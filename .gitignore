@@ -1,0 +1,8 @@
+# Claude Code — personal / machine-local, never commit
+.claude/settings.local.json
+CLAUDE.local.md
+
+# Native auto-memory lives under ~/.claude/projects/<project>/memory/ (outside the
+# repo, machine-local) — nothing to ignore here, noted so it isn't re-created in-repo.
+
+# Append your project's own ignores below (node_modules/, dist/, .venv/, etc.)
