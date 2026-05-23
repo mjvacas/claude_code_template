@@ -46,6 +46,32 @@ list (project-shared) or to `settings.local.json` (just you), e.g.:
 }
 ```
 
+## Secrets handling
+
+Three layers, on by default — keep them in place (the self-check below enforces it):
+
+1. **`.gitignore`** ignores `.env*`, `*.pem`, `*.key`, `*.p12`, `id_rsa`/`id_ed25519`,
+   `.aws/credentials`, and `secrets/` so they can't be committed. Commit only
+   `*.example` variants (e.g. `.env.example`).
+2. **`settings.json` deny rules** stop Claude from *reading* those same files; a deny
+   always wins over an allow.
+3. **`scripts/check-template.sh`** (run locally and in CI) fails if a secret-like file
+   gets tracked, if obvious secret material (private keys, AWS keys, GitHub/Slack/Google
+   tokens) appears in tracked content, or if either protection above is removed.
+
+Keep real secrets in environment variables or an untracked `.env` loaded at runtime —
+never in tracked files. For deeper scanning across git history, add
+[gitleaks](https://github.com/gitleaks/gitleaks) to CI.
+
+## Validate the template
+
+```bash
+bash scripts/check-template.sh
+```
+
+Validates JSON, hook scripts, every `@reference`, and the secrets protections above.
+Runs automatically on push/PR via `.github/workflows/check.yml`.
+
 ## Optional: format-on-edit hook
 
 Not enabled by default (it's stack-specific). To auto-format after Claude edits files,

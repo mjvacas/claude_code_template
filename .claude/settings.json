@@ -28,7 +28,13 @@
       "Read(**/credentials*)",
       "Read(**/*.pem)",
       "Read(**/id_rsa)",
-      "Read(**/id_ed25519)"
+      "Read(**/id_ed25519)",
+      "Read(**/*.key)",
+      "Read(**/*.p12)",
+      "Read(**/.aws/credentials)",
+      "Bash(nc:*)",
+      "Bash(ncat:*)",
+      "Bash(telnet:*)"
     ]
   },
   "hooks": {

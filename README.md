@@ -18,19 +18,25 @@ skills, hooks) with a small set of engineering-discipline practices.
 ```
 CLAUDE.md                     # Project rules + conventions (auto-loaded every session)
 AI_CONTEXT.md                 # Human-curated decision log (auto-loaded via @import)
-.gitignore                    # Ignores personal/local Claude files
+.gitignore                    # Ignores Claude-local files, secrets/env, scan output
 .claude/
-├── settings.json             # Permissions (deny secrets), defaultMode, SessionStart hook
+├── settings.json             # Permissions (deny secret reads + exfil tools), SessionStart hook
 ├── settings.local.json.example
+├── settings.lockdown.json.example  # Opt-in egress denies for vetting untrusted skills
 ├── hooks/session-context.sh  # Prints recent git activity at session start
 ├── commands/                 # /session-start, /handoff
 ├── agents/                   # code-reviewer subagent
 └── skills/                   # verify-refactor, tune-parameters, llm-eval
+scripts/
+├── check-template.sh         # Integrity + secrets smoke-test (run manually)
+└── audit-config.sh           # Reports what .claude/ artifacts do — vet skills before trusting
 docs/
 ├── claude-code-setup.md      # How the native config is wired; what to customize
+├── skill-security.md         # Trust model, vetting checklist, SAST options
 └── adr/                      # Filled-in Architecture Decision Records go here
 templates/                    # Reference docs + blank templates (loaded on demand)
 ├── ADR-template.md           # Copy into docs/adr/ when recording a decision
+├── PROJECT_SPEC.md / ARCHITECTURE.md / BUILD_PLAN.md   # source-of-truth triad
 ├── AI_SESSION_START.md
 └── LLM_APP_DEVELOPMENT_BEST_PRACTICES.md
 old/                          # Historical, project-specific originals — don't copy
@@ -44,6 +50,17 @@ Two complementary stores, kept from overlapping:
 - **Native auto-memory** (`~/.claude/...`, machine-local, on by default) — patterns Claude *learns* on its own. Browse with `/memory`.
 
 If a human decided it, it goes in `AI_CONTEXT.md`. If Claude noticed it, let auto-memory hold it.
+
+## Security
+
+Skills, commands, hooks, and MCP servers are code you install. Before adding anything
+from outside this repo, vet it — see `docs/skill-security.md`. Quick tools:
+
+- `bash scripts/audit-config.sh <path>` — report what a skill/config actually does
+  (dynamic execution, tool grants, egress/secret tokens) before you trust it.
+- `bash scripts/check-template.sh` — validate config integrity + secrets hygiene.
+- The default `settings.json` denies secret reads; `settings.lockdown.json.example`
+  adds network-egress denies for quarantining untrusted skills.
 
 ## What's distinctive here
 

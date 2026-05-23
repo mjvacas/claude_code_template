@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "_comment": "QUARANTINE OVERLAY. While vetting an untrusted skill, merge these deny rules into .claude/settings.local.json (deny wins over any allow and cannot be overridden). This blocks network egress so a malicious skill can't exfiltrate — it will also block legitimate network use, which is the point during vetting. Remove once trusted. Best paired with a sandbox or throwaway dir. See docs/skill-security.md.",
+  "permissions": {
+    "deny": [
+      "WebFetch",
+      "Bash(curl:*)",
+      "Bash(wget:*)",
+      "Bash(nc:*)",
+      "Bash(ncat:*)",
+      "Bash(telnet:*)",
+      "Bash(ssh:*)",
+      "Bash(scp:*)",
+      "Bash(sftp:*)"
+    ]
+  }
+}

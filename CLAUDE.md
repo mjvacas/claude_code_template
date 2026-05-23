@@ -49,6 +49,7 @@ npx tsc --noEmit    # Type check
 - Types first: define data contracts in `types/` before building features
 - Defensive defaults at boundaries only: normalize external/untrusted data (`?? 0` / `?? ''`); don't validate trusted internal calls
 - After refactoring deterministic code, verify behavior is unchanged against a saved baseline output — stronger than "tests still pass"
+- Treat `.claude/` skills/commands/agents/hooks and MCP servers as dependencies: vet before adding, review every update, keep unvetted ones out of version control — see docs/skill-security.md
 
 ## Hard Constraints (guarded by code)
 
