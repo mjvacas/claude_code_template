@@ -50,6 +50,16 @@ npx tsc --noEmit    # Type check
 - Defensive defaults at boundaries only: normalize external/untrusted data (`?? 0` / `?? ''`); don't validate trusted internal calls
 - After refactoring deterministic code, verify behavior is unchanged against a saved baseline output — stronger than "tests still pass"
 
+## Hard Constraints (guarded by code)
+
+Critical invariants are enforced **in code** — asserted at startup or at the
+relevant boundary — not merely documented, so they can't silently regress. Config
+that governs behavior lives in version-controlled files changed via PR review,
+never a runtime toggle/UI. List this project's code-guarded invariants here, e.g.:
+
+- `<INVARIANT>` — asserted at startup; the process refuses to run if violated.
+- `<limit/threshold>` — enforced in `<module>`; violations are rejected, not warned.
+
 ## Architecture Decisions
 
 <!-- Add decisions as they're made. Format: -->
@@ -73,6 +83,7 @@ Hybrid memory — two stores, kept from overlapping:
 - **Native auto-memory** (`~/.claude/projects/<project>/memory/`, on by default): patterns and build quirks Claude *learns* on its own. Browse/edit with `/memory`. Don't copy these into AI_CONTEXT.md.
 - **docs/adr/ADR-NNN-*.md**: Architecture Decision Records — one per significant or hard-to-reverse decision (Status / Context / Decision / Consequences / Alternatives Considered). Don't re-litigate a decided ADR; if it genuinely needs revisiting, write a new one that supersedes it. Keep a one-line highlight per ADR in the "Architecture Decisions" section above.
 - **docs/summaries/YYYY-MM.md**: Monthly compressed recaps.
+- **docs/{PROJECT_SPEC,ARCHITECTURE,BUILD_PLAN}.md** (optional; scale to project size): the source-of-truth triad — the "why/what", the "how", and the "in what order". Read at session start; don't re-litigate decisions captured here (revisit via a new ADR). Skeletons in `templates/`.
 - **.claude/**: native Claude Code config — `settings.json` (permissions + SessionStart hook), `commands/` (`/session-start`, `/handoff`), `agents/` (code-reviewer), `skills/` (verify-refactor, tune-parameters, llm-eval). See docs/claude-code-setup.md.
 - **Rule**: Commit code + AI_CONTEXT.md updates together atomically.
 
