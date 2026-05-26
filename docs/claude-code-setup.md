@@ -10,12 +10,20 @@ after you copy it into a new project.
 | `settings.json` | Permissions (deny secret reads, allow safe read-only commands), `defaultMode: acceptEdits`, a `SessionStart` hook. Committed, team-shared. | Yes — tune the allow list to your stack. |
 | `settings.local.json` | Your personal overrides. **Gitignored.** Copy `settings.local.json.example` to start. | Personal. |
 | `hooks/session-context.sh` | `SessionStart` hook: prints recent commits + working-tree status into context. Safe no-op outside git. | Optional — delete the hook entry in `settings.json` to disable. |
+| `hooks/block-dangerous.sh` | `PreToolUse(Bash)` guard: hard-blocks catastrophic commands (`rm -rf /`, `git reset --hard`, `git push --force`, pipe-to-shell, `dd`/`mkfs`, fork bomb) via exit 2. A safety net, **not** a sandbox. | Tune the pattern list to your needs. |
+| `statusline.sh` | Status line: model · dir · git branch · context warning. | Optional — remove the `statusLine` key in `settings.json` to disable. |
 | `commands/session-start.md` | `/session-start` — restore context and orient before coding. | As needed. |
 | `commands/handoff.md` | `/handoff` — record decisions in `AI_CONTEXT.md` and commit code + context atomically. | As needed. |
+| `commands/commit.md` | `/commit` — one atomic, conventional-prefix commit; enforces the code + `AI_CONTEXT.md` rule. | As needed. |
+| `commands/adr.md` | `/adr "<title>"` — scaffold the next ADR from `templates/ADR-template.md` into `docs/adr/`. | As needed. |
 | `agents/code-reviewer.md` | Subagent that reviews diffs for simplicity, scope, and duplication. | As needed. |
 | `skills/verify-refactor/` | Prove a refactor preserved behavior via golden-output diff. | As needed. |
 | `skills/tune-parameters/` | Pick a parameter by reading the metric surface, not the peak. | As needed. |
 | `skills/llm-eval/` | Ground-truth accuracy harness for AI features. | As needed. |
+
+> To review a diff, invoke the **`code-reviewer` subagent** ("use the code-reviewer
+> subagent on my changes"). There's intentionally no `/review` command — it would just
+> duplicate the subagent, which the template's own "don't duplicate" rule forbids.
 
 ## Hybrid memory model
 
@@ -69,8 +77,10 @@ never in tracked files. For deeper scanning across git history, add
 bash scripts/check-template.sh
 ```
 
-Validates JSON, hook scripts, every `@reference`, and the secrets protections above.
-Runs automatically on push/PR via `.github/workflows/check.yml`.
+Validates JSON, hook scripts, every `@reference`, that the PreToolUse guard stays wired,
+the referenced doc directories exist, and the secrets protections above. Runs automatically
+on push/PR via `.github/workflows/check.yml` (which also runs a `gitleaks` secret scan and
+deliberately runs no project build/test, so fork PRs can't execute untrusted code).
 
 ## Optional: format-on-edit hook
 

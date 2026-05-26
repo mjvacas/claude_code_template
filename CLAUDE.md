@@ -58,6 +58,8 @@ relevant boundary — not merely documented, so they can't silently regress. Con
 that governs behavior lives in version-controlled files changed via PR review,
 never a runtime toggle/UI. List this project's code-guarded invariants here, e.g.:
 
+- **Catastrophic shell commands are hard-blocked** by the `PreToolUse` hook
+  `.claude/hooks/block-dangerous.sh` (exit 2) — a safety net, not a sandbox. Ships with this template.
 - `<INVARIANT>` — asserted at startup; the process refuses to run if violated.
 - `<limit/threshold>` — enforced in `<module>`; violations are rejected, not warned.
 
@@ -85,7 +87,7 @@ Hybrid memory — two stores, kept from overlapping:
 - **docs/adr/ADR-NNN-*.md**: Architecture Decision Records — one per significant or hard-to-reverse decision (Status / Context / Decision / Consequences / Alternatives Considered). Don't re-litigate a decided ADR; if it genuinely needs revisiting, write a new one that supersedes it. Keep a one-line highlight per ADR in the "Architecture Decisions" section above.
 - **docs/summaries/YYYY-MM.md**: Monthly compressed recaps.
 - **docs/{PROJECT_SPEC,ARCHITECTURE,BUILD_PLAN}.md** (optional; scale to project size): the source-of-truth triad — the "why/what", the "how", and the "in what order". Read at session start; don't re-litigate decisions captured here (revisit via a new ADR). Skeletons in `templates/`.
-- **.claude/**: native Claude Code config — `settings.json` (permissions + SessionStart hook), `commands/` (`/session-start`, `/handoff`), `agents/` (code-reviewer), `skills/` (verify-refactor, tune-parameters, llm-eval). See docs/claude-code-setup.md.
+- **.claude/**: native Claude Code config — `settings.json` (permissions, statusline, SessionStart + PreToolUse hooks), `hooks/` (session-context, block-dangerous), `commands/` (`/session-start`, `/handoff`, `/commit`, `/adr`), `agents/` (code-reviewer), `skills/` (verify-refactor, tune-parameters, llm-eval). See docs/claude-code-setup.md.
 - **Rule**: Commit code + AI_CONTEXT.md updates together atomically.
 
 Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed. 

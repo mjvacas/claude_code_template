@@ -1,0 +1,24 @@
+name: template-check
+
+# Validates template integrity + secrets hygiene on every push/PR. Deliberately runs
+# NO project build/test — it must never execute untrusted code from a fork PR. Keep it
+# that way; add language-specific CI in a separate, fork-safe workflow if you need it.
+
+on: [push, pull_request]
+
+permissions:
+  contents: read   # least privilege
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      # Pin third-party actions to a commit SHA in practice (see docs/skill-security.md);
+      # tags are shown here for readability.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history so the secret scan sees all commits
+      - name: Template self-check
+        run: bash scripts/check-template.sh
+      - name: Secret scan (gitleaks)
+        uses: gitleaks/gitleaks-action@v2

@@ -1,6 +1,8 @@
 # Claude Code — personal / machine-local, never commit
 .claude/settings.local.json
 CLAUDE.local.md
+# Live MCP config — may carry tokens / point at local paths. Commit only .mcp.json.example.
+.mcp.json
 
 # Secrets / credentials — never commit (keep .example variants for templating)
 .env

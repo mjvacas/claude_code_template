@@ -1,0 +1,9 @@
+{
+  "_comment": "TEMPLATE — copy to .mcp.json ONLY after vetting each server. .mcp.json is loaded once you accept the folder-trust dialog; an MCP server is an external process that can read your context and reach the network. Anthropic does NOT audit third-party MCP servers — treat each like an unpinned dependency. Pin versions/digests, prefer first-party servers, scope filesystem servers to a single project dir (never $HOME or /), and read docs/skill-security.md before enabling anything. .mcp.json is gitignored (may carry tokens); only this .example is tracked. Delete the file if you use no MCP servers. Keys prefixed with _ below are disabled examples.",
+  "mcpServers": {
+    "_example_filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem@<pinned-version>", "/abs/path/to/this/project"]
+    }
+  }
+}

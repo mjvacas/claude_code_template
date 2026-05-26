@@ -99,6 +99,18 @@ else
   err "settings.json deny list does not cover .env reads"
 fi
 
+echo "== 5. Safety guard + scaffolding =="
+# The PreToolUse guard must stay wired (deleting the script or the wiring is caught here).
+if python3 -c "import json; d=json.load(open('.claude/settings.json')); pt=d.get('hooks',{}).get('PreToolUse',[]); raise SystemExit(0 if any('block-dangerous' in h.get('command','') for g in pt for h in g.get('hooks',[])) else 1)" 2>/dev/null; then
+  ok "settings.json wires the PreToolUse dangerous-command guard"
+else
+  err "settings.json does not wire .claude/hooks/block-dangerous.sh as a PreToolUse hook"
+fi
+# Directories referenced by CLAUDE.md / AI_CONTEXT.md / commands must exist.
+for d in docs/adr docs/summaries; do
+  if [ -d "$d" ]; then ok "$d/ exists"; else err "missing directory: $d"; fi
+done
+
 echo
 if [ "$fail" -ne 0 ]; then echo "RESULT: FAIL"; exit 1; fi
 echo "RESULT: PASS"

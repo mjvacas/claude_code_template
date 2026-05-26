@@ -62,6 +62,25 @@ reads (`.env*`, keys, `secrets/`, `.aws/credentials`) and the never-needed exfil
   machine only); only commit to `.claude/` after vetting.
 - **Review gate** — require extra review on `.claude/**` changes (e.g. CODEOWNERS).
 
+## Vetting an MCP server (before adding to `.mcp.json`)
+
+An MCP server is an external process that can read your context and reach the network,
+loaded once you accept the folder-trust dialog. Anthropic does **not** audit third-party
+servers — vet each like an unpinned dependency. Start from `.mcp.json.example`.
+
+- **Provenance & pinning** — prefer first-party / Anthropic-listed servers; pin the package
+  version or image digest, never `@latest`.
+- **Least scope** — filesystem servers get one project path, never `$HOME` or `/`. Servers
+  that reach the network get the lockdown overlay while you watch their first runs.
+- **Auto-approve caveat** — do **not** set `autoApproveMcpjsonServers` /
+  `enableAllProjectMcpServers` globally: a cloned repo's `.mcp.json` would then launch its
+  servers with no prompt. `.mcp.json` is gitignored here; only `.mcp.json.example` is tracked.
+- **Deny still wins** — a `deny` in `settings.json` beats any MCP tool. Block one with
+  `mcp__<server>__<tool>` (or `mcp__<server>__*` for the whole server); the lockdown egress
+  denies also cover MCP calls.
+- **Marketplaces are the same surface** — `/plugin` marketplaces bundle skills/hooks/MCP and
+  warrant the same review (managed `blockedMarketplaces` can restrict them).
+
 ## Vetting checklist (before adding anything from online)
 
 Read it like untrusted code:
