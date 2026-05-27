@@ -3,6 +3,8 @@
 CLAUDE.local.md
 # Live MCP config — may carry tokens / point at local paths. Commit only .mcp.json.example.
 .mcp.json
+# Pre-compaction context snapshots (raw conversation tails) — machine-local, never commit.
+.claude/snapshots/
 
 # Secrets / credentials — never commit (keep .example variants for templating)
 .env

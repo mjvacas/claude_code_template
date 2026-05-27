@@ -41,7 +41,7 @@ import os, re, sys
 ref_re = re.compile(r'(?:^|[\s(])@([A-Za-z0-9._\-/~]+)')
 broken, checked = [], 0
 for dp, _, fs in os.walk('.'):
-    if dp.startswith('./.git') or dp.startswith('./old'):
+    if dp.startswith('./.git') or dp.startswith('./old') or dp.startswith('./.claude/snapshots'):
         continue
     for fn in fs:
         if not fn.endswith('.md'):

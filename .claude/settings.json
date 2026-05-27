@@ -67,6 +67,19 @@
           }
         ]
       }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "auto|manual",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR/.claude/hooks/precompact-snapshot.sh\"",
+            "statusMessage": "Snapshotting context before compaction...",
+            "timeout": 15
+          }
+        ]
+      }
     ]
   }
 }

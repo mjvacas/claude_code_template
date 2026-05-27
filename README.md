@@ -26,12 +26,13 @@ SECURITY.md                   # How to report vulns; points at the AI-config tru
 .mcp.json.example             # Vetted-server template; copy to .mcp.json (gitignored) after review
 .github/workflows/check.yml   # CI: runs check-template.sh + gitleaks (no project build/test)
 .claude/
-├── settings.json             # Permissions, statusline, SessionStart + PreToolUse hooks
+├── settings.json             # Permissions, statusline, SessionStart + PreToolUse + PreCompact hooks
 ├── settings.local.json.example
 ├── settings.lockdown.json.example  # Opt-in egress denies for vetting untrusted skills
 ├── statusline.sh             # Status line: model · dir · branch · context warning
 ├── hooks/session-context.sh  # Prints recent git activity at session start
 ├── hooks/block-dangerous.sh  # PreToolUse guard: hard-blocks catastrophic shell commands
+├── hooks/precompact-snapshot.sh  # PreCompact: snapshots context to .claude/snapshots/ before compaction
 ├── commands/                 # /session-start, /handoff, /commit, /adr
 ├── agents/                   # code-reviewer subagent
 └── skills/                   # verify-refactor, tune-parameters, llm-eval

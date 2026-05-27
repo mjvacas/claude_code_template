@@ -11,6 +11,7 @@ after you copy it into a new project.
 | `settings.local.json` | Your personal overrides. **Gitignored.** Copy `settings.local.json.example` to start. | Personal. |
 | `hooks/session-context.sh` | `SessionStart` hook: prints recent commits + working-tree status into context. Safe no-op outside git. | Optional — delete the hook entry in `settings.json` to disable. |
 | `hooks/block-dangerous.sh` | `PreToolUse(Bash)` guard: hard-blocks catastrophic commands (`rm -rf /`, `git reset --hard`, `git push --force`, pipe-to-shell, `dd`/`mkfs`, fork bomb) via exit 2. A safety net, **not** a sandbox. | Tune the pattern list to your needs. |
+| `hooks/precompact-snapshot.sh` | `PreCompact` hook: before the context is compacted, writes a recovery breadcrumb (transcript pointer + recent turns) to `.claude/snapshots/` (gitignored). A safety net, not a replacement for `/handoff`. | Optional — delete the hook entry in `settings.json` to disable. |
 | `statusline.sh` | Status line: model · dir · git branch · context warning. | Optional — remove the `statusLine` key in `settings.json` to disable. |
 | `commands/session-start.md` | `/session-start` — restore context and orient before coding. | As needed. |
 | `commands/handoff.md` | `/handoff` — record decisions in `AI_CONTEXT.md` and commit code + context atomically. | As needed. |
@@ -38,6 +39,12 @@ Two complementary stores — keep them from overlapping:
 
 Rule of thumb: if a human decided it, it goes in `AI_CONTEXT.md`. If Claude noticed it,
 let auto-memory hold it. Don't copy one into the other.
+
+Both of those are *deliberate* checkpoints. As a backstop against losing an in-progress
+session, the `PreCompact` hook (`hooks/precompact-snapshot.sh`) auto-snapshots recent turns
++ a pointer to the append-only transcript into `.claude/snapshots/` (gitignored) right
+before Claude Code compacts the context. It's a recovery breadcrumb, not curated memory —
+promote anything that matters into `AI_CONTEXT.md` with `/handoff`.
 
 ## Permissions
 
