@@ -22,3 +22,8 @@ jobs:
         run: bash scripts/check-template.sh
       - name: Secret scan (gitleaks)
         uses: gitleaks/gitleaks-action@v2
+        env:
+          # v2 requires a token to enumerate a PR's commits via the API. The built-in
+          # GITHUB_TOKEN is auto-provided; no secret setup needed (free for personal/public
+          # repos — org repos additionally need GITLEAKS_LICENSE).
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
