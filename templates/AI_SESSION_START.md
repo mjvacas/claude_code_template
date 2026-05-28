@@ -1,387 +1,105 @@
-# Starting a New AI Coding Session
+# Starting & Ending an AI Coding Session
 
-> **Purpose:** Standard procedure for onboarding AI assistants to a codebase.
-> **Use this:** When starting a fresh Claude Code / Cursor / GitHub Copilot session.
-
----
-
-## Quick Start (2 minutes)
-
-### **Step 1: Read Context Files** (AI should do this automatically)
-
-```
-1. AI_CONTEXT.md - Current session context and recent decisions
-2. git log --oneline -10 - Latest 10 commits
-3. docs/ARCHITECTURE.md - System overview (if exists)
-4. Todo list - Current task list
-```
-
-### **Step 2: Review Active Work**
-
-Check what's in progress:
-```bash
-git status
-git diff
-```
-
-### **Step 3: Confirm Understanding**
-
-AI should summarize:
-- What we're currently building
-- Last session's accomplishments
-- Next steps from AI_CONTEXT.md
-- Any blockers or open questions
+> **Purpose:** the session workflow this template assumes — how to restore context at the
+> start, keep it current while you work, and hand off cleanly at the end.
+> The `/session-start` and `/handoff` commands automate most of this; read this when you
+> want the full procedure and the *why* behind it.
 
 ---
 
-## Detailed Onboarding Procedure
+## The memory model (where things live)
 
-### **1. Context Restoration**
+This template uses a hybrid memory. CLAUDE.md → **"Context System"** is the source of truth
+for the full list; the short version:
 
-#### **Primary Source: AI_CONTEXT.md**
-Read the current session section at the top of the file. It contains:
-- Summary of recent work
-- Design decisions with rationale
-- Technical architecture insights
-- Files modified
-- Open questions
-- Next steps
+- **`CLAUDE.md`** — static rules and conventions, auto-loaded every session.
+- **`AI_CONTEXT.md`** — *human-curated* decisions, rationale, open questions, next steps.
+  Auto-loaded via `@AI_CONTEXT.md`. Updated with `/handoff`.
+- **Native auto-memory** (`~/.claude/projects/<project>/memory/`, machine-local, on by
+  default) — patterns Claude *learns* on its own. Browse/edit with `/memory`. Don't
+  hand-copy these into `AI_CONTEXT.md`.
+- **`docs/adr/ADR-NNN-*.md`** — one record per significant or hard-to-reverse decision
+  (scaffold with `/adr`).
+- **`docs/summaries/YYYY-MM.md`** — monthly compressed recaps; old `AI_CONTEXT.md` blocks
+  land here once the file gets long.
 
-**Location:** `/AI_CONTEXT.md`
-
-**What to focus on:**
-- "Summary" - High-level overview
-- "Design Decisions" - Understanding the "why"
-- "Technical Learnings" - Patterns to follow
-- "Next Steps" - What to work on next
+Rule of thumb: a *human* decided it → `AI_CONTEXT.md` (or an ADR). Claude *noticed* it →
+let auto-memory hold it.
 
 ---
 
-#### **Secondary Source: Git History**
+## Start of session — `/session-start [focus]`
 
-```bash
-# See latest commits with context
-git log --oneline -10
+The `SessionStart` hook (`.claude/hooks/session-context.sh`) already injects recent repo
+activity. To actively orient:
 
-# See detailed commit messages (include design decisions)
-git log -5 --format=medium
+1. Read the newest block in **`AI_CONTEXT.md`** — decisions, open questions, next steps.
+2. Skim `git log --oneline -10` for what shipped recently.
+3. If a focus area was given, skim the relevant files and `docs/adr/`.
+4. Check the working tree (`git status`, `git diff`) for paused, in-progress work.
+5. Report back briefly — **Last completed / In progress / Next planned**, plus any blockers
+   — then confirm direction with the user **before editing**.
 
-# See what changed recently
-git diff HEAD~5..HEAD --stat
-```
-
-**What to look for:**
-- Recent feature additions
-- Bug fixes and their causes
-- Refactoring decisions
+`/session-start [focus]` runs steps 1–5 for you.
 
 ---
 
-#### **Tertiary Source: Design Docs**
+## During the session
 
-Check `docs/` directory for feature specs:
+- Update **`AI_CONTEXT.md`** as decisions happen — not "at the end" (a session can end
+  abruptly).
+- Commit **code + `AI_CONTEXT.md` together** in one atomic commit (`/commit`), with a
+  conventional prefix (`feat:` / `fix:` / `refactor:` / `docs:` / `chore:`) and a body
+  explaining *what* and *why*.
+- Promote any significant or hard-to-reverse decision into an ADR (`/adr`).
+- Leave learned patterns and build quirks to auto-memory — don't duplicate them in
+  `AI_CONTEXT.md`.
 
-```bash
-ls docs/
-
-# Common docs:
-docs/
-├── ARCHITECTURE.md                 # System overview
-├── FEATURE_NAME_DESIGN.md          # Per-feature spec
-├── TECH_DECISIONS.md               # ADRs
-├── LLM_APP_DEVELOPMENT_BEST_PRACTICES.md  # General AI dev guide
-└── archive/                        # Old AI_CONTEXT files (compressed)
-```
-
-**When to read:**
-- Building or modifying a feature with a design doc
-- Need to understand system architecture
-- Want to know why something was built a certain way
+**Red flags:** committing code without the matching `AI_CONTEXT.md` update; batching 5+
+commits before recording context; planning to "document it later."
 
 ---
 
-### **2. Understand Current State**
+## End of session — `/handoff`
 
-#### **Check Working Directory**
+1. Append a dated block to **`AI_CONTEXT.md`**: Summary, Decisions (+ why / alternatives
+   rejected), Open Questions, Next Steps. Capture only what a future reader *can't*
+   reconstruct from the diff.
+2. Promote decisions worth an ADR with `/adr` (copy from `templates/ADR-template.md`).
+3. Commit code + `AI_CONTEXT.md` together (atomic), conventional prefix + explanatory body.
+4. Confirm the working tree is clean and report the commit hash.
 
-```bash
-# Any uncommitted changes?
-git status
+`/handoff` runs this checklist.
 
-# What's been modified?
-git diff
+### Keeping `AI_CONTEXT.md` scannable
 
-# Any staged changes?
-git diff --cached
-```
-
-**Ask user:**
-- "Should I continue the work in progress?"
-- "Or start fresh on a new feature?"
+When it grows long, move the oldest session blocks into `docs/summaries/YYYY-MM.md` (one
+compressed page per month) and keep only recent blocks in `AI_CONTEXT.md`.
 
 ---
 
-#### **Check Todo List**
+## Recovering older context
 
-The todo list tracks all pending work. Look for:
-- Items marked `in_progress` - What we're currently doing
-- Items marked `pending` - What's queued up
-- Recently `completed` items - Recent context
-
-**Location:** Maintained by TodoWrite tool during session
+- **`docs/summaries/YYYY-MM.md`** — month-by-month recaps.
+- **`git log --oneline`** / **`git show <hash>`** — when and why a change landed.
+- **`docs/adr/`** — the rationale for a standing decision. Don't re-litigate a decided ADR;
+  if it genuinely needs revisiting, write a new one that supersedes it.
 
 ---
 
-### **3. Identify Next Task**
+## Quick reference
 
-Based on context review, identify what to work on next:
+| Need | Use |
+|------|-----|
+| Orient at session start | `/session-start [focus]` |
+| Record decisions + commit atomically | `/handoff` (or `/commit`) |
+| Capture a hard-to-reverse decision | `/adr` |
+| Browse what Claude learned on its own | `/memory` |
 
-#### **Option A: Continue In-Progress Work**
-If todo list shows `in_progress` items:
-- Confirm with user: "I see we're working on [X]. Should I continue?"
-- Review related files
-- Check for any blockers in AI_CONTEXT.md
-
-#### **Option B: Start New Feature**
-If nothing in progress:
-- Check "Next Steps" in AI_CONTEXT.md
-- Review pending todo items
-- Ask user which priority to tackle
-
-#### **Option C: Bug Fix**
-If user reports an issue:
-- Reproduce the error
-- Check recent commits for related changes
-- Review AI_CONTEXT.md for related design decisions
+Key files: `CLAUDE.md` · `AI_CONTEXT.md` · `docs/adr/` · `docs/summaries/` · `templates/`.
 
 ---
 
-### **4. Confirm Approach**
-
-Before coding, confirm:
-- ✅ Understand the requirement
-- ✅ Know which files to modify
-- ✅ Aware of design constraints (from AI_CONTEXT.md)
-- ✅ Following established patterns
-
-**Ask user if uncertain:**
-- "I'm planning to [approach]. Does that align with your vision?"
-- "Should I follow the pattern in [existing file]?"
-
----
-
-## Example Session Start
-
-### **User Prompt:**
-> "Let's continue where we left off."
-
-### **AI Response (structure to follow):**
-
-**Context Restored:**
-- ✅ AI_CONTEXT.md - Last session (YYYY-MM-DD)
-- ✅ Git log - Latest N commits
-- ✅ Todo list - X items (Y completed, Z in progress)
-
-**Current State:**
-- **Last completed:** [feature or fix shipped in the previous session]
-- **In progress:** [work that was paused mid-session, if any]
-- **Next planned:** [the top item from the Next Steps list in AI_CONTEXT.md]
-
-**Summary of Recent Work:**
-- [Bullet per shipped feature or notable change since the last summary]
-- [Include any bugs fixed and what caused them]
-
-**Key Decisions from Last Session:**
-1. [Decision and one-line rationale]
-2. [Decision and one-line rationale]
-
-**Next Steps (from AI_CONTEXT.md):**
-1. [Next concrete action]
-2. [Next concrete action]
-3. [Next concrete action]
-
-**Ready to proceed. What would you like to work on?**
-- A) Continue with the in-progress item
-- B) Address a specific issue
-- C) Start a different feature
-
----
-
-## Recovery from Compressed Archives
-
-If you need context from older sessions:
-
-```bash
-# List archived contexts
-ls docs/archive/
-
-# Read compressed archive
-gunzip -c docs/archive/AI_CONTEXT_YYYY-MM.md.gz | less
-
-# Extract if needed for AI to read
-gunzip docs/archive/AI_CONTEXT_YYYY-MM.md.gz
-# Now at: docs/archive/AI_CONTEXT_YYYY-MM.md
-```
-
-**When to read archives:**
-- Feature was designed months ago
-- Need to understand old design decisions
-- Tracking down when a pattern was established
-
----
-
-## Best Practices During Session
-
-### **IMPORTANT: Update Context as You Go**
-
-**After Each Feature or Major Change:**
-
-1. ✅ Write the code changes
-2. ✅ Update AI_CONTEXT.md with feature details, design decisions, and learnings
-3. ✅ Update todo list (mark completed, add new tasks)
-4. ✅ **Commit code + context together in one atomic commit**
-
-**Why Commit Together?**
-- Ensures context is never forgotten or orphaned
-- Code and explanation stay associated in git history
-- One commit = one complete logical change
-- Easier to review what was done and why
-
-**Example Workflow:**
-```bash
-# 1. Complete feature + update AI_CONTEXT.md
-# Edit code files...
-# Edit AI_CONTEXT.md to document the feature...
-
-# 2. Commit everything together (ATOMIC)
-git add src/path/to/changed_file \
-        AI_CONTEXT.md
-
-git commit -m "feat: Add new feature
-
-Implemented [description of what was built].
-
-Updated AI_CONTEXT.md:
-- Added feature documentation
-- Documented design decision to use X instead of Y
-- Updated Next Steps section
-"
-
-# 3. Continue to next task
-```
-
-**Red Flags (Don't Do This):**
-- ❌ Committing code without updating AI_CONTEXT.md
-- ❌ Making 5+ commits before updating context
-- ❌ Planning to "update context at the end" (session may crash!)
-- ❌ Separate commits for code and context (easy to forget the second one)
-- ❌ Not documenting design decisions as they happen
-
-**Rule of Thumb:** If the commit changes functionality, AI_CONTEXT.md should be updated in the same commit.
-
----
-
-## Session Handoff (Ending Current Session)
-
-Before ending, ensure continuity for next session:
-
-### **1. Final Review**
-```bash
-# Check that all work is committed
-git status
-
-# Verify AI_CONTEXT.md is current
-# Should reflect all work done this session
-```
-
-### **2. Update SESSION_SUMMARY.md (Optional)**
-If major features were completed:
-```bash
-# Update SESSION_SUMMARY.md with session highlights
-git add SESSION_SUMMARY.md
-git commit -m "docs: Update session summary"
-```
-
-### **3. Push to Remote**
-```bash
-git push origin main
-```
-
-### **4. Archive if Needed**
-If AI_CONTEXT.md exceeds 50KB:
-```bash
-./scripts/archive-ai-context.sh
-```
-
----
-
-## Troubleshooting
-
-### **"AI doesn't understand the context"**
-
-**Solutions:**
-1. Check if AI_CONTEXT.md is up to date
-2. Provide specific file references: "See src/path/to/file.ext:LINE for pattern"
-3. Quote relevant sections from AI_CONTEXT.md
-4. Show git commit that introduced the pattern
-
----
-
-### **"AI suggests something we already decided against"**
-
-**Solutions:**
-1. Point to decision in AI_CONTEXT.md: "We decided against X because Y (see AI_CONTEXT.md line 123)"
-2. Reference the commit that implemented current approach
-3. Update AI_CONTEXT.md to make decision more prominent
-
----
-
-### **"Context file is too long"**
-
-**Solutions:**
-1. Run archive script: `./scripts/archive-ai-context.sh`
-2. Archive rotates monthly or when >50KB
-3. Keeps current session focused
-
----
-
-## Best Practices
-
-### **Do:**
-- ✅ Always read AI_CONTEXT.md before coding
-- ✅ Update context after major features
-- ✅ Include "why" in design decisions
-- ✅ Reference design docs in commits
-- ✅ Ask clarifying questions when uncertain
-
-### **Don't:**
-- ❌ Skip context review and guess
-- ❌ Make big decisions without checking past decisions
-- ❌ Forget to update AI_CONTEXT.md after important work
-- ❌ Let AI_CONTEXT.md grow indefinitely (archive it)
-
----
-
-## Quick Reference
-
-### **Files to Read (Priority Order):**
-1. `AI_CONTEXT.md` - Recent decisions and context (current + last session)
-2. `docs/summaries/YYYY-MM.md` - Monthly summaries (1 page each, ultra-compressed)
-3. `git log --oneline -10` - Latest commits
-4. `docs/FEATURE_NAME_DESIGN.md` - Specific feature specs
-5. Todo list - Current task status
-
-### **Scripts:**
-```bash
-./scripts/update-ai-context.sh    # Update context log
-./scripts/archive-ai-context.sh   # Archive when >50KB
-```
-
-### **Reading Archives:**
-```bash
-gunzip -c docs/archive/AI_CONTEXT_YYYY-MM.md.gz | less
-```
-
----
-
-**Template — copy into a new project's `docs/` folder and customize as needed.**
+**Reference guide.** In this template it lives in `templates/` and is loaded on demand —
+the `/session-start` and `/handoff` commands link to it as `@templates/AI_SESSION_START.md`.
+Copy it into your own project and adapt the command names and paths to match your setup.
