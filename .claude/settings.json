@@ -8,11 +8,7 @@
       "Bash(git log:*)",
       "Bash(git show:*)",
       "Bash(git branch:*)",
-      "Bash(ls:*)",
-      "Bash(cat:*)",
-      "Bash(find:*)",
-      "Bash(grep:*)",
-      "Bash(rg:*)"
+      "Bash(ls:*)"
     ],
     "ask": [
       "Bash(git push:*)",
