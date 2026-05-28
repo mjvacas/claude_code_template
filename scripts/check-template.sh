@@ -25,14 +25,15 @@ while IFS= read -r f; do
   fi
 done < <(find . -not -path './.git/*' \( -name '*.json' -o -name '*.json.example' \) | sort)
 
-echo "== 2. Hook scripts =="
-if compgen -G ".claude/hooks/*.sh" >/dev/null; then
-  for h in .claude/hooks/*.sh; do
+echo "== 2. Shell scripts (hooks + statusline) =="
+scripts=$(ls .claude/hooks/*.sh .claude/statusline.sh 2>/dev/null || true)
+if [ -n "$scripts" ]; then
+  for h in $scripts; do
     [ -x "$h" ] || err "not executable (chmod +x): $h"
     if bash -n "$h" 2>/dev/null; then ok "$h"; else err "bash syntax error: $h"; fi
   done
 else
-  ok "no hook scripts"
+  ok "no shell scripts"
 fi
 
 echo "== 3. @references resolve =="

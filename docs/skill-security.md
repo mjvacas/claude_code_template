@@ -29,9 +29,12 @@ What a malicious or compromised artifact can do:
 
 Permission precedence is **`deny` > `ask` > `allow`**, a deny from *any* scope wins, and
 **nothing exceeds it** — not `allowed-tools`, not a hook returning `"allow"`, not
-autonomous invocation. A correct deny list is your jail. This template denies secret
-reads (`.env*`, keys, `secrets/`, `.aws/credentials`) and the never-needed exfil tools
-(`nc`, `ncat`, `telnet`) by default in `.claude/settings.json`.
+autonomous invocation. A correct deny list is your jail. This template denies the **Read
+tool** from secret files (`.env*`, keys, `secrets/`, `.aws/credentials`) and the never-needed
+exfil tools (`nc`, `ncat`, `telnet`) by default in `.claude/settings.json`. Caveat: a
+`Read(.env)` deny governs the Read tool, not the shell — it does **not** block `cat .env`,
+and Bash-pattern denies for reads are leaky. That's why the allow-list stays minimal (no
+blanket `cat`/`grep`/`find`) and why the OS sandbox is the real boundary for untrusted code.
 
 ## Trust controls Claude Code gives you
 

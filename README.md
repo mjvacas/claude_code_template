@@ -69,8 +69,9 @@ from outside this repo, vet it — see `docs/skill-security.md`. Quick tools:
 - `bash scripts/audit-config.sh <path>` — report what a skill/config actually does
   (dynamic execution, tool grants, egress/secret tokens) before you trust it.
 - `bash scripts/check-template.sh` — validate config integrity + secrets hygiene.
-- The default `settings.json` denies secret reads; `settings.lockdown.json.example`
-  adds network-egress denies for quarantining untrusted skills.
+- The default `settings.json` denies the Read tool from secret files and keeps the shell
+  allow-list minimal (so `cat .env` prompts rather than running unattended);
+  `settings.lockdown.json.example` adds network-egress denies for quarantining untrusted skills.
 - A `PreToolUse` hook (`.claude/hooks/block-dangerous.sh`) hard-blocks catastrophic shell
   commands (`rm -rf /`, `git reset --hard`, `git push --force`, pipe-to-shell, `dd`/`mkfs`).
   It's a safety net, **not** a sandbox — pair it with the lockdown overlay / OS sandbox.

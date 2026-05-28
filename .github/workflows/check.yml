@@ -1,8 +1,10 @@
 name: template-check
 
-# Validates template integrity + secrets hygiene on every push/PR. Deliberately runs
-# NO project build/test — it must never execute untrusted code from a fork PR. Keep it
-# that way; add language-specific CI in a separate, fork-safe workflow if you need it.
+# Validates template integrity + secrets hygiene on every push/PR. Runs NO project
+# build/test. It DOES run repo scripts (check-template.sh) + a downloaded scanner, so on a
+# PUBLIC repo a fork PR's edits to those execute on the runner — but `pull_request` gives a
+# read-only token with no secrets, limiting the blast radius. Don't switch to
+# pull_request_target, and don't add secret-bearing steps here.
 
 on: [push, pull_request]
 
@@ -31,7 +33,7 @@ jobs:
         run: |
           set -euo pipefail
           base="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
-          asset="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          asset="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"   # x64 matches ubuntu-latest; change for arm/self-hosted
           curl -sSfL "$base/$asset" -o "$asset"
           curl -sSfL "$base/gitleaks_${GITLEAKS_VERSION}_checksums.txt" -o checksums.txt
           grep "$asset" checksums.txt | sha256sum -c -   # fail closed if asset/hash missing

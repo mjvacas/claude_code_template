@@ -7,7 +7,7 @@ after you copy it into a new project.
 
 | Path | What it does | Customize? |
 |------|--------------|-----------|
-| `settings.json` | Permissions (deny secret reads, allow safe read-only commands), `defaultMode: acceptEdits`, a `SessionStart` hook. Committed, team-shared. | Yes — tune the allow list to your stack. |
+| `settings.json` | Permissions (Read-tool denies for secret files; a minimal shell allow-list — only `ls` + read-only `git`; `defaultMode: acceptEdits` **auto-applies file edits without prompting**), statusline, and SessionStart/PreToolUse/PreCompact hooks. Committed, team-shared. | Yes — add your build/test/lint to the allow list. |
 | `settings.local.json` | Your personal overrides. **Gitignored.** Copy `settings.local.json.example` to start. | Personal. |
 | `hooks/session-context.sh` | `SessionStart` hook: prints recent commits + working-tree status into context. Safe no-op outside git. | Optional — delete the hook entry in `settings.json` to disable. |
 | `hooks/block-dangerous.sh` | `PreToolUse(Bash)` guard: hard-blocks catastrophic commands (`rm -rf /`, `git reset --hard`, `git push --force`, pipe-to-shell, `dd`/`mkfs`, fork bomb) via exit 2. A safety net, **not** a sandbox. | Tune the pattern list to your needs. |
@@ -48,10 +48,13 @@ promote anything that matters into `AI_CONTEXT.md` with `/handoff`.
 
 ## Permissions
 
-`settings.json` denies reads of common secret files (`.env*`, `secrets/**`, keys) — these
-deny rules win over any allow. The allow list pre-approves safe, read-only inspection
-commands so you aren't prompted for them. Add your build/test/lint commands to the allow
-list (project-shared) or to `settings.local.json` (just you), e.g.:
+`settings.json` denies the **Read tool** from reading common secret files (`.env*`,
+`secrets/**`, keys) — these deny rules win over any allow. Note this governs the Read tool,
+not the shell: a `Read(.env)` deny does **not** stop `cat .env`. That's why the allow list
+is intentionally minimal — only `ls` and read-only `git` — so shell readers (`cat`, `grep`,
+`rg`, `find`) prompt instead of running unattended. (Bash-pattern denies for file reads are
+leaky; for a hard guarantee against untrusted code, use the sandbox.) Add your build/test/
+lint commands to the allow list (project-shared) or to `settings.local.json` (just you), e.g.:
 
 ```json
 {
@@ -68,8 +71,10 @@ Three layers, on by default — keep them in place (the self-check below enforce
 1. **`.gitignore`** ignores `.env*`, `*.pem`, `*.key`, `*.p12`, `id_rsa`/`id_ed25519`,
    `.aws/credentials`, and `secrets/` so they can't be committed. Commit only
    `*.example` variants (e.g. `.env.example`).
-2. **`settings.json` deny rules** stop Claude from *reading* those same files; a deny
-   always wins over an allow.
+2. **`settings.json` deny rules** block the *Read tool* (and the dedicated file tools) from
+   reading those files, and the shell allow-list omits `cat`/`grep`/`rg`/`find` so they
+   can't read a secret unattended either. (Bash-pattern denies aren't airtight — for untrusted
+   code the real boundary is the sandbox.)
 3. **`scripts/check-template.sh`** (run locally and in CI) fails if a secret-like file
    gets tracked, if obvious secret material (private keys, AWS keys, GitHub/Slack/Google
    tokens) appears in tracked content, or if either protection above is removed.
