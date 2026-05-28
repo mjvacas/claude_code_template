@@ -21,9 +21,21 @@ jobs:
       - name: Template self-check
         run: bash scripts/check-template.sh
       - name: Secret scan (gitleaks)
-        uses: gitleaks/gitleaks-action@v2
+        # Pinned, checksum-verified MIT CLI binary — NOT the gitleaks-action (which is
+        # proprietary, needs a license key for org repos, and phones home to keygen.sh).
+        # The binary makes no network/API calls, so it sidesteps token/permission issues.
+        # Bump GITLEAKS_VERSION to update; the matching checksums file ships with each
+        # release. See docs/skill-security.md.
         env:
-          # v2 requires a token to enumerate a PR's commits via the API. The built-in
-          # GITHUB_TOKEN is auto-provided; no secret setup needed (free for personal/public
-          # repos — org repos additionally need GITLEAKS_LICENSE).
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_VERSION: "8.30.1"
+        run: |
+          set -euo pipefail
+          base="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
+          asset="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfL "$base/$asset" -o "$asset"
+          curl -sSfL "$base/gitleaks_${GITLEAKS_VERSION}_checksums.txt" -o checksums.txt
+          grep "$asset" checksums.txt | sha256sum -c -   # fail closed if asset/hash missing
+          tar -xzf "$asset" gitleaks
+          chmod +x gitleaks
+          # Scan full git history (fetch-depth: 0 above); exits non-zero if a secret is found.
+          ./gitleaks git . --redact --no-banner --verbose
