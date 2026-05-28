@@ -16,6 +16,21 @@ fail=0
 ok()  { printf '  ok   %s\n' "$*"; }
 err() { printf '  FAIL %s\n' "$*"; fail=1; }
 
+# Files matching given globs: tracked files in a git repo (skips node_modules/.venv
+# etc. for free), else a pruned find fallback for a non-git checkout.
+list_files() {
+  if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    git ls-files -- "$@" ':!old/'
+  else
+    local args=() pat
+    for pat in "$@"; do args+=(-o -name "$pat"); done
+    find . \( -path './.git' -o -path '*/node_modules' -o -path '*/.venv' \
+      -o -path '*/venv' -o -path '*/dist' -o -path '*/build' \
+      -o -path './old' -o -path './.claude/snapshots' \) -prune -o \
+      \( "${args[@]:1}" \) -type f -print
+  fi
+}
+
 echo "== 1. JSON validity =="
 while IFS= read -r f; do
   if python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$f" 2>/dev/null; then
@@ -23,7 +38,7 @@ while IFS= read -r f; do
   else
     err "invalid JSON: $f"
   fi
-done < <(find . -not -path './.git/*' \( -name '*.json' -o -name '*.json.example' \) | sort)
+done < <(list_files '*.json' '*.json.example' | sort)
 
 echo "== 2. Shell scripts (hooks + statusline) =="
 scripts=$(ls .claude/hooks/*.sh .claude/statusline.sh 2>/dev/null || true)
@@ -37,29 +52,31 @@ else
 fi
 
 echo "== 3. @references resolve =="
-if ! python3 - <<'PY'
+if ! python3 - <(list_files '*.md') <<'PY'
 import os, re, sys
 ref_re = re.compile(r'(?:^|[\s(])@([A-Za-z0-9._\-/~]+)')
+with open(sys.argv[1], encoding='utf-8') as lf:
+    files = [ln.strip() for ln in lf if ln.strip()]
 broken, checked = [], 0
-for dp, _, fs in os.walk('.'):
-    if dp.startswith('./.git') or dp.startswith('./old') or dp.startswith('./.claude/snapshots'):
+for src in files:
+    try:
+        fh = open(src, encoding='utf-8', errors='ignore')
+    except OSError:
         continue
-    for fn in fs:
-        if not fn.endswith('.md'):
-            continue
-        src = os.path.join(dp, fn)
-        with open(src, encoding='utf-8', errors='ignore') as fh:
-            for line in fh:
-                for raw in ref_re.findall(line):
-                    ref = raw.rstrip('.')
-                    if '/' not in ref and '.' not in ref:   # not a path-like token
-                        continue
-                    if ref.startswith('~'):                  # home import; can't verify
-                        continue
-                    checked += 1
-                    cands = [ref, os.path.join(os.path.dirname(src), ref)]
-                    if not any(os.path.exists(c) for c in cands):
-                        broken.append((src, ref))
+    with fh:
+        for line in fh:
+            for raw in ref_re.findall(line):
+                ref = raw.rstrip('.')
+                if '/' not in ref and '.' not in ref:   # not a path-like token
+                    continue
+                if ref.startswith('~'):                  # home import; can't verify
+                    continue
+                if not os.path.splitext(os.path.basename(ref))[1]:  # package-style, e.g. @anthropic-ai/sdk
+                    continue
+                checked += 1
+                cands = [ref, os.path.join(os.path.dirname(src), ref)]
+                if not any(os.path.exists(c) for c in cands):
+                    broken.append((src, ref))
 for src, ref in broken:
     print(f"  FAIL @{ref}  (referenced in {src})")
 print(f"  checked {checked} reference(s); {len(broken)} broken")
@@ -70,7 +87,7 @@ then fail=1; fi
 echo "== 4. Secrets hygiene =="
 if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   secret_files=$(git ls-files \
-    | grep -E '(^|/)\.env($|\.)|\.pem$|\.p12$|\.pfx$|\.key$|(^|/)id_(rsa|ed25519)$|(^|/)\.aws/credentials$' \
+    | grep -E '(^|/)\.env($|\.)|\.pem$|\.p12$|\.pfx$|\.keystore$|\.key$|_key$|_secret$|(^|/)id_(rsa|ed25519)$|(^|/)\.aws/credentials$' \
     | grep -vE '\.example$' || true)
   if [ -n "$secret_files" ]; then
     err "secret-like files tracked by git:"; printf '       %s\n' $secret_files
@@ -79,7 +96,10 @@ if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   fi
 
   secret_re='-----BEGIN [A-Z ]*PRIVATE KEY-----|AKIA[0-9A-Z]{16}|ASIA[0-9A-Z]{16}|ghp_[0-9A-Za-z]{36}|xox[baprs]-[0-9A-Za-z-]{10,}|AIza[0-9A-Za-z_\-]{35}'
-  hits=$(git grep -nIE "$secret_re" -- ':!old/' ':!*.example' ':!scripts/check-template.sh' 2>/dev/null || true)
+  # -e marks the pattern explicitly; without it git grep reads the leading
+  # "-----BEGIN…" as an option and aborts (the scan would silently never run).
+  # cut redacts to file:line so a matched secret never lands in logs/CI output.
+  hits=$(git grep -nIE -e "$secret_re" -- ':!old/' ':!*.example' ':!scripts/check-template.sh' 2>/dev/null | cut -d: -f1,2 || true)
   if [ -n "$hits" ]; then
     err "possible secret material in tracked files:"; printf '       %s\n' "$hits"
   else
