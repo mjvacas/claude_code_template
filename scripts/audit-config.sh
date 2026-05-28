@@ -3,8 +3,12 @@
 # can vet a skill / command / agent / hook before trusting it.
 #
 # This is a REVIEW AID for a human, not a pass/fail gate: legitimate config trips
-# many of these checks (e.g. our own hooks use git). Read the report, then decide.
-# Pairs with docs/skill-security.md (the vetting checklist).
+# many of these checks (our own commands use `!`git ...`` and our hooks mention curl).
+# Read the report, then decide. Pairs with docs/skill-security.md (the checklist).
+#
+# Handles arbitrary filenames safely (spaces/newlines via -print0) and scans EVERY
+# file regardless of extension, so a payload can't hide behind an odd name (`evil cmd.md`)
+# or an unusual/absent extension (`setup.ts`, an extensionless binary).
 #
 # Usage:
 #   scripts/audit-config.sh [PATH]            # default: .claude
@@ -21,32 +25,63 @@ target="${1:-.claude}"
 high=0
 hdr() { printf '\n=== %s ===\n' "$*"; }
 
-md_files=$(find "$target" -type f -name '*.md' 2>/dev/null)
-script_files=$(find "$target" -type f \( -name '*.sh' -o -name '*.py' -o -name '*.js' -o -name '*.rb' \) 2>/dev/null)
-json_files=$(find "$target" -type f \( -name 'settings*.json' -o -name 'settings*.json.example' \) 2>/dev/null)
+# Binary = has a NUL byte or >30% non-printable bytes in the first 8KB. Catches compiled
+# binaries (NUL-heavy) and high-entropy blobs; tolerant of normal UTF-8 text/source.
+is_binary() {
+  python3 - "$1" <<'PY' 2>/dev/null
+import sys
+try:
+    d = open(sys.argv[1], "rb").read(8192)
+except Exception:
+    sys.exit(1)
+if not d:
+    sys.exit(1)
+nonprint = sum(b == 0 or b < 9 or 13 < b < 32 or b > 126 for b in d)
+sys.exit(0 if (b"\x00" in d or nonprint > len(d) * 0.30) else 1)
+PY
+}
 
-hdr "1. Dynamic shell execution  [HIGH: runs at load time, before the model sees output]"
-if grep -rnE '!`[^`]+`|^```!' $md_files /dev/null 2>/dev/null; then high=1; else echo "  none"; fi
+# --- 1. Inventory: every file with perms, flagging executables and (unreviewable) binaries.
+hdr "1. Files  [exec = gets run; BINARY = can't be reviewed by eye -> HIGH]"
+n_files=0
+while IFS= read -r -d '' f; do
+  n_files=$((n_files + 1))
+  mark="-"
+  [ -x "$f" ] && mark="exec"
+  if is_binary "$f"; then
+    mark="BINARY"; high=1                 # non-text: unreviewable -> HIGH
+  fi
+  printf '  %-7s %s\n' "[$mark]" "$(ls -ldh -- "$f" 2>/dev/null)"
+done < <(find "$target" -type f -print0 2>/dev/null)
+[ "$n_files" -eq 0 ] && echo "  (no files)"
 
-hdr "2. Tool pre-approvals  (allowed-tools: suppresses per-call prompts while active)"
-grep -rniE '^allowed-tools:' $md_files /dev/null 2>/dev/null || echo "  none"
+# --- 2. Dynamic shell execution: runs at LOAD time, before the model sees output.
+hdr "2. Dynamic shell execution  [HIGH]"
+if grep -rnIE '!`[^`]+`|^```!' -- "$target" 2>/dev/null; then high=1; else echo "  none"; fi
 
-hdr "3. Model-invocable skills/commands  (can self-trigger; no disable-model-invocation)"
-found3=0
-for f in $md_files; do
+# --- 3. Tool pre-approvals (allowed-tools: suppresses per-call prompts while active).
+hdr "3. Tool pre-approvals (allowed-tools:)"
+grep -rniE '^allowed-tools:' -- "$target" 2>/dev/null || echo "  none"
+
+# --- 4. Model-invocable skills/commands (can self-trigger; no disable-model-invocation).
+hdr "4. Model-invocable skills/commands"
+found=0
+while IFS= read -r -d '' f; do
   case "$f" in
     */skills/*|*/commands/*)
-      grep -qiE '^disable-model-invocation:[[:space:]]*true' "$f" || { echo "  $f"; found3=1; } ;;
+      grep -qiE '^disable-model-invocation:[[:space:]]*true' -- "$f" 2>/dev/null \
+        || { echo "  $f"; found=1; } ;;
   esac
-done
-[ "$found3" -eq 0 ] && echo "  none"
+done < <(find "$target" -type f -name '*.md' -print0 2>/dev/null)
+[ "$found" -eq 0 ] && echo "  none"
 
-hdr "4. Bundled scripts / executables under the config path"
-if [ -n "$script_files" ]; then printf '  %s\n' $script_files; else echo "  none"; fi
-
+# --- 5. Hook commands configured in settings.
 hdr "5. Hook commands configured in settings"
-if [ -n "$json_files" ]; then
-  for s in $json_files; do
+settings=()
+while IFS= read -r -d '' s; do settings+=("$s"); done \
+  < <(find "$target" -type f \( -name 'settings*.json' -o -name 'settings*.json.example' \) -print0 2>/dev/null)
+if [ "${#settings[@]}" -gt 0 ]; then
+  for s in "${settings[@]}"; do
     python3 - "$s" <<'PY' || true
 import json, sys
 p = sys.argv[1]
@@ -69,12 +104,13 @@ else
   echo "  (no settings files in path)"
 fi
 
-hdr "6. Sensitive tokens  [HIGH: network egress, secret access, code-gen]"
+# --- 6. Sensitive tokens: network egress, secret access, code-gen. Scans ALL files.
+hdr "6. Sensitive tokens  [HIGH]"
 danger='curl|wget|netcat|ncat|telnet|/dev/tcp|base64|https?://|/\.ssh|/\.aws|id_rsa|id_ed25519|credentials|/\.env|secrets/'
-if grep -rniE "$danger" $md_files $script_files /dev/null 2>/dev/null; then high=1; else echo "  none"; fi
+if grep -rnIE "$danger" -- "$target" 2>/dev/null; then high=1; else echo "  none"; fi
 
 echo
-echo "Reviewed: $(printf '%s\n' $md_files $script_files $json_files | grep -c . ) file(s) under '$target'."
+echo "Reviewed $n_files file(s) under '$target'."
 echo "Reminder: this reports; YOU decide. See docs/skill-security.md."
 if [ "$strict" -eq 1 ] && [ "$high" -eq 1 ]; then
   echo "STRICT: high-signal findings present -> exit 1"; exit 1
