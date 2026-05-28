@@ -1,8 +1,30 @@
 # Claude Code — personal / machine-local, never commit
 .claude/settings.local.json
 CLAUDE.local.md
+# Live MCP config — may carry tokens / point at local paths. Commit only .mcp.json.example.
+.mcp.json
+# Pre-compaction context snapshots (raw conversation tails) — machine-local, never commit.
+.claude/snapshots/
+
+# Secrets / credentials — never commit (keep .example variants for templating)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+id_rsa
+id_ed25519
+.aws/credentials
+secrets/
 
 # Native auto-memory lives under ~/.claude/projects/<project>/memory/ (outside the
 # repo, machine-local) — nothing to ignore here, noted so it isn't re-created in-repo.
+
+# Local security-scan output (CodeQL / Semgrep — see docs/skill-security.md)
+*.sarif
+.codeql-db/
 
 # Append your project's own ignores below (node_modules/, dist/, .venv/, etc.)

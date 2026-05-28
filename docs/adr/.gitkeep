@@ -1,0 +1,3 @@
+# Architecture Decision Records live here. Create one with `/adr "<title>"`
+# (copies templates/ADR-template.md → docs/adr/ADR-NNN-<slug>.md). This file
+# only keeps the otherwise-empty directory in git; delete it once a real ADR exists.

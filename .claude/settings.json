@@ -28,10 +28,33 @@
       "Read(**/credentials*)",
       "Read(**/*.pem)",
       "Read(**/id_rsa)",
-      "Read(**/id_ed25519)"
+      "Read(**/id_ed25519)",
+      "Read(**/*.key)",
+      "Read(**/*.p12)",
+      "Read(**/.aws/credentials)",
+      "Bash(nc:*)",
+      "Bash(ncat:*)",
+      "Bash(telnet:*)"
     ]
   },
+  "statusLine": {
+    "type": "command",
+    "command": "\"$CLAUDE_PROJECT_DIR/.claude/statusline.sh\""
+  },
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR/.claude/hooks/block-dangerous.sh\"",
+            "statusMessage": "Checking command safety...",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
     "SessionStart": [
       {
         "matcher": "startup|resume",
@@ -41,6 +64,19 @@
             "command": "\"$CLAUDE_PROJECT_DIR/.claude/hooks/session-context.sh\"",
             "statusMessage": "Loading recent repo activity...",
             "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "auto|manual",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR/.claude/hooks/precompact-snapshot.sh\"",
+            "statusMessage": "Snapshotting context before compaction...",
+            "timeout": 15
           }
         ]
       }
