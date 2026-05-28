@@ -12,11 +12,14 @@ keep you updated on the fix.
 
 ## Scope
 
-This is a project template. The relevant attack surface is the **AI-config trust model** —
-skills, slash commands, subagents, hooks, and MCP servers are code that runs on your
-machine. The threat model, vetting checklist, and the deny-list backstop are documented in
-[`docs/skill-security.md`](docs/skill-security.md). Before adopting anything from outside
-your own repo, run `bash scripts/audit-config.sh <path>` and review it.
+> Customize this section for your project — the services, endpoints, and data it handles.
+
+Because this project is built from the Claude Code template, the **AI-config trust model**
+is part of the attack surface — skills, slash commands, subagents, hooks, and MCP servers
+are code that runs on your machine. The threat model, vetting checklist, and the deny-list
+backstop are documented in [`docs/skill-security.md`](docs/skill-security.md). Before
+adopting anything from outside your own repo, run `bash scripts/audit-config.sh <path>`
+and review it.
 
 ## Secrets
 
