@@ -9,6 +9,10 @@
 #   3. Every @reference in *.md resolves to a real file
 #   4. Secrets hygiene: no secret files tracked, no obvious secret material in
 #      tracked content, and the protections (.gitignore + settings deny) are present
+#   5. Safety guard + scaffolding: PreToolUse dangerous-command hook is wired,
+#      and the directories the commands/CLAUDE.md reference exist
+#   6. Posture invariants: the specific deny/.gitignore/regex lines that have
+#      silently regressed in the past (e.g. via an unrebased branch) stay present
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 
@@ -131,6 +135,50 @@ fi
 for d in docs/adr docs/summaries; do
   if [ -d "$d" ]; then ok "$d/ exists"; else err "missing directory: $d"; fi
 done
+
+echo "== 6. Posture invariants (silent-regression defense) =="
+# Assert the specific posture lines that have been silently regressable in the
+# past (e.g. a docs-titled branch forked off pre-hardening main, never rebased,
+# whose diff against main looked like deletions of deny-list / redaction lines).
+# These checks ensure those exact protections stay present.
+if ! python3 - <<'PY'
+import json, re, sys
+posture_fail = 0
+def ok(m): print(f"  ok   {m}")
+def err(m):
+    global posture_fail
+    posture_fail = 1
+    print(f"  FAIL {m}")
+
+deny = set(json.load(open('.claude/settings.json'))['permissions']['deny'])
+for pat in ('**/*_key', '**/*_secret', '**/*.pfx', '**/*.keystore'):
+    glob = f'Read({pat})'
+    (ok if glob in deny else err)(f"settings.json deny includes {glob}")
+
+gi = open('.gitignore').read()
+for pat in ('*_key', '*_secret'):
+    if re.search(rf'^{re.escape(pat)}\s*$', gi, re.M):
+        ok(f".gitignore contains {pat}")
+    else:
+        err(f".gitignore missing {pat}")
+
+src = open('scripts/check-template.sh').read()
+re_markers = ['_key$', '_secret$', r'\.keystore$']
+missing = [m for m in re_markers if m not in src]
+if missing:
+    err(f"check-template.sh secret_files regex missing: {', '.join(missing)}")
+else:
+    ok("check-template.sh secret_files regex covers _key/_secret/.keystore")
+
+for marker, name in [
+    ('git grep -nIE -e "$secret_re"', 'check-template.sh secret-content scan uses -e (otherwise silently never runs)'),
+    ('cut -d: -f1,2', 'check-template.sh secret-content scan redacts matches to file:line'),
+]:
+    (ok if marker in src else err)(name)
+
+sys.exit(posture_fail)
+PY
+then fail=1; fi
 
 echo
 if [ "$fail" -ne 0 ]; then echo "RESULT: FAIL"; exit 1; fi
