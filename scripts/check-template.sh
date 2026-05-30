@@ -9,6 +9,10 @@
 #   3. Every @reference in *.md resolves to a real file
 #   4. Secrets hygiene: no secret files tracked, no obvious secret material in
 #      tracked content, and the protections (.gitignore + settings deny) are present
+#   5. Safety guard + scaffolding: PreToolUse dangerous-command hook is wired,
+#      and the directories the commands/CLAUDE.md reference exist
+#   6. Posture invariants: the specific deny/.gitignore/regex lines that have
+#      silently regressed in the past (e.g. via an unrebased branch) stay present
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 
@@ -120,6 +124,31 @@ else
   err "settings.json deny list does not cover .env reads"
 fi
 
+# Local secret-bearing files (when present at the repo root) should be owner-only
+# (mode 600). Mirrors the .gitignore / settings.json deny patterns at the
+# filesystem-ACL layer. Silent when no matching files exist — template repos and
+# most CI checkouts have none. Root-level only; adopters with deeper layouts
+# (e.g. `secrets/`) can extend the patterns list.
+# Save and restore nullglob so we don't disturb a caller that had it on (the script
+# is meant to be executed, not sourced, but `shopt -p` is the bash-idiomatic safe form).
+shopt_saved=$(shopt -p nullglob)
+shopt -s nullglob
+for pattern in '.env' '.env.*' '.mcp.json' '.claude/settings.local.json' \
+               '*.pem' '*.key' '*.p12' '*.pfx' '*.keystore' \
+               '*_key' '*_secret' 'id_rsa' 'id_ed25519'; do
+  for path in $pattern; do
+    [ -f "$path" ] || continue
+    case "$path" in *.example) continue ;; esac
+    mode=$(stat -f '%Lp' "$path" 2>/dev/null || stat -c '%a' "$path" 2>/dev/null || echo "?")
+    if [ "$mode" = "600" ]; then
+      ok "$path mode is 600"
+    else
+      err "$path mode is $mode (expected 600 — chmod 600 $path)"
+    fi
+  done
+done
+eval "$shopt_saved"
+
 echo "== 5. Safety guard + scaffolding =="
 # The PreToolUse guard must stay wired (deleting the script or the wiring is caught here).
 if python3 -c "import json; d=json.load(open('.claude/settings.json')); pt=d.get('hooks',{}).get('PreToolUse',[]); raise SystemExit(0 if any('block-dangerous' in h.get('command','') for g in pt for h in g.get('hooks',[])) else 1)" 2>/dev/null; then
@@ -131,6 +160,50 @@ fi
 for d in docs/adr docs/summaries; do
   if [ -d "$d" ]; then ok "$d/ exists"; else err "missing directory: $d"; fi
 done
+
+echo "== 6. Posture invariants (silent-regression defense) =="
+# Assert the specific posture lines that have been silently regressable in the
+# past (e.g. a docs-titled branch forked off pre-hardening main, never rebased,
+# whose diff against main looked like deletions of deny-list / redaction lines).
+# These checks ensure those exact protections stay present.
+if ! python3 - <<'PY'
+import json, re, sys
+posture_fail = 0
+def ok(m): print(f"  ok   {m}")
+def err(m):
+    global posture_fail
+    posture_fail = 1
+    print(f"  FAIL {m}")
+
+deny = set(json.load(open('.claude/settings.json'))['permissions']['deny'])
+for pat in ('**/*_key', '**/*_secret', '**/*.pfx', '**/*.keystore'):
+    glob = f'Read({pat})'
+    (ok if glob in deny else err)(f"settings.json deny includes {glob}")
+
+gi = open('.gitignore').read()
+for pat in ('*_key', '*_secret'):
+    if re.search(rf'^{re.escape(pat)}\s*$', gi, re.M):
+        ok(f".gitignore contains {pat}")
+    else:
+        err(f".gitignore missing {pat}")
+
+src = open('scripts/check-template.sh').read()
+re_markers = ['_key$', '_secret$', r'\.keystore$']
+missing = [m for m in re_markers if m not in src]
+if missing:
+    err(f"check-template.sh secret_files regex missing: {', '.join(missing)}")
+else:
+    ok("check-template.sh secret_files regex covers _key/_secret/.keystore")
+
+for marker, name in [
+    ('git grep -nIE -e "$secret_re"', 'check-template.sh secret-content scan uses -e (otherwise silently never runs)'),
+    ('cut -d: -f1,2', 'check-template.sh secret-content scan redacts matches to file:line'),
+]:
+    (ok if marker in src else err)(name)
+
+sys.exit(posture_fail)
+PY
+then fail=1; fi
 
 echo
 if [ "$fail" -ne 0 ]; then echo "RESULT: FAIL"; exit 1; fi

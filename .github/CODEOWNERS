@@ -1,0 +1,18 @@
+# Security-critical posture — any change must be explicitly reviewed.
+#
+# This file declares ownership. Enforcement requires the branch-protection rule
+# "Require review from Code Owners" on `main` (Settings → Branches → main → Require
+# a pull request before merging → Require review from Code Owners). Without that
+# toggle, this file is documentary, not enforcing.
+#
+# Pair with `scripts/check-template.sh` section 6 (posture invariants) — CODEOWNERS
+# is the review-time layer; section 6 is the CI-time layer. Together they close the
+# silent-revert risk class (an unrebased branch whose PR diff looks like deletions of
+# deny-list / redaction lines).
+
+.gitignore                @mjvacas
+SECURITY.md               @mjvacas
+.claude/settings.json     @mjvacas
+.claude/hooks/            @mjvacas
+scripts/check-template.sh @mjvacas
+scripts/audit-config.sh   @mjvacas

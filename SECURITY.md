@@ -26,3 +26,15 @@ and review it.
 Never commit secrets. `.gitignore` and the `settings.json` deny-list block the common
 cases, and `scripts/check-template.sh` (also run in CI) fails on tracked secret material.
 Keep real secrets in environment variables or an untracked `.env`.
+
+After creating any local secret-bearing file — `.env` / `.env.*`, `.mcp.json`,
+`.claude/settings.local.json`, private keys (`*.pem`, `*.key`, `id_rsa`, etc.),
+or extensionless `*_key` / `*_secret` files — run `chmod 600 <path>` to restrict it
+to your user. Defends against shared-machine readers, lax backup tools, and SDKs
+(`gcloud`, `ssh`) that refuse to load files with permissive modes. The self-check
+asserts this for any of these patterns it finds at the repo root.
+
+The `*.key` pattern targets **private** keys (public keys are conventionally `*.pub`
+or `*.crt`). A non-secret file with a `.key` suffix at the repo root will FAIL the
+mode check by design — fail-closed treats any `.key` as sensitive until you rename it
+or move it out of the patterns' reach.
