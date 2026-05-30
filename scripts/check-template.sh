@@ -129,6 +129,9 @@ fi
 # filesystem-ACL layer. Silent when no matching files exist — template repos and
 # most CI checkouts have none. Root-level only; adopters with deeper layouts
 # (e.g. `secrets/`) can extend the patterns list.
+# Save and restore nullglob so we don't disturb a caller that had it on (the script
+# is meant to be executed, not sourced, but `shopt -p` is the bash-idiomatic safe form).
+shopt_saved=$(shopt -p nullglob)
 shopt -s nullglob
 for pattern in '.env' '.env.*' '.mcp.json' '.claude/settings.local.json' \
                '*.pem' '*.key' '*.p12' '*.pfx' '*.keystore' \
@@ -144,7 +147,7 @@ for pattern in '.env' '.env.*' '.mcp.json' '.claude/settings.local.json' \
     fi
   done
 done
-shopt -u nullglob
+eval "$shopt_saved"
 
 echo "== 5. Safety guard + scaffolding =="
 # The PreToolUse guard must stay wired (deleting the script or the wiring is caught here).
