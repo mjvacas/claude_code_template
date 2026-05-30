@@ -124,6 +124,28 @@ else
   err "settings.json deny list does not cover .env reads"
 fi
 
+# Local secret-bearing files (when present at the repo root) should be owner-only
+# (mode 600). Mirrors the .gitignore / settings.json deny patterns at the
+# filesystem-ACL layer. Silent when no matching files exist — template repos and
+# most CI checkouts have none. Root-level only; adopters with deeper layouts
+# (e.g. `secrets/`) can extend the patterns list.
+shopt -s nullglob
+for pattern in '.env' '.env.*' '.mcp.json' '.claude/settings.local.json' \
+               '*.pem' '*.key' '*.p12' '*.pfx' '*.keystore' \
+               '*_key' '*_secret' 'id_rsa' 'id_ed25519'; do
+  for path in $pattern; do
+    [ -f "$path" ] || continue
+    case "$path" in *.example) continue ;; esac
+    mode=$(stat -f '%Lp' "$path" 2>/dev/null || stat -c '%a' "$path" 2>/dev/null || echo "?")
+    if [ "$mode" = "600" ]; then
+      ok "$path mode is 600"
+    else
+      err "$path mode is $mode (expected 600 — chmod 600 $path)"
+    fi
+  done
+done
+shopt -u nullglob
+
 echo "== 5. Safety guard + scaffolding =="
 # The PreToolUse guard must stay wired (deleting the script or the wiring is caught here).
 if python3 -c "import json; d=json.load(open('.claude/settings.json')); pt=d.get('hooks',{}).get('PreToolUse',[]); raise SystemExit(0 if any('block-dangerous' in h.get('command','') for g in pt for h in g.get('hooks',[])) else 1)" 2>/dev/null; then
