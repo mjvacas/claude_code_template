@@ -114,4 +114,10 @@ the `/session-start` and `/handoff` commands link to it as `@templates/AI_SESSIO
 Copy it into your own project and adapt the command names and paths to match your setup.
 *Example:* if you relocate this guide to `docs/`, also rewrite the two
 `@templates/AI_SESSION_START.md` references in `.claude/commands/session-start.md` and
-`handoff.md` to `@docs/AI_SESSION_START.md`.
+`handoff.md` to `@docs/AI_SESSION_START.md`. Portable across BSD/macOS and GNU sed:
+
+```bash
+sed -i.bak 's|@templates/AI_SESSION_START\.md|@docs/AI_SESSION_START.md|' \
+  .claude/commands/session-start.md .claude/commands/handoff.md \
+  && rm .claude/commands/session-start.md.bak .claude/commands/handoff.md.bak
+```
