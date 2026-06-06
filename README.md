@@ -89,3 +89,60 @@ practices as runnable skills and reviewer rules:
 - **`code-reviewer`** subagent — reviews diffs for surgical scope, simplicity, and duplication.
 
 See `docs/claude-code-setup.md` for the full tour.
+
+## Acknowledgements
+
+This template builds on patterns and ideas from a number of projects and
+standards.
+
+- **Anthropic Claude Code** — the platform this template extends; settings,
+  hooks, commands, agents, and skills follow its conventions.
+- **[multica-ai/andrej-karpathy-skills](https://github.com/multica-ai/andrej-karpathy-skills)**
+  — Andrej Karpathy's engineering-discipline practices; the behavioral
+  guidelines in `CLAUDE.md` (think-before-coding, simplicity-first,
+  surgical-changes, goal-driven-execution) trace to this collection.
+- **[Keep a Changelog](https://keepachangelog.com)** — the `CHANGELOG.md`
+  format (date-stamped rather than semver, since templates aren't versioned).
+- **Security posture standards** — specific patterns trace to specific sources:
+  - **Deny-list (Read + Bash)** in `.claude/settings.json`:
+    [OWASP Top 10 Proactive Controls — C5 "Secure by Default"](https://top10proactive.owasp.org/the-top-10/c5-secure-by-default/).
+    The "deny by default, allowlist what's needed" principle; the deny
+    entries cannot be overridden by the model.
+  - **`chmod 600` enforcement** (asserted by `scripts/check-template.sh`
+    section 4):
+    [CIS Distribution Independent Linux Benchmark §5.3.2 (SSH Private Host
+    Key File Permissions)](https://www.tenable.com/audits/items/CIS_Amazon_Linux_2_v2.0.0_L1.audit:078b3bdba9f168f66df57226c9ac50df).
+    Extends CIS's `0600` mandate for SSH keys to all 13 local
+    secret-bearing patterns (`.env`, `*.pem`, `*.key`, `id_rsa`, etc.).
+  - **Cryptographic key handling:**
+    [NIST SP 800-57 Part 1 Rev. 5 (Key Management)](https://csrc.nist.gov/pubs/sp/800/57/pt1/r5/final).
+    Protection-of-keys principle informing both the Read-deny on key
+    files and the `chmod 600` enforcement.
+  - **Dangerous-command guard** (`.claude/hooks/block-dangerous.sh`):
+    general defense-in-depth. No canonical standard mandates the specific
+    regex patterns; the guard is operational hardening, documented in
+    this repo as "a safety net, not a sandbox."
+- **[Architecture Decision Records](https://adr.github.io/)** — Michael
+  Nygard's ADR concept; `templates/ADR-template.md` follows the standard
+  Status / Context / Decision / Consequences / Alternatives shape.
+
+Real-world feedback:
+
+- **[nulog](https://github.com/mjvacas/nulog)** — first downstream adopter;
+  its review surfaced the issues that drove the security-hardening series
+  (PRs #3–#6) and the adoption infrastructure (`docs/ADOPTING.md` +
+  `VENDORED.md`).
+
+## Related templates
+
+Other Claude Code template projects worth knowing about. Reviewed during
+this template's design — for comparison, not borrowed from. If a deeper
+adoption review surfaces specific patterns worth incorporating, those
+will be credited under Acknowledgements at that time.
+
+- **[scotthavird/claude-code-template](https://github.com/scotthavird/claude-code-template)**
+  — functional-category approach (slash commands, skills, hooks, CI/CD)
+  with feature counts; bias toward wholesale fork.
+- **[davila7/claude-code-templates](https://github.com/davila7/claude-code-templates)**
+  — NPM CLI installer + web dashboard for component discovery; selective
+  adoption via `--agent`, `--command`, `--mcp` flags.
