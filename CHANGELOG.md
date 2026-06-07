@@ -72,10 +72,6 @@ date-stamped — this template isn't versioned. Convention validated against
   carry `/* */` and `//` comments. Strict `json.load` was failing
   these and blocking adoption for any project that ships them (e.g.
   Vite + TS frontends).
-- **`.gitignore`: anchored `/secrets/`** (was unanchored `secrets/`).
-  Matches the same root-level `secrets/` directory adopters intend,
-  but without the visual ambiguity that would otherwise match nested
-  `*/secrets/` directories by pattern.
 
 ### Removed
 - **`templates/LLM_APP_DEVELOPMENT_BEST_PRACTICES.md`** (826 lines):
