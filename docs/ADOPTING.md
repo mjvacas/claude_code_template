@@ -43,7 +43,7 @@ below doesn't apply.
   `code-reviewer`). Replaces the `code-reviewer` agent this template
   previously shipped; richer specialization, maintained upstream.
 
-### Discovery
+### Plugin discovery
 
 For project-specific plugins beyond the baseline, the session reviews
 the user's tech stack + domain + working style, then searches
@@ -58,7 +58,28 @@ it) for matches. For each candidate, the session surfaces:
 User picks. Session installs (`claude plugin install <name>@<marketplace>`)
 and records selections in `VENDORED.md` under "Installed plugins".
 
-### Vetting rubric (community plugins only)
+### MCP server discovery
+
+The Claude Code plugin marketplaces aren't the only source of useful
+extensions. The broader MCP ecosystem (canonical index:
+[`modelcontextprotocol/servers`](https://github.com/modelcontextprotocol/servers))
+hosts standalone MCP servers (Postgres, Slack, Filesystem, GitHub,
+Brave Search, etc.) that adopters install via `.mcp.json` directly —
+no plugin wrapper.
+
+After plugin discovery, the session also proposes relevant standalone
+MCP servers based on the user's stack + integration needs. For each
+candidate, the session surfaces the same vetting info as for community
+plugins (license, named maintainer, recency) and requests explicit user
+approval before adding.
+
+User picks. Selected MCP servers go into the project's `.mcp.json` (see
+`.mcp.json.example` for the committed-template shape — `.mcp.json`
+itself is typically gitignored, since it can hold per-developer
+credentials). MCP servers are separate from `VENDORED.md`'s "Installed
+plugins" section — they're a different distribution model.
+
+### Vetting rubric (community plugins and MCP servers)
 
 Default-deny. To accept a community plugin, the session must confirm:
 
@@ -70,6 +91,23 @@ Default-deny. To accept a community plugin, the session must confirm:
 
 Surface ambiguous cases rather than auto-install. Anthropic-official
 plugins (the baseline) are trusted by default and don't need this rubric.
+
+### Activation caveat (silent-failure trap)
+
+After `claude plugin install <plugin>@<marketplace>`, the plugin appears
+in `claude plugin list` but its hooks, agents, and skills do **not**
+bind to the currently-active session until one of:
+
+- The user runs `/reload-plugins` (slash command — only the user can
+  type it; the AI session can't invoke slash commands directly).
+- The session restarts.
+
+**Why this matters during adoption.** The procedures below install
+baseline plugins, then later run verification + commit the adoption.
+If `/reload-plugins` is skipped, the just-installed plugins won't
+review the adoption commit — they'll be active from the *next* session
+start onward, so future commits in the repo get reviewed normally, but
+the adoption commit itself ships unreviewed.
 
 ## First-time adoption
 
@@ -100,11 +138,20 @@ The session will:
    contact).
 6. Copy each **skeleton** file and fill placeholders from the user's
    answers.
-7. **Install baseline plugins** per [Plugins](#plugins). Default-install
-   both (`security-guidance`, `pr-review-toolkit`) at user scope; ask the
-   user to opt out per plugin.
-8. **Run plugin discovery** per [Plugins](#plugins). Surface candidates
-   for the user's project; install accepted at the user's chosen scope.
+7. **Install baseline plugins** per [Plugins](#plugins). First check
+   `claude plugin list`; for any baseline already installed at user
+   scope, confirm it's enabled and skip — no re-install or re-prompt.
+   For baselines not yet installed, default-install at user scope; ask
+   the user to opt out per *missing* plugin. **If any were installed,
+   prompt the user to run `/reload-plugins`** so hooks/agents bind to
+   this session (see
+   [Activation caveat](#activation-caveat-silent-failure-trap));
+   skipping means the adoption commit ships without plugin review.
+8. **Run plugin + MCP discovery** per [Plugins](#plugins). Surface
+   plugin and standalone MCP-server candidates for the user's project;
+   install accepted plugins at the user's chosen scope and add accepted
+   MCP servers to `.mcp.json`. Prompt for `/reload-plugins` again if
+   any plugins were installed.
 9. Create `VENDORED.md` at repo root (see [Source-pin manifest](#source-pin-manifest)),
    including the "Installed plugins" section listing baseline + discovered.
 10. Run `bash scripts/check-template.sh` and
@@ -135,9 +182,12 @@ The session will:
 5. For conflicting paths, apply the user's resolutions.
 6. **Detect already-installed plugins** via `claude plugin list`. For any
    baseline plugin not yet installed, prompt the user to opt in (default
-   install). Don't double-suggest what's already there.
-7. **Run plugin discovery** per [Plugins](#plugins), excluding plugins
-   already installed.
+   install). Don't double-suggest what's already there. **If any were
+   installed, prompt the user to run `/reload-plugins`** (see
+   [Activation caveat](#activation-caveat-silent-failure-trap)).
+7. **Run plugin + MCP discovery** per [Plugins](#plugins), excluding
+   plugins and MCP servers already installed/configured. Prompt for
+   `/reload-plugins` again if any plugins were installed.
 8. Create or update `VENDORED.md` (existing repos may already have one
    from a prior adoption; merge entries). Includes the "Installed plugins"
    section.
@@ -284,8 +334,11 @@ The session will:
 4. **Check baseline plugins** (`claude plugin list`) — install any
    baseline newly recommended by the template (per upstream
    [Plugins](#plugins)) and not yet installed; prompt opt-in per plugin.
-5. **Re-run discovery** for any plugins newly relevant to the project
-   (new project areas, new ecosystem entries since last sync).
+   **If any were installed, prompt the user to run `/reload-plugins`**
+   (see [Activation caveat](#activation-caveat-silent-failure-trap)).
+5. **Re-run plugin + MCP discovery** for anything newly relevant to the
+   project (new project areas, new ecosystem entries since last sync).
+   Prompt for `/reload-plugins` again if any plugins were installed.
 6. Propose specific diffs for each changed file; ask the user to approve,
    modify, or skip each.
 7. Apply approved changes; bump the SHA(s) in `VENDORED.md`; update the
