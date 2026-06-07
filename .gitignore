@@ -20,7 +20,7 @@ CLAUDE.local.md
 id_rsa
 id_ed25519
 .aws/credentials
-secrets/
+/secrets/
 
 # Native auto-memory lives under ~/.claude/projects/<project>/memory/ (outside the
 # repo, machine-local) — nothing to ignore here, noted so it isn't re-created in-repo.

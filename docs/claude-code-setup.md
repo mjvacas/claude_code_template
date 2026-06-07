@@ -123,8 +123,9 @@ The `.claude/` commands and skills are deliberately short and *reference* the de
 write-ups so nothing is duplicated:
 
 - `templates/AI_SESSION_START.md` — full session onboarding + handoff procedure.
-- `templates/LLM_APP_DEVELOPMENT_BEST_PRACTICES.md` — context preservation, prompting,
-  architecture, testing/validation patterns.
+- `.claude/skills/{verify-refactor,tune-parameters,llm-eval}/SKILL.md` — each carries
+  its own inline rationale (golden-output diffing; surface-shape parameter tuning;
+  ground-truth accuracy harness).
 
 These are loaded on demand (when a command/skill references them), not on every session,
 which keeps the always-loaded context lean.

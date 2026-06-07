@@ -36,7 +36,14 @@ list_files() {
 }
 
 echo "== 1. JSON validity =="
+# Skip files conventionally written as JSONC (legal `/* */` and `//` comments):
+# tsconfig*.json (Vite + TS, Next.js, etc.) and .vscode/*.json. Strict json.load
+# fails on these, which would block adoption for any project that ships them.
 while IFS= read -r f; do
+  case "$f" in
+    .vscode/*.json|*/.vscode/*.json) ok "$f (skipped: JSONC by convention)"; continue ;;
+    tsconfig.json|tsconfig.*.json|*/tsconfig.json|*/tsconfig.*.json) ok "$f (skipped: JSONC by convention)"; continue ;;
+  esac
   if python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$f" 2>/dev/null; then
     ok "$f"
   else

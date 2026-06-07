@@ -199,6 +199,16 @@ adopting into), with this template available at a path like
 > Especially valuable for the existing-repo procedure, which has more
 > merge decisions and more pre-existing state to reconcile.
 
+> **If your repo already maintains a `docs/adr/` series**, vendor template
+> ADRs into a sub-namespace — `docs/claude-code-template/` or
+> `docs/adr/_upstream/` are both common — to avoid numbering collisions.
+> The template ships `ADR-001-vendor-with-source-pin.md` and
+> `ADR-002-ai-context-archive-threshold.md`; vendoring those naïvely into
+> a repo with its own ADR-001 silently corrupts the adopter's ADR sequence.
+> Patch the inline references in `templates/AI_SESSION_START.md` (and any
+> other vendored docs that cross-link to template ADRs) to the
+> sub-namespace path you chose.
+
 ### New repo (or near-empty)
 
 Bias: generous adoption.
@@ -221,30 +231,40 @@ The session will:
    contact).
 6. Copy each **skeleton** file and fill placeholders from the user's
    answers.
-7. **Repoint `@templates/...` references.** Seven `@`-refs across six
-   files in `.claude/commands/` and `.claude/skills/` point at
-   `@templates/...`. If this adoption relocated or stripped `templates/`,
-   repoint each match to the local layout. Quick scan:
-   ```bash
-   grep -rn '@templates/' .claude/commands .claude/skills
-   ```
-   `scripts/check-template.sh` (step 11 below) catches surviving
-   `@templates/` refs — but can't catch refs that resolve to the wrong
-   file, so do this step even if `templates/` was kept.
+7. **Repoint `@templates/...` references.** Four `@`-refs across three
+   files in `.claude/commands/` point at `@templates/...`. If this
+   adoption relocated or stripped `templates/`, repoint each match to
+   the local layout:
+
+   | File | `@templates/...` refs carried |
+   |------|-------------------------------|
+   | `.claude/commands/session-start.md` | `@templates/AI_SESSION_START.md` |
+   | `.claude/commands/handoff.md` | `@templates/ADR-template.md`, `@templates/AI_SESSION_START.md` |
+   | `.claude/commands/adr.md` | `@templates/ADR-template.md` |
+
+   Quick scan to confirm: `grep -rn '@templates/' .claude/commands .claude/skills`.
+   Also scan vendored skeleton templates (especially `templates/AI_SESSION_START.md`)
+   for inline `docs/skill-security.md` / `docs/adr/ADR-NNN-*.md` references —
+   they're prose-level path mentions rather than `@`-imports so
+   `scripts/check-template.sh` doesn't catch them, but they break the same way.
+   Adopters with their own `docs/adr/` series should sub-namespace template
+   ADRs (see the callout above).
+   `scripts/check-template.sh` (step 11 below) catches surviving `@templates/`
+   refs — but can't catch refs that resolve to the wrong file, so do this
+   step even if `templates/` was kept.
 8. **Install baseline plugins** per [Plugins](#plugins). First check
    `claude plugin list`; for any baseline already installed at user
    scope, confirm it's enabled and skip — no re-install or re-prompt.
    For baselines not yet installed, default-install at user scope; ask
-   the user to opt out per *missing* plugin. **If any were installed,
-   prompt the user to run `/reload-plugins`** so hooks/agents bind to
-   this session (see
-   [Activation caveat](#activation-caveat-silent-failure-trap));
-   skipping means the adoption commit ships without plugin review.
+   the user to opt out per *missing* plugin.
 9. **Run plugin + MCP discovery** per [Plugins](#plugins). Surface
    plugin and standalone MCP-server candidates for the user's project;
    install accepted plugins at the user's chosen scope and add accepted
-   MCP servers to `.mcp.json`. Prompt for `/reload-plugins` again if
-   any plugins were installed.
+   MCP servers to `.mcp.json`. **After steps 8-9 complete, if any
+   plugins were installed (baseline or discovered), prompt the user
+   once to run `/reload-plugins`** so hooks/agents bind to this session
+   (see [Activation caveat](#activation-caveat-silent-failure-trap));
+   skipping means the adoption commit ships without plugin review.
 10. Create `VENDORED.md` at repo root (see [Source-pin manifest](#source-pin-manifest)),
     including the "Installed plugins" section listing baseline + discovered.
 11. Run `bash scripts/check-template.sh` and
@@ -283,24 +303,35 @@ The session will:
    intentional divergence. Batch the questions; don't ask file-by-file.
 4. For non-conflicting paths, follow steps 4–6 of the new-repo procedure.
 5. For conflicting paths, apply the user's resolutions.
-6. **Repoint `@templates/...` references.** Seven `@`-refs across six
-   files in `.claude/commands/` and `.claude/skills/` point at
-   `@templates/...`. If this adoption relocated or stripped `templates/`,
-   repoint each match to the local layout. Quick scan:
-   ```bash
-   grep -rn '@templates/' .claude/commands .claude/skills
-   ```
-   `scripts/check-template.sh` (step 10 below) catches surviving
-   `@templates/` refs — but can't catch refs that resolve to the wrong
-   file, so do this step even if `templates/` was kept.
+6. **Repoint `@templates/...` references.** Four `@`-refs across three
+   files in `.claude/commands/` point at `@templates/...`. If this
+   adoption relocated or stripped `templates/`, repoint each match to
+   the local layout:
+
+   | File | `@templates/...` refs carried |
+   |------|-------------------------------|
+   | `.claude/commands/session-start.md` | `@templates/AI_SESSION_START.md` |
+   | `.claude/commands/handoff.md` | `@templates/ADR-template.md`, `@templates/AI_SESSION_START.md` |
+   | `.claude/commands/adr.md` | `@templates/ADR-template.md` |
+
+   Quick scan to confirm: `grep -rn '@templates/' .claude/commands .claude/skills`.
+   Also scan vendored skeleton templates (especially `templates/AI_SESSION_START.md`)
+   for inline `docs/skill-security.md` / `docs/adr/ADR-NNN-*.md` references —
+   they're prose-level path mentions rather than `@`-imports so
+   `scripts/check-template.sh` doesn't catch them, but they break the same way.
+   Adopters with their own `docs/adr/` series should sub-namespace template
+   ADRs (see the callout above).
+   `scripts/check-template.sh` (step 10 below) catches surviving `@templates/`
+   refs — but can't catch refs that resolve to the wrong file, so do this
+   step even if `templates/` was kept.
 7. **Detect already-installed plugins** via `claude plugin list`. For any
    baseline plugin not yet installed, prompt the user to opt in (default
-   install). Don't double-suggest what's already there. **If any were
-   installed, prompt the user to run `/reload-plugins`** (see
-   [Activation caveat](#activation-caveat-silent-failure-trap)).
+   install). Don't double-suggest what's already there.
 8. **Run plugin + MCP discovery** per [Plugins](#plugins), excluding
-   plugins and MCP servers already installed/configured. Prompt for
-   `/reload-plugins` again if any plugins were installed.
+   plugins and MCP servers already installed/configured. **After steps
+   7-8 complete, if any plugins were installed, prompt the user once
+   to run `/reload-plugins`** (see
+   [Activation caveat](#activation-caveat-silent-failure-trap)).
 9. Create or update `VENDORED.md` (existing repos may already have one
    from a prior adoption; merge entries). Includes the "Installed plugins"
    section.
@@ -418,7 +449,6 @@ convenience.
 |------|-----|
 | `docs/claude-code-setup.md` | How this template wires into Claude Code. Read for ideas. |
 | `docs/skill-security.md` | Trust model + vetting procedures. Link rather than copy. |
-| `templates/LLM_APP_DEVELOPMENT_BEST_PRACTICES.md` | Framework-agnostic guidelines. |
 | `CHANGELOG.md` | This template's change log. Read to re-sync. |
 
 ### Skip
