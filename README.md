@@ -6,7 +6,7 @@ skills, hooks) with a small set of engineering-discipline practices.
 
 ## Quick start
 
-1. Copy everything **except `old/`** into your new project's root.
+1. Copy everything into your new project's root.
 2. Customize `CLAUDE.md` — fill in tech stack, structure, key files, commands. Keep it under 200 lines.
 3. Tune `.claude/settings.json` — add your build/test/lint commands to the `allow` list.
 4. Copy `.claude/settings.local.json.example` → `.claude/settings.local.json` for personal overrides (gitignored).
@@ -48,7 +48,6 @@ templates/                    # Reference docs + blank templates (loaded on dema
 ├── PROJECT_SPEC.md / ARCHITECTURE.md / BUILD_PLAN.md   # source-of-truth triad
 ├── AI_SESSION_START.md
 └── LLM_APP_DEVELOPMENT_BEST_PRACTICES.md
-old/                          # Historical, project-specific originals — don't copy
 ```
 
 ## Hybrid memory model
@@ -130,8 +129,8 @@ standards.
 
 Real-world feedback:
 
-- **[nulog](https://github.com/mjvacas/nulog)** — first downstream adopter;
-  its review surfaced the issues that drove the security-hardening series
+- **Personal projects dogfooding the template** — adoption reviews
+  surfaced the issues that drove the security-hardening series
   (PRs #3–#6) and the adoption infrastructure (`docs/ADOPTING.md` +
   `VENDORED.md`).
 

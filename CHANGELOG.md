@@ -36,6 +36,20 @@ date-stamped — this template isn't versioned. Convention validated against
 - New-repo step 8, existing-repo step 7, and re-sync step 5 renamed
   from "plugin discovery" to "plugin + MCP discovery" to reflect the
   expanded scope.
+- Genericized adopter credits in `README.md` Acknowledgements and the
+  `CHANGELOG.md` PR #9 entry: replaced the specific downstream-project
+  bullet with "Personal projects dogfooding the template." Preserves
+  the battle-tested claim without naming specific adopters in
+  public-facing docs.
+
+### Removed
+- Historical `old/` directory and its two files (`AI_SESSION_START.md`,
+  `LLM_APP_DEVELOPMENT_BEST_PRACTICES.md`) — the project-specific
+  predecessors that were abstracted into `templates/` during the
+  initial template extraction. No longer relevant for adopters;
+  retrievable from `git log` for anyone tracing the abstraction lineage.
+  Also drops the matching `except old/` callout in `README.md` Quick
+  start step 1 and the `old/` line in the Layout block.
 
 ## [2026-06-06]
 
@@ -54,7 +68,8 @@ date-stamped — this template isn't versioned. Convention validated against
 - `Installed plugins` subsection in the `VENDORED.md` schema. (#10)
 - `README.md`: Acknowledgements section (Anthropic Claude Code,
   multica-ai/andrej-karpathy-skills, Keep a Changelog, ADR concept by
-  Michael Nygard, nulog as first downstream adopter). (#9)
+  Michael Nygard, real-world feedback from personal projects
+  dogfooding the template). (#9)
 - `README.md`: Related templates section noting
   `scotthavird/claude-code-template` and `davila7/claude-code-templates`
   as reviewed-for-comparison prior art. (#9)
