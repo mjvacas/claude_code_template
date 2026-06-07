@@ -94,10 +94,6 @@ the evidence chain and sources.
 - **`git log --oneline`** / **`git show <hash>`** — when and why a change landed.
 - **`docs/adr/`** — the rationale for a standing decision. Don't re-litigate a decided ADR;
   if it genuinely needs revisiting, write a new one that supersedes it.
-- **Legacy `docs/archive/*.gz`** — if you adopted this template before the hybrid-memory
-  model, you may still have gzipped session archives there:
-  `gunzip -c docs/archive/AI_CONTEXT_YYYY-MM.md.gz | less`. New work belongs in
-  `docs/summaries/`.
 
 ---
 

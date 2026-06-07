@@ -21,6 +21,11 @@ jobs:
         with:
           fetch-depth: 0   # full history so the secret scan sees all commits
       - name: Template self-check
+        env:
+          # Suppress the adopter-side check that flags @templates/... references
+          # in .claude/commands and .claude/skills — those refs are correct here,
+          # but break post-vendoring. See scripts/check-template.sh § 3b.
+          CHECK_TEMPLATE_SOURCE: "1"
         run: bash scripts/check-template.sh
       - name: Secret scan (gitleaks)
         # Pinned, checksum-verified MIT CLI binary — NOT the gitleaks-action (which is

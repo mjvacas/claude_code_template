@@ -221,7 +221,17 @@ The session will:
    contact).
 6. Copy each **skeleton** file and fill placeholders from the user's
    answers.
-7. **Install baseline plugins** per [Plugins](#plugins). First check
+7. **Repoint `@templates/...` references.** Seven `@`-refs across six
+   files in `.claude/commands/` and `.claude/skills/` point at
+   `@templates/...`. If this adoption relocated or stripped `templates/`,
+   repoint each match to the local layout. Quick scan:
+   ```bash
+   grep -rn '@templates/' .claude/commands .claude/skills
+   ```
+   `scripts/check-template.sh` (step 11 below) catches surviving
+   `@templates/` refs — but can't catch refs that resolve to the wrong
+   file, so do this step even if `templates/` was kept.
+8. **Install baseline plugins** per [Plugins](#plugins). First check
    `claude plugin list`; for any baseline already installed at user
    scope, confirm it's enabled and skip — no re-install or re-prompt.
    For baselines not yet installed, default-install at user scope; ask
@@ -230,16 +240,16 @@ The session will:
    this session (see
    [Activation caveat](#activation-caveat-silent-failure-trap));
    skipping means the adoption commit ships without plugin review.
-8. **Run plugin + MCP discovery** per [Plugins](#plugins). Surface
+9. **Run plugin + MCP discovery** per [Plugins](#plugins). Surface
    plugin and standalone MCP-server candidates for the user's project;
    install accepted plugins at the user's chosen scope and add accepted
    MCP servers to `.mcp.json`. Prompt for `/reload-plugins` again if
    any plugins were installed.
-9. Create `VENDORED.md` at repo root (see [Source-pin manifest](#source-pin-manifest)),
-   including the "Installed plugins" section listing baseline + discovered.
-10. Run `bash scripts/check-template.sh` and
+10. Create `VENDORED.md` at repo root (see [Source-pin manifest](#source-pin-manifest)),
+    including the "Installed plugins" section listing baseline + discovered.
+11. Run `bash scripts/check-template.sh` and
     `bash scripts/audit-config.sh .claude/`. Report.
-11. Stage one atomic commit: `chore: adopt claude_code_template @ <sha>`
+12. Stage one atomic commit: `chore: adopt claude_code_template @ <sha>`
     with a body listing what was adopted (files + plugins).
 
 ### Existing repo (Claude Code already in use)
@@ -254,29 +264,49 @@ Bias: audit first; never stomp silently.
 The session will:
 
 1. **Audit.** For each path the template wants to vendor, check whether
-   the adopter repo already has it. Build a conflict list.
+   the adopter repo already has it (exact-path conflict). **Also flag
+   files with the same basename at a different path** — e.g., the
+   adopter has `docs/AI_SESSION_START.md` while the template vendors
+   `templates/AI_SESSION_START.md`. These are silent staleness traps
+   when the adopter version pre-dates a content rewrite upstream (the
+   2026-05 hybrid-memory rewrite changed thresholds and removed
+   references to retired scripts; an adopter who skipped past it can
+   keep stale prose that contradicts the freshly-vendored code). Build
+   a conflict list **and** a basename-clash list.
 2. Read the template docs as above; capture source SHA; refuse on dirty
    template tree.
 3. **Ask the user** how to resolve each conflict — *merge*, *replace*,
    *keep mine*, or *skip*. For known-mergeable files (`.gitignore`,
    `.claude/settings.json` deny-list, `CLAUDE.md`), propose a specific
-   merge. Batch the questions; don't ask file-by-file.
+   merge. **For basename clashes, bias toward overwrite-or-merge** —
+   stale adopter content is the more common failure mode than
+   intentional divergence. Batch the questions; don't ask file-by-file.
 4. For non-conflicting paths, follow steps 4–6 of the new-repo procedure.
 5. For conflicting paths, apply the user's resolutions.
-6. **Detect already-installed plugins** via `claude plugin list`. For any
+6. **Repoint `@templates/...` references.** Seven `@`-refs across six
+   files in `.claude/commands/` and `.claude/skills/` point at
+   `@templates/...`. If this adoption relocated or stripped `templates/`,
+   repoint each match to the local layout. Quick scan:
+   ```bash
+   grep -rn '@templates/' .claude/commands .claude/skills
+   ```
+   `scripts/check-template.sh` (step 10 below) catches surviving
+   `@templates/` refs — but can't catch refs that resolve to the wrong
+   file, so do this step even if `templates/` was kept.
+7. **Detect already-installed plugins** via `claude plugin list`. For any
    baseline plugin not yet installed, prompt the user to opt in (default
    install). Don't double-suggest what's already there. **If any were
    installed, prompt the user to run `/reload-plugins`** (see
    [Activation caveat](#activation-caveat-silent-failure-trap)).
-7. **Run plugin + MCP discovery** per [Plugins](#plugins), excluding
+8. **Run plugin + MCP discovery** per [Plugins](#plugins), excluding
    plugins and MCP servers already installed/configured. Prompt for
    `/reload-plugins` again if any plugins were installed.
-8. Create or update `VENDORED.md` (existing repos may already have one
+9. Create or update `VENDORED.md` (existing repos may already have one
    from a prior adoption; merge entries). Includes the "Installed plugins"
    section.
-9. Run both verification scripts. Distinguish failures originating from
-   template files vs. pre-existing project state.
-10. Stage one atomic commit; body lists what was adopted, what was merged
+10. Run both verification scripts. Distinguish failures originating from
+    template files vs. pre-existing project state.
+11. Stage one atomic commit; body lists what was adopted, what was merged
     (with strategy), what was skipped, plugins installed, and the current
     pinned SHA.
 

@@ -88,6 +88,23 @@ sys.exit(1 if broken else 0)
 PY
 then fail=1; fi
 
+echo "== 3b. @-references avoid template-internal paths (adopter check) =="
+# Refs into `templates/` are correct in this source repo but break in adopter
+# repos after vendoring (the adopter typically relocates or strips `templates/`).
+# CHECK_TEMPLATE_SOURCE=1 suppresses this check — set in this repo's CI so the
+# source tree doesn't fail itself. Adopters get loud-by-default detection.
+if [ -n "${CHECK_TEMPLATE_SOURCE:-}" ]; then
+  ok "skipped — CHECK_TEMPLATE_SOURCE set (template source repo)"
+else
+  hits=$(grep -rn --include='*.md' '@templates/' .claude/commands .claude/skills 2>/dev/null || true)
+  if [ -n "$hits" ]; then
+    err "@-references to template-internal paths (repoint per docs/ADOPTING.md § First-time adoption):"
+    printf '%s\n' "$hits" | sed 's/^/       /'
+  else
+    ok "no @templates/ references in .claude/commands or .claude/skills"
+  fi
+fi
+
 echo "== 4. Secrets hygiene =="
 if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   secret_files=$(git ls-files \
