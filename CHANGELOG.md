@@ -10,13 +10,60 @@ date-stamped — this template isn't versioned. Convention validated against
 ## [Unreleased]
 
 ### Added
-- `docs/ADOPTING.md` — adoption guide: file classification, first-run
-  checks, vendoring with source-pin headers, re-sync procedure.
-- `docs/adr/ADR-001-vendor-with-source-pin.md` — vendor-with-source-pin
-  decision and alternatives.
-- `CHANGELOG.md` — this file.
+- **Baseline plugins** concept: two Anthropic-official plugins
+  (`security-guidance@claude-plugins-official`,
+  `pr-review-toolkit@claude-plugins-official`) default-installed during
+  adoption with per-plugin opt-out. Documented in
+  `docs/ADOPTING.md` § Plugins.
+- **Plugin discovery** step in new-repo, existing-repo, and re-sync
+  procedures: AI session searches `claude-plugins-official` and
+  `claude-community` (if added) for project-relevant plugins, surfaces
+  candidates with vetting info, user picks.
+- **Vetting rubric** for community plugins (explicit license + named
+  maintainer + commit within ~6 months + explicit user approval).
+- `Installed plugins` subsection in the `VENDORED.md` schema.
+
+### Removed
+- `.claude/agents/code-reviewer.md` — superseded by
+  `pr-review-toolkit@claude-plugins-official` (now a baseline plugin
+  installed during adoption). Existing adopters: see ADOPTING.md
+  re-sync section for the swap.
+- References to the dropped agent in `README.md`, `CLAUDE.md`, and
+  `docs/claude-code-setup.md` updated accordingly.
+
+### Security
+- Template's own security-relevant code verified against
+  `security-guidance@claude-plugins-official` v2.0.3 during this PR.
+  Layer-1 regex patterns target web-vuln classes in
+  Python/JS/TS/Go/YAML and don't natively apply to our bash/JSON/markdown
+  security code (already hardened in PRs #3–#6). The one in-scope file,
+  `.github/workflows/check.yml`, was manually audited against the
+  plugin's GHA-workflow rule: no findings (no untrusted-input
+  interpolation; least-priv `permissions: contents: read`; no
+  `pull_request_target`; sha256-verified binary download). Layers 2–3
+  (LLM diff review + agentic commit review) bound to this commit on
+  `/reload-plugins`; any findings surface as rewake injections in-session
+  and are addressed inline.
+
+## [2026-06-06]
+
+### Added
+- `README.md`: Acknowledgements section (Anthropic Claude Code,
+  multica-ai/andrej-karpathy-skills, Keep a Changelog, ADR concept by
+  Michael Nygard, nulog as first downstream adopter). (#9)
+- `README.md`: Related templates section noting
+  `scotthavird/claude-code-template` and `davila7/claude-code-templates`
+  as reviewed-for-comparison prior art. (#9)
 
 ## [2026-05-31]
+
+### Added
+- `docs/ADOPTING.md` — adoption guide: file classification, first-run
+  checks, vendoring with source-pin sidecar (`VENDORED.md`), new-repo /
+  existing-repo / re-sync procedures driven by the adopter's CC session. (#8)
+- `docs/adr/ADR-001-vendor-with-source-pin.md` — sidecar-manifest
+  decision and alternatives considered. (#8)
+- `CHANGELOG.md` — this file. (#8)
 
 ### Changed
 - `templates/AI_SESSION_START.md` footer: portable `sed -i.bak` one-liner

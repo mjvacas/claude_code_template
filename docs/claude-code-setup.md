@@ -17,14 +17,15 @@ after you copy it into a new project.
 | `commands/handoff.md` | `/handoff` — record decisions in `AI_CONTEXT.md` and commit code + context atomically. | As needed. |
 | `commands/commit.md` | `/commit` — one atomic, conventional-prefix commit; enforces the code + `AI_CONTEXT.md` rule. | As needed. |
 | `commands/adr.md` | `/adr "<title>"` — scaffold the next ADR from `templates/ADR-template.md` into `docs/adr/`. | As needed. |
-| `agents/code-reviewer.md` | Subagent that reviews diffs for simplicity, scope, and duplication. | As needed. |
 | `skills/verify-refactor/` | Prove a refactor preserved behavior via golden-output diff. | As needed. |
 | `skills/tune-parameters/` | Pick a parameter by reading the metric surface, not the peak. | As needed. |
 | `skills/llm-eval/` | Ground-truth accuracy harness for AI features. | As needed. |
 
-> To review a diff, invoke the **`code-reviewer` subagent** ("use the code-reviewer
-> subagent on my changes"). There's intentionally no `/review` command — it would just
-> duplicate the subagent, which the template's own "don't duplicate" rule forbids.
+> Code review is delegated to the **`pr-review-toolkit@claude-plugins-official`**
+> baseline plugin installed during adoption (see `docs/ADOPTING.md`). This
+> template no longer ships its own `code-reviewer` subagent — the plugin's
+> richer specialization (silent-failure-hunter, type-design-analyzer,
+> pr-test-analyzer, etc.) is maintained upstream rather than forked here.
 
 ## Hybrid memory model
 
