@@ -65,6 +65,9 @@ never a runtime toggle/UI. List this project's code-guarded invariants here, e.g
 
 ## Architecture Decisions
 
+- **[ADR-001](docs/adr/ADR-001-vendor-with-source-pin.md)** — adopters track vendored template files via a root `VENDORED.md` sidecar pinning upstream SHAs; per-file headers are optional.
+- **[ADR-002](docs/adr/ADR-002-ai-context-archive-threshold.md)** — `AI_CONTEXT.md` archives oldest blocks to `docs/summaries/YYYY-MM.md` once it exceeds **500 lines** (~6k tokens); derived from lost-in-the-middle research + Anthropic context-engineering guidance, enforced by SessionStart hook + `/handoff`.
+
 <!-- Add decisions as they're made. Format: -->
 <!-- - **Decision**: What was decided -->
 <!-- - **Why**: Rationale -->
