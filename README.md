@@ -34,7 +34,6 @@ SECURITY.md                   # How to report vulns; points at the AI-config tru
 ├── hooks/block-dangerous.sh  # PreToolUse guard: hard-blocks catastrophic shell commands
 ├── hooks/precompact-snapshot.sh  # PreCompact: snapshots context to .claude/snapshots/ before compaction
 ├── commands/                 # /session-start, /handoff, /commit, /adr
-├── agents/                   # code-reviewer subagent
 └── skills/                   # verify-refactor, tune-parameters, llm-eval
 scripts/
 ├── check-template.sh         # Integrity + secrets smoke-test (run manually + in CI)
@@ -86,7 +85,10 @@ practices as runnable skills and reviewer rules:
 - **`/verify-refactor`** — prove a refactor preserved behavior by diffing deterministic output (byte-identical), not just "tests pass."
 - **`/tune-parameters`** — pick a threshold by reading the *shape* of the metric surface, rejecting overfit spikes.
 - **`/llm-eval`** — gate AI features on accuracy against a ground-truth set.
-- **`code-reviewer`** subagent — reviews diffs for surgical scope, simplicity, and duplication.
+
+For code review, the template recommends installing
+`pr-review-toolkit@claude-plugins-official` as a baseline plugin during
+adoption (see `docs/ADOPTING.md`) rather than shipping a competing agent.
 
 See `docs/claude-code-setup.md` for the full tour.
 

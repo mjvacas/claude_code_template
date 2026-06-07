@@ -20,6 +20,57 @@ lock-in.
 Adopting doesn't have to be all-or-nothing. The file map classifies each
 file by how it's meant to travel.
 
+## Plugins
+
+Two kinds: **baseline** (installed by default during adoption) and
+**discovered** (project-specific, found by searching marketplaces during
+adoption).
+
+### Baseline plugins
+
+Universally useful regardless of project. The adopter's CC session
+installs them by default at user scope; the user opts out per plugin if
+not wanted. Both are Anthropic-official, so the community vetting rubric
+below doesn't apply.
+
+- **`security-guidance@claude-plugins-official`** — reactive SAST and
+  diff-review. Complements this template's *preventive* posture (deny-list,
+  `block-dangerous.sh` PreToolUse guard) by catching vulnerabilities in
+  the code Claude *writes*, not just the commands it tries to *run*.
+- **`pr-review-toolkit@claude-plugins-official`** — specialized PR review
+  agents (`silent-failure-hunter`, `type-design-analyzer`,
+  `pr-test-analyzer`, `comment-analyzer`, `code-simplifier`,
+  `code-reviewer`). Replaces the `code-reviewer` agent this template
+  previously shipped; richer specialization, maintained upstream.
+
+### Discovery
+
+For project-specific plugins beyond the baseline, the session reviews
+the user's tech stack + domain + working style, then searches
+`claude-plugins-official` (and `claude-community` if the user has added
+it) for matches. For each candidate, the session surfaces:
+
+- Name + marketplace + one-line description
+- Components (skills / agents / hooks / MCP / LSP / monitors)
+- License + named maintainer + last commit date
+- How it relates to this template (orthogonal / complementary / overlapping)
+
+User picks. Session installs (`claude plugin install <name>@<marketplace>`)
+and records selections in `VENDORED.md` under "Installed plugins".
+
+### Vetting rubric (community plugins only)
+
+Default-deny. To accept a community plugin, the session must confirm:
+
+- Explicit **license** declared (in `plugin.json` or `LICENSE`).
+- **Named maintainer** (not anonymous).
+- **Commit within ~6 months** (or explicit "stable, not abandoned"
+  justification).
+- **Explicit user approval** before install.
+
+Surface ambiguous cases rather than auto-install. Anthropic-official
+plugins (the baseline) are trusted by default and don't need this rubric.
+
 ## First-time adoption
 
 Two starting points. Pick the one that fits, paste the prompt into a
@@ -49,11 +100,17 @@ The session will:
    contact).
 6. Copy each **skeleton** file and fill placeholders from the user's
    answers.
-7. Create `VENDORED.md` at repo root (see [Source-pin manifest](#source-pin-manifest)).
-8. Run `bash scripts/check-template.sh` and
-   `bash scripts/audit-config.sh .claude/`. Report.
-9. Stage one atomic commit: `chore: adopt claude_code_template @ <sha>`
-   with a body listing what was adopted.
+7. **Install baseline plugins** per [Plugins](#plugins). Default-install
+   both (`security-guidance`, `pr-review-toolkit`) at user scope; ask the
+   user to opt out per plugin.
+8. **Run plugin discovery** per [Plugins](#plugins). Surface candidates
+   for the user's project; install accepted at the user's chosen scope.
+9. Create `VENDORED.md` at repo root (see [Source-pin manifest](#source-pin-manifest)),
+   including the "Installed plugins" section listing baseline + discovered.
+10. Run `bash scripts/check-template.sh` and
+    `bash scripts/audit-config.sh .claude/`. Report.
+11. Stage one atomic commit: `chore: adopt claude_code_template @ <sha>`
+    with a body listing what was adopted (files + plugins).
 
 ### Existing repo (Claude Code already in use)
 
@@ -76,12 +133,19 @@ The session will:
    merge. Batch the questions; don't ask file-by-file.
 4. For non-conflicting paths, follow steps 4–6 of the new-repo procedure.
 5. For conflicting paths, apply the user's resolutions.
-6. Create or update `VENDORED.md` (existing repos may already have one
-   from a prior adoption; merge entries).
-7. Run both verification scripts. Distinguish failures originating from
+6. **Detect already-installed plugins** via `claude plugin list`. For any
+   baseline plugin not yet installed, prompt the user to opt in (default
+   install). Don't double-suggest what's already there.
+7. **Run plugin discovery** per [Plugins](#plugins), excluding plugins
+   already installed.
+8. Create or update `VENDORED.md` (existing repos may already have one
+   from a prior adoption; merge entries). Includes the "Installed plugins"
+   section.
+9. Run both verification scripts. Distinguish failures originating from
    template files vs. pre-existing project state.
-8. Stage one atomic commit; body lists what was adopted, what was merged
-   (with strategy), what was skipped, and the current pinned SHA.
+10. Stage one atomic commit; body lists what was adopted, what was merged
+    (with strategy), what was skipped, plugins installed, and the current
+    pinned SHA.
 
 ## Source-pin manifest
 
@@ -105,6 +169,14 @@ Last sync: 2026-06-01 @ 80768f7
 | `.claude/settings.json` | same | 80768f7 | merged with project's deny additions |
 | `scripts/check-template.sh` | same | 80768f7 | vendor-as-is |
 | `CLAUDE.md` | same | 80768f7 | skeleton — adapted to tech stack |
+
+## Installed plugins
+
+| Plugin | Marketplace | Scope | Installed | Source |
+|--------|-------------|-------|-----------|--------|
+| `security-guidance` | `claude-plugins-official` | user | 2026-06-01 | baseline |
+| `pr-review-toolkit` | `claude-plugins-official` | user | 2026-06-01 | baseline |
+| `commit-commands` | `claude-plugins-official` | user | 2026-06-01 | discovered |
 ```
 
 **Why a sidecar (not per-file headers).** Four of the vendor-as-is files
@@ -145,7 +217,6 @@ convenience.
 | `.claude/hooks/precompact-snapshot.sh` | Pre-compaction breadcrumb snapshots. |
 | `.claude/commands/commit.md` | `/commit` slash command. |
 | `.claude/commands/adr.md` | `/adr` slash command. |
-| `.claude/agents/code-reviewer.md` | Diff reviewer agent. |
 | `.claude/skills/verify-refactor/` | Golden-output byte-identical diffing. |
 | `.claude/skills/tune-parameters/` | Threshold-tuning skill. |
 | `.claude/skills/llm-eval/` | Ground-truth accuracy harness. |
@@ -204,18 +275,24 @@ Claude Code session:
 
 The session will:
 
-1. Read `VENDORED.md` to get the current pinned SHA(s) and the list of
-   vendored paths.
+1. Read `VENDORED.md` to get the current pinned SHA(s), vendored paths,
+   and installed plugins.
 2. Read the template's `CHANGELOG.md`; identify entries affecting
-   vendored paths.
+   vendored paths or baseline plugins.
 3. Run, against the template repo:
    `git log --oneline <pinned-sha>..HEAD -- <vendored-paths>`.
-4. Propose specific diffs for each changed file; ask the user to approve,
+4. **Check baseline plugins** (`claude plugin list`) — install any
+   baseline newly recommended by the template (per upstream
+   [Plugins](#plugins)) and not yet installed; prompt opt-in per plugin.
+5. **Re-run discovery** for any plugins newly relevant to the project
+   (new project areas, new ecosystem entries since last sync).
+6. Propose specific diffs for each changed file; ask the user to approve,
    modify, or skip each.
-5. Apply approved changes; bump the SHA(s) in `VENDORED.md`.
-6. Re-run `bash scripts/check-template.sh` and
+7. Apply approved changes; bump the SHA(s) in `VENDORED.md`; update the
+   "Installed plugins" section.
+8. Re-run `bash scripts/check-template.sh` and
    `bash scripts/audit-config.sh .claude/`.
-7. Stage one atomic commit:
+9. Stage one atomic commit:
    `chore: re-sync claude_code_template <old-sha>..<new-sha>`.
 
 ## Verification
