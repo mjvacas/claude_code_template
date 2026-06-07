@@ -30,8 +30,9 @@ manifest during adoption — no freeform "search").
 
 Universally useful regardless of project. The adopter's CC session
 installs them by default at user scope; the user opts out per plugin if
-not wanted. Both are Anthropic-official, so the community vetting rubric
-below doesn't apply.
+not wanted. Both are Anthropic-authored (string `source` field — see
+the authorship discriminator under [Plugin discovery](#plugin-discovery)),
+so the third-party vetting rubric below doesn't apply.
 
 - **`security-guidance@claude-plugins-official`** — reactive SAST and
   diff-review. Complements this template's *preventive* posture (deny-list,
@@ -89,21 +90,40 @@ entry — no guessing):
 - **How it relates to this template** (orthogonal / complementary /
   overlapping)
 
-**License** is not in the catalog. Baseline plugins (Anthropic-official)
-are trusted by default and skip this check. For community-marketplace
-candidates only, the session must verify a declared license from the
-plugin's `marketplace_entry.source.url` (curl/WebFetch the repo's
-`LICENSE` or `plugin.json`) before installing — see
-[Vetting rubric](#vetting-rubric-community-plugins-and-mcp-servers).
+**License** is not in the catalog. The trust model is
+**authorship-based, not marketplace-based** — being listed in
+`claude-plugins-official` is curation, not authorship. The discriminator
+is one field:
+
+```jq
+.marketplace_entry.source | type == "string"   # ⇒ Anthropic-authored
+```
+
+A **string** source (e.g., `"./plugins/security-guidance"`) is a path
+within the `anthropics/claude-plugins-official` repo itself —
+Anthropic-authored, trusted by default. An **object** source
+(`{ "url": "https://github.com/<vendor>/<repo>.git", ... }`, or
+`{ "repo": "<vendor>/<repo>", ... }` for the `github` sub-schema) points
+to a vendor-maintained repo — third-party-authored, **needs the full
+vetting rubric regardless of which marketplace lists it.** Of the 222
+plugins in `claude-plugins-official` at the time of writing, only 50 are
+Anthropic-authored; the other 172 are third-party-curated.
+
+For each third-party-authored candidate, fetch the license from the
+source repo (`marketplace_entry.source.url` when present; otherwise
+construct from `marketplace_entry.source.repo`) and confirm a declared
+license before installing — see
+[Vetting rubric](#vetting-rubric-third-party-authored-plugins-and-mcp-servers).
 
 User picks. Session installs (`claude plugin install <name>@<marketplace>`)
 and records selections in `VENDORED.md` under "Installed plugins".
 
 > **Adopting `claude-community`.** Only configured marketplaces are
-> enumerable. To consider community plugins, the user runs
-> `claude plugin marketplace add anthropics/claude-community` before
-> step 1; otherwise step 2 surfaces only `claude-plugins-official`
-> entries.
+> enumerable. To consider plugins from `claude-community`, the user
+> runs `claude plugin marketplace add anthropics/claude-community`
+> before step 1; otherwise step 2 surfaces only `claude-plugins-official`
+> entries. All `claude-community` plugins are third-party-authored
+> by construction, so every candidate runs the full vetting rubric.
 
 ### MCP server discovery
 
@@ -126,9 +146,12 @@ itself is typically gitignored, since it can hold per-developer
 credentials). MCP servers are separate from `VENDORED.md`'s "Installed
 plugins" section — they're a different distribution model.
 
-### Vetting rubric (community plugins and MCP servers)
+### Vetting rubric (third-party-authored plugins and MCP servers)
 
-Default-deny. To accept a community plugin, the session must confirm:
+Default-deny. Scope is **any plugin whose `marketplace_entry.source`
+is an object** — that includes the third-party-curated majority of
+`claude-plugins-official` as well as everything in `claude-community`.
+To accept such a plugin, the session must confirm:
 
 - Explicit **license** declared (in `plugin.json` or `LICENSE`).
 - **Named maintainer** (not anonymous).
@@ -136,8 +159,11 @@ Default-deny. To accept a community plugin, the session must confirm:
   justification).
 - **Explicit user approval** before install.
 
-Surface ambiguous cases rather than auto-install. Anthropic-official
-plugins (the baseline) are trusted by default and don't need this rubric.
+Surface ambiguous cases rather than auto-install. **Anthropic-authored**
+plugins — those whose `marketplace_entry.source` is a string path
+within `anthropics/claude-plugins-official`, including both baselines —
+are trusted by default and skip this rubric. The discriminator is the
+schema of the `source` field, not the marketplace name.
 
 ### Activation caveat (silent-failure trap)
 

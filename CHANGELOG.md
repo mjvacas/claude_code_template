@@ -51,6 +51,26 @@ date-stamped — this template isn't versioned. Convention validated against
   Also drops the matching `except old/` callout in `README.md` Quick
   start step 1 and the `old/` line in the Layout block.
 
+### Fixed
+- **Plugin vetting reframed from marketplace-based to authorship-based**
+  in `docs/ADOPTING.md`. The previous wording assumed
+  "Anthropic-official marketplace ⇒ Anthropic-authored ⇒ trusted, skip
+  vetting." That's wrong: `claude-plugins-official` is a *curation*
+  surface. Of the 222 plugins listed there at the time of writing,
+  only 50 are Anthropic-authored; the other 172 are vendor-maintained
+  (RevenueCat, Sentry, Supabase, Semgrep, AWS, etc.) and were silently
+  being skipped from the vetting rubric. The discriminator is now
+  the schema of `marketplace_entry.source`: a **string** path
+  (`"./plugins/<name>"`) means Anthropic-authored and trusted by
+  default; an **object** with a `url` or `repo` means third-party-
+  authored and runs the full license + maintainer + recency rubric,
+  regardless of which marketplace lists it. The
+  `### Vetting rubric` heading is renamed from "community plugins and
+  MCP servers" to "third-party-authored plugins and MCP servers" to
+  match the corrected scope; existing anchor link from
+  `### Plugin discovery` updated accordingly. Baseline-plugins paragraph
+  also tightened (`Anthropic-official` ⇒ `Anthropic-authored`).
+
 ## [2026-06-06]
 
 ### Added
