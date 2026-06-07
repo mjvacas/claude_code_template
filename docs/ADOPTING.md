@@ -23,8 +23,8 @@ file by how it's meant to travel.
 ## Plugins
 
 Two kinds: **baseline** (installed by default during adoption) and
-**discovered** (project-specific, found by searching marketplaces during
-adoption).
+**discovered** (project-specific, enumerated from the local marketplace
+manifest during adoption — no freeform "search").
 
 ### Baseline plugins
 
@@ -45,18 +45,65 @@ below doesn't apply.
 
 ### Plugin discovery
 
-For project-specific plugins beyond the baseline, the session reviews
-the user's tech stack + domain + working style, then searches
-`claude-plugins-official` (and `claude-community` if the user has added
-it) for matches. For each candidate, the session surfaces:
+For project-specific plugins beyond the baseline, the session matches
+the user's tech stack + domain + working style against the
+**authoritative plugin catalog** — not a freeform "search." There is
+**no `claude plugin search` subcommand**; the failure mode this
+procedure prevents is the session confabulating plausible-sounding
+plugin names (`expo@claude-plugins-official` and similar) that don't
+exist in any marketplace.
 
-- Name + marketplace + one-line description
-- Components (skills / agents / hooks / MCP / LSP / monitors)
-- License + named maintainer + last commit date
-- How it relates to this template (orthogonal / complementary / overlapping)
+**Enumeration (the session runs these in order):**
+
+1. Refresh marketplaces so the local catalog matches upstream:
+   ```bash
+   claude plugin marketplace update
+   ```
+2. Enumerate the authoritative catalog. One JSON file covers all
+   configured marketplaces and carries description, author, version,
+   source SHA, last commit, component inventory, and per-model token
+   costs:
+   ```bash
+   # List of every available plugin (as <name>@<marketplace> keys):
+   jq -r '.catalog.plugins | keys[]' ~/.claude/plugins/plugin-catalog-cache.json
+
+   # Full metadata for a specific candidate:
+   jq '.catalog.plugins."<name>@<marketplace>"' \
+     ~/.claude/plugins/plugin-catalog-cache.json
+   ```
+3. Match against the user's stack **using only names that appear in
+   step 2's output.** A name not in the catalog does not exist;
+   propose it and the install will fail with "not found." Confabulation
+   is rejected by construction.
+
+For each verified candidate, surface (all readable from the catalog
+entry — no guessing):
+
+- **Name + marketplace + description** (`marketplace_entry.description`)
+- **Components** — skills / agents / hooks / MCP / LSP servers
+  (`components.{commands,agents,skills,hooks,mcpServers,lspServers}`)
+- **Maintainer + last commit** (`marketplace_entry.author.name`,
+  `last_updated`)
+- **Per-session token cost** (`tokens.<model>.always_on` and
+  `tokens.<model>.on_invoke`)
+- **How it relates to this template** (orthogonal / complementary /
+  overlapping)
+
+**License** is not in the catalog. Baseline plugins (Anthropic-official)
+are trusted by default and skip this check. For community-marketplace
+candidates only, the session must verify a declared license from the
+plugin's `marketplace_entry.source.url` (curl/WebFetch the repo's
+`LICENSE` or `plugin.json`) before installing — see
+[Vetting rubric](#vetting-rubric-community-plugins-and-mcp-servers).
 
 User picks. Session installs (`claude plugin install <name>@<marketplace>`)
 and records selections in `VENDORED.md` under "Installed plugins".
+
+> **Adopting `claude-community`.** Only configured marketplaces are
+> enumerable. To consider community plugins, the user runs
+> `claude plugin marketplace add anthropics/claude-community` before
+> step 1; otherwise step 2 surfaces only `claude-plugins-official`
+> entries.
 
 ### MCP server discovery
 
