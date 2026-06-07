@@ -189,6 +189,16 @@ Claude Code session running in your *target* repo (the one you're
 adopting into), with this template available at a path like
 `../claude_code_template`.
 
+> **Recommended: enter [plan mode](https://code.claude.com/docs/en/permission-modes#analyze-before-you-edit-with-plan-mode)
+> first.** The procedures below have a natural read-and-decide phase
+> before any writes — inspecting the target repo, enumerating plugins
+> from the catalog, identifying secret-file modes that need `chmod 600`,
+> planning merges for conflicting paths. Plan mode lets the session
+> surface all of that as a reviewable plan before touching files; you
+> can edit the plan before execution and avoid mid-flow surprises.
+> Especially valuable for the existing-repo procedure, which has more
+> merge decisions and more pre-existing state to reconcile.
+
 ### New repo (or near-empty)
 
 Bias: generous adoption.

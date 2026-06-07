@@ -26,6 +26,14 @@ date-stamped — this template isn't versioned. Convention validated against
   (different distribution model). Renamed `### Discovery` →
   `### Plugin discovery` with new sibling `### MCP server discovery`;
   vetting rubric heading updated to cover both.
+- **Plan-mode recommendation** at the top of `docs/ADOPTING.md`
+  § First-time adoption: both procedures (new-repo and existing-repo)
+  have a natural read-and-decide phase before any writes — plugin
+  enumeration, secret-file mode checks, merge planning. Plan mode
+  lets the session surface all of that as a reviewable plan before
+  touching files, avoiding mid-flow surprises. Especially valuable
+  for the existing-repo procedure. Links to Anthropic's canonical
+  plan-mode documentation.
 
 ### Changed
 - New-repo procedure step 7 now mirrors existing-repo step 6's
