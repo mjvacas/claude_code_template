@@ -7,7 +7,10 @@
 >
 > Auto-loaded into every session via `@AI_CONTEXT.md` in `CLAUDE.md`. Update it with
 > `/handoff` at the end of a session and commit it **together with the code**.
-> Keep it scannable; archive old session blocks to `docs/summaries/YYYY-MM.md` when long.
+> Keep it scannable; archive old session blocks to `docs/summaries/YYYY-MM.md` once
+> this file exceeds ~500 lines (the SessionStart hook nags above that, and `/handoff`
+> archives before committing). Threshold rationale + sources:
+> [ADR-002](docs/adr/ADR-002-ai-context-archive-threshold.md).
 
 ---
 

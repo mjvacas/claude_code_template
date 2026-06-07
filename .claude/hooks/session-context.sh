@@ -17,4 +17,16 @@ git log --oneline -5 2>/dev/null || true
 echo
 echo "### Working tree status"
 git status --short 2>/dev/null || true
+
+# Nag if AI_CONTEXT.md has grown past the archive threshold. Silent below it.
+# Threshold rationale + sources: docs/adr/ADR-002-ai-context-archive-threshold.md
+if [ -f AI_CONTEXT.md ]; then
+  lines=$(wc -l < AI_CONTEXT.md | tr -d ' ')
+  if [ "$lines" -gt 500 ]; then
+    echo
+    echo "### AI_CONTEXT.md needs archiving (${lines} lines > 500)"
+    echo "Move oldest session blocks into docs/summaries/$(date +%Y-%m).md before /handoff."
+    echo "See docs/adr/ADR-002-ai-context-archive-threshold.md for the why."
+  fi
+fi
 exit 0
