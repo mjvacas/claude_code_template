@@ -65,6 +65,19 @@ date-stamped — this template isn't versioned. Convention validated against
   hardening" commit `4c8c5ca` alongside `.env*` / keys / etc., with
   no in-codebase explanation); future readers re-examining the line
   now have the rationale inline.
+- **ADR sub-namespacing callout** in `docs/ADOPTING.md`
+  § First-time adoption: adopters with their own `docs/adr/` series
+  collide with the template's `ADR-001` and `ADR-002` if they vendor
+  naïvely. New callout points at `docs/claude-code-template/` and
+  `docs/adr/_upstream/` as common sub-namespaces, with a reminder
+  to repoint inline cross-doc references.
+- **Per-file `@templates/...` inventory table** in both first-time
+  procedures' Repoint step: lists the four surviving refs across
+  three `.claude/commands/` files (down from seven after the skills
+  cleanup below). Also adds a callout for prose-level
+  `docs/skill-security.md` / `docs/adr/ADR-NNN-*.md` references in
+  vendored skeleton templates (not `@`-imports, so
+  `scripts/check-template.sh` doesn't catch them).
 
 ### Changed
 - New-repo procedure step 7 now mirrors existing-repo step 6's
@@ -80,8 +93,29 @@ date-stamped — this template isn't versioned. Convention validated against
   bullet with "Personal projects dogfooding the template." Preserves
   the battle-tested claim without naming specific adopters in
   public-facing docs.
+- **`/reload-plugins` prompts consolidated** in both first-time
+  procedures: previously prompted in two adjacent steps (baseline
+  install + plugin/MCP discovery); now prompted once after both
+  install phases complete. Cleaner execution; same activation
+  guarantee.
+- **`scripts/check-template.sh` § 1 skips JSONC files**
+  (`tsconfig.json`, `tsconfig.*.json`, `.vscode/*.json`) which legally
+  carry `/* */` and `//` comments. Strict `json.load` was failing
+  these and blocking adoption for any project that ships them (e.g.
+  Vite + TS frontends).
 
 ### Removed
+- **`templates/LLM_APP_DEVELOPMENT_BEST_PRACTICES.md`** (826 lines):
+  duplicated content from `CLAUDE.md` § Context System and
+  `templates/AI_SESSION_START.md`, plus carried stale `50KB` and
+  `docs/archive/*.gz` references already removed elsewhere in the
+  2026-05-27 hybrid-memory rewrite (commit `50bbd6c`). The Testing
+  & Validation patterns the three skills (`llm-eval`,
+  `tune-parameters`, `verify-refactor`) used to `@`-ref now live
+  inline in each `SKILL.md` — closer to the mechanics they
+  describe, with no risk of doc/code drift. Cleanup also touched
+  `README.md` Layout, `docs/ADOPTING.md` file map, and
+  `docs/claude-code-setup.md` § "Where the long-form guidance lives".
 - Historical `old/` directory and its two files (`AI_SESSION_START.md`,
   `LLM_APP_DEVELOPMENT_BEST_PRACTICES.md`) — the project-specific
   predecessors that were abstracted into `templates/` during the

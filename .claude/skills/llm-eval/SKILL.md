@@ -12,4 +12,4 @@ Goal: never ship an AI feature on vibes — measure it against known-correct dat
 4. **Gate on accuracy.** Compute `passed / total`, log it, and assert a threshold (e.g. `>= 0.90`). Wire this into the test suite so regressions fail CI.
 5. **Log inputs and outputs** during runs (`[LLM] Input:` / `[LLM] Response:`) so failures are debuggable and prompt changes are measurable over time.
 
-Keep the harness provider-agnostic (call the project's `LLMProvider` interface, not a vendor SDK directly) so the same eval runs across models. See @templates/LLM_APP_DEVELOPMENT_BEST_PRACTICES.md (#testing--validation) for a worked example and the provider-agnostic pattern.
+Keep the harness provider-agnostic (call the project's `LLMProvider` interface, not a vendor SDK directly) so the same eval runs across models without re-instrumentation.

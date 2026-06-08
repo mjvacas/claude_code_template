@@ -19,4 +19,4 @@ Let `$ARGUMENTS` be the command that produces deterministic output (e.g. `npm ru
 
 If output is nondeterministic (timestamps, ordering, ids), normalize both sides the same way (sort, strip volatile fields) before diffing — and note what you normalized.
 
-Tie-in: if production and an offline replay share the *exact* same implementation (don't-duplicate rule), the replay *is* a golden-output harness for production refactors. See @templates/LLM_APP_DEVELOPMENT_BEST_PRACTICES.md (#testing--validation).
+Tie-in: if production and an offline replay share the *exact* same implementation (don't-duplicate rule), the replay *is* a golden-output harness for production refactors.

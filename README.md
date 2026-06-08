@@ -46,8 +46,7 @@ docs/
 templates/                    # Reference docs + blank templates (loaded on demand)
 ├── ADR-template.md           # Copy into docs/adr/ when recording a decision
 ├── PROJECT_SPEC.md / ARCHITECTURE.md / BUILD_PLAN.md   # source-of-truth triad
-├── AI_SESSION_START.md
-└── LLM_APP_DEVELOPMENT_BEST_PRACTICES.md
+└── AI_SESSION_START.md
 ```
 
 ## Hybrid memory model
