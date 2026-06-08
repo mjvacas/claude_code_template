@@ -20,6 +20,7 @@ CLAUDE.local.md
 id_rsa
 id_ed25519
 .aws/credentials
+# Catch-all credential folder (Helm sealed-secrets, Terraform/K8s vault, Ansible vault conventions).
 secrets/
 
 # Native auto-memory lives under ~/.claude/projects/<project>/memory/ (outside the

@@ -297,10 +297,13 @@ The session will:
    template tree.
 3. **Ask the user** how to resolve each conflict — *merge*, *replace*,
    *keep mine*, or *skip*. For known-mergeable files (`.gitignore`,
-   `.claude/settings.json` deny-list, `CLAUDE.md`), propose a specific
-   merge. **For basename clashes, bias toward overwrite-or-merge** —
-   stale adopter content is the more common failure mode than
-   intentional divergence. Batch the questions; don't ask file-by-file.
+   `.claude/settings.json` deny-list), propose a specific merge. **For
+   `CLAUDE.md`, propose the three-bucket merge** described in
+   [§ Merging the template's `CLAUDE.md`](#merging-the-templates-claudemd)
+   rather than a file-level decision. **For basename clashes, bias toward
+   overwrite-or-merge** — stale adopter content is the more common failure
+   mode than intentional divergence. Batch the questions; don't ask
+   file-by-file.
 4. For non-conflicting paths, follow steps 4–6 of the new-repo procedure.
 5. For conflicting paths, apply the user's resolutions.
 6. **Repoint `@templates/...` references.** Four `@`-refs across three
@@ -340,6 +343,58 @@ The session will:
 11. Stage one atomic commit; body lists what was adopted, what was merged
     (with strategy), what was skipped, plugins installed, and the current
     pinned SHA.
+
+## Merging the template's `CLAUDE.md`
+
+The file map classifies `CLAUDE.md` as a "skeleton," but in practice it's a
+**hybrid** — some sections are project-specific scaffolding (replace with
+your own), others are template-shared engineering principles + load-bearing
+framework prose (keep on merge). An adoption that treats `CLAUDE.md` as
+pure skeleton drops the second group, and the rest of the template
+(commands, hooks, skills) silently loses contract with it.
+
+When the existing-repo procedure step 3 reaches `CLAUDE.md`, propose a
+**three-bucket merge** rather than a file-level overwrite-or-keep decision.
+
+### Bucket 1 — Template-shared, keep verbatim
+
+These are the sections the rest of the template assumes exist. Bring them
+into the adopter's `CLAUDE.md` unchanged.
+
+| Section | Why it's template-shared |
+|---------|--------------------------|
+| `## Conventions` block (the engineering principles: don't-duplicate, types-first, defensive-defaults-at-boundaries, refactor-verify against baseline, treat `.claude/` as deps) | These are the shared engineering stance the rest of the template assumes. Skills like `verify-refactor` reference the baseline-output rule directly. |
+| `## Context System` (entire section) | Load-bearing for `/handoff`, `/session-start`, hybrid-memory model, ADR/summaries archive mechanics. The template's commands, hooks, and skills assume this paragraph exists. |
+| Behavioral guidelines block at the bottom (the four principles: Think Before Coding, Simplicity First, Surgical Changes, Goal-Driven Execution) | Referenced as the "four principles" throughout AI sessions; dropping them changes the contract for what the model is being asked to optimize for. |
+
+### Bucket 2 — Template framing + project content
+
+Keep the framing (the template-provided intro + structural skeleton);
+replace the bracketed placeholders with the project's actual content.
+
+| Section | Keep | Replace |
+|---------|------|---------|
+| `## Hard Constraints (guarded by code)` | The intro philosophy ("Critical invariants are enforced in code... never a runtime toggle/UI") + the `block-dangerous.sh` PreToolUse hook bullet (template-provided) | The `<INVARIANT>` and `<limit/threshold>` placeholders → your project's actual code-guarded invariants |
+| `## Architecture Decisions` | The one-line-highlight-per-ADR format | Include ADR-001 / ADR-002 entries **only if you vendored those ADRs** (sub-namespaced or otherwise). Add your project's own ADR entries below. |
+| `## AI Integration Patterns (if applicable)` | The section if your project uses LLMs | Customize the bullets freely; drop the section entirely if your project doesn't use AI integrations. |
+
+### Bucket 3 — Pure project scaffold, replace
+
+These exist only to give the adopter a starting structure. Replace each
+with the project's actual content (or skip if the adopter already has
+equivalents in their own `CLAUDE.md`).
+
+- Project Name + one-line description
+- `## Tech Stack`
+- `## Project Structure`
+- `## Key Files`
+- `## Commands`
+
+### After merging
+
+Keep the merged file under **200 lines** (`CLAUDE.md` auto-loads every
+session — token discipline matters here). The template's bucket-1 sections
+add up to ~30 lines together; the rest is the project's responsibility.
 
 ## Source-pin manifest
 
@@ -418,7 +473,10 @@ convenience.
 | `.mcp.json.example` | MCP template with vetting instructions. |
 | `scripts/check-template.sh` | Template self-check (zero deps). |
 | `scripts/audit-config.sh` | Vetting aid for `.claude/` content. |
+| `.github/workflows/check.yml` | Runs `check-template.sh` + gitleaks on every PR/push. Without it the template's security posture isn't enforced on adopter PRs. Skip only if your CI is wired up differently. |
 | `templates/ADR-template.md` | ADR scaffold (referenced by `/adr`). |
+| `docs/adr/ADR-001-vendor-with-source-pin.md` | Rationale for the `VENDORED.md` sidecar manifest. Sub-namespace if you maintain your own `docs/adr/` series (see § First-time adoption callout). |
+| `docs/adr/ADR-002-ai-context-archive-threshold.md` | Rationale for the 500-line `AI_CONTEXT.md` archive threshold (referenced from `templates/AI_SESSION_START.md` and CLAUDE.md's Context System). Same sub-namespacing caveat. |
 
 ### Adapt (copy, then customize)
 

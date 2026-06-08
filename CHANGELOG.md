@@ -34,6 +34,37 @@ date-stamped — this template isn't versioned. Convention validated against
   touching files, avoiding mid-flow surprises. Especially valuable
   for the existing-repo procedure. Links to Anthropic's canonical
   plan-mode documentation.
+- **Three new file-map rows in `docs/ADOPTING.md` § File map (Vendor
+  as-is)**: `.github/workflows/check.yml` (the CI workflow running
+  `check-template.sh` + gitleaks on every PR/push — without it the
+  template's security posture isn't enforceable on the adopter's
+  PRs), `docs/adr/ADR-001-vendor-with-source-pin.md`, and
+  `docs/adr/ADR-002-ai-context-archive-threshold.md`. All three were
+  referenced in procedure prose but missing from the file-map table
+  that adopters/sessions actually consult. ADRs carry the
+  sub-namespacing caveat from the existing § First-time adoption
+  callout (adopters with their own `docs/adr/` series should sub-
+  namespace to avoid numbering collision).
+- **`## Merging the template's CLAUDE.md`** — new top-level section
+  in `docs/ADOPTING.md` between § First-time adoption and § Source-
+  pin manifest. `CLAUDE.md` is structurally a hybrid (some sections
+  are template-shared engineering principles + load-bearing framework
+  prose, others are pure project scaffold); the previous file-map
+  classification ("skeleton, fill placeholders") didn't distinguish.
+  Adopters following the procedure literally dropped the template-
+  shared content (Conventions block, Context System, four-principle
+  behavioral guidelines), silently breaking the contract the rest of
+  the template assumes. The new section gives a three-bucket
+  categorization: keep-verbatim, keep-framing-replace-content, and
+  pure-scaffold-replace. Existing-repo procedure step 3 now points
+  at this section instead of asking for a generic "specific merge."
+- **Inline rationale comment above `secrets/` in `.gitignore`**:
+  one-liner noting the catch-all-credential-folder convention
+  (Helm sealed-secrets, Terraform/K8s vault, Ansible vault). Origin
+  was previously implicit (added in the 2026-05-23 "secrets
+  hardening" commit `4c8c5ca` alongside `.env*` / keys / etc., with
+  no in-codebase explanation); future readers re-examining the line
+  now have the rationale inline.
 - **ADR sub-namespacing callout** in `docs/ADOPTING.md`
   § First-time adoption: adopters with their own `docs/adr/` series
   collide with the template's `ADR-001` and `ADR-002` if they vendor
