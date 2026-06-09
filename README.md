@@ -6,13 +6,22 @@ skills, hooks) with a small set of engineering-discipline practices.
 
 ## Quick start
 
-1. Copy everything into your new project's root.
-2. Customize `CLAUDE.md` — fill in tech stack, structure, key files, commands. Keep it under 200 lines.
-3. Tune `.claude/settings.json` — add your build/test/lint commands to the `allow` list.
-4. Copy `.claude/settings.local.json.example` → `.claude/settings.local.json` for personal overrides (gitignored).
-5. Delete any commands / agents / skills you don't want.
-6. Set the `SECURITY.md` contact and the `LICENSE` copyright holder (currently `muro`).
-7. Read `docs/claude-code-setup.md` for the details.
+Adoption is driven by a Claude Code session reading [`docs/ADOPTING.md`](docs/ADOPTING.md) — **not** by manual `cp -r`. The session installs baseline plugins (`security-guidance`, `pr-review-toolkit`), runs project-specific plugin and MCP-server discovery against your stack, pins the upstream SHA in `VENDORED.md` so future re-syncs are diffable, and merges `CLAUDE.md` per the three-bucket scheme rather than overwriting your existing config.
+
+1. From inside your target repo, clone this template as a sibling:
+   ```bash
+   git clone https://github.com/mjvacas/claude_code_template.git ../claude_code_template
+   ```
+2. Open Claude Code in your target repo. Recommended: [plan mode](https://code.claude.com/docs/en/permission-modes#analyze-before-you-edit-with-plan-mode) — the procedure has a natural read-and-decide phase before any writes.
+3. Paste one of these prompts:
+
+   **New repo (or near-empty):**
+   > Read `../claude_code_template/docs/ADOPTING.md` and adopt this template into the current repo. **New project.** Tech stack: `<fill in>`. Follow the new-repo procedure.
+
+   **Existing repo (Claude Code already in use):**
+   > Read `../claude_code_template/docs/ADOPTING.md` and adopt this template into the current repo. **Existing project** — already has its own Claude Code config / `CLAUDE.md` / etc. Follow the existing-repo procedure.
+
+The session handles the rest: SHA pin, file-map traversal, plugin install + `/reload-plugins` prompt, MCP discovery, conflict resolution, `bash scripts/check-template.sh` validation, and one atomic adoption commit. Full procedure (file map, discovery rubric, re-sync flow) lives in [`docs/ADOPTING.md`](docs/ADOPTING.md).
 
 ## Layout
 
