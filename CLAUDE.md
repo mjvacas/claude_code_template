@@ -66,8 +66,9 @@ never a runtime toggle/UI. List this project's code-guarded invariants here, e.g
 ## Architecture Decisions
 
 - **[ADR-001](docs/adr/ADR-001-vendor-with-source-pin.md)** — adopters track vendored template files via a root `VENDORED.md` sidecar pinning upstream SHAs; per-file headers are optional.
-- **[ADR-002](docs/adr/ADR-002-ai-context-archive-threshold.md)** — `AI_CONTEXT.md` archives oldest blocks to `docs/summaries/YYYY-MM.md` once it exceeds **500 lines** (~6k tokens); derived from lost-in-the-middle research + Anthropic context-engineering guidance, enforced by SessionStart hook + `/handoff`.
+- **[ADR-002](docs/adr/ADR-002-ai-context-archive-threshold.md)** *(superseded by [ADR-004](docs/adr/ADR-004-ai-context-archive-threshold-bump.md))* — original 500-line / 6k-token research-anchored derivation of the `AI_CONTEXT.md` archive threshold.
 - **[ADR-003](docs/adr/ADR-003-cc-task-bench-scope.md)** — `cc-task-bench` V1 measures 3 deterministic task families (refactor, explore, test-write) across Opus 4.7/4.8, Sonnet 4.6, Haiku 4.5 with 5 runs/cell = **60 attempts per run**; methodology + fixture layout ship now, runner is V2.
+- **[ADR-004](docs/adr/ADR-004-ai-context-archive-threshold-bump.md)** — `AI_CONTEXT.md` archive threshold raised to **750 lines** (~9k tokens) AND `/handoff` now requires each session block to be state-sufficient for cold pickup; the discipline makes archival safe at the higher cap.
 
 <!-- Add decisions as they're made. Format: -->
 <!-- - **Decision**: What was decided -->
