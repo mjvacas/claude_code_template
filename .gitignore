@@ -30,4 +30,7 @@ secrets/
 *.sarif
 .codeql-db/
 
+# cc-task-bench raw results stay machine-local; force-add `bench/results/<run-id>/INDEX.md` per run.
+bench/results/
+
 # Append your project's own ignores below (node_modules/, dist/, .venv/, etc.)
