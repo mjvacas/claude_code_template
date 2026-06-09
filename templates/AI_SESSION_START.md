@@ -78,13 +78,14 @@ commits before recording context; planning to "document it later."
 
 ### Keeping `AI_CONTEXT.md` scannable
 
-When the file exceeds ~500 lines, move the oldest session blocks into
+When the file exceeds ~750 lines, move the oldest session blocks into
 `docs/summaries/YYYY-MM.md` (one compressed page per month) and keep only recent
 blocks in `AI_CONTEXT.md`. Enforcement is two-layered: the SessionStart hook nags at
 every session start above the threshold, and `/handoff` archives before committing.
-The threshold is derived from lost-in-the-middle research and Anthropic context-
-engineering guidance — see `docs/adr/ADR-002-ai-context-archive-threshold.md` for
-the evidence chain and sources.
+Archival is safe because each handoff must produce a state-sufficient latest block —
+enough alone for cold `/session-start` to resume. Threshold rationale:
+`docs/adr/ADR-004-ai-context-archive-threshold-bump.md` (supersedes ADR-002, the
+original 500-line research-anchored derivation).
 
 ---
 

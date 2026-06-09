@@ -10,6 +10,11 @@ date-stamped — this template isn't versioned. Convention validated against
 ## [Unreleased]
 
 ### Added
+- **`docs/adr/ADR-004-ai-context-archive-threshold-bump.md`** — supersedes
+  ADR-002 (which stays in-repo as the original research-anchored historical
+  record). Records the 500 → 750 line `AI_CONTEXT.md` archive threshold bump
+  and the new `/handoff` state-sufficiency requirement that makes the higher
+  cap safe.
 - **Plugin activation caveat** in `docs/ADOPTING.md` § Plugins:
   documents the silent-failure trap where newly-installed plugins don't
   bind to the active session until `/reload-plugins` (slash command) or
@@ -80,6 +85,23 @@ date-stamped — this template isn't versioned. Convention validated against
   `scripts/check-template.sh` doesn't catch them).
 
 ### Changed
+- **`AI_CONTEXT.md` archive threshold: 500 → 750 lines.** Origin: 500 was
+  being hit after a single long session, generating archival friction
+  (SessionStart nag, mid-flow `/handoff` interruption) that outweighed the
+  lost-in-the-middle retrieval cost it was guarding against. 750 keeps most
+  of ADR-002's retrieval headroom intact (~9k tokens vs the 10k attention-safe
+  envelope); 1000 was considered and rejected as sacrificing too much.
+- **`/handoff` state-sufficiency requirement** (new in step 1): each session
+  block must carry enough Current State / Decisions / Open Questions / Next
+  Steps for a cold-start `/session-start` to resume from the latest block
+  alone, without reading archived summaries. Archival is safe at the higher
+  cap because of this discipline (step 3 cites step 1 as the safety basis).
+- **Threshold-value cascade** propagated to `.claude/hooks/session-context.sh`,
+  `.claude/commands/handoff.md`, `AI_CONTEXT.md` header,
+  `templates/AI_SESSION_START.md`, and the CLAUDE.md ADR highlight (now lists
+  both ADRs with ADR-002 flagged superseded). `docs/ADOPTING.md` § First-time
+  adoption callout and § File map updated to mention ADR-004 and flag ADR-002
+  superseded so adopters vendor the right files with the right framing.
 - New-repo procedure step 7 now mirrors existing-repo step 6's
   `claude plugin list` precheck pattern: check first, default-install
   only what's missing, confirm-enabled for what's already there. Avoids

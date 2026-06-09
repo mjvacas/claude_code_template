@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted (2026-06-06)
+Superseded by [ADR-004](./ADR-004-ai-context-archive-threshold-bump.md) (2026-06-09).
+
+Original status: Accepted (2026-06-06). Superseded after the 500-line cap was found to trigger archival friction often enough in practice that the retrieval cost it guarded against was no longer the binding constraint. The math in this ADR remains correct; ADR-004 raises the cap to 750 and pairs it with a `/handoff` state-sufficiency requirement so archival stays safe at the higher number.
 
 ## Context
 

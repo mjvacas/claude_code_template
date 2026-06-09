@@ -202,9 +202,12 @@ adopting into), with this template available at a path like
 > **If your repo already maintains a `docs/adr/` series**, vendor template
 > ADRs into a sub-namespace — `docs/claude-code-template/` or
 > `docs/adr/_upstream/` are both common — to avoid numbering collisions.
-> The template ships `ADR-001-vendor-with-source-pin.md` and
-> `ADR-002-ai-context-archive-threshold.md`; vendoring those naïvely into
-> a repo with its own ADR-001 silently corrupts the adopter's ADR sequence.
+> The template ships `ADR-001-vendor-with-source-pin.md`,
+> `ADR-002-ai-context-archive-threshold.md` (superseded — kept as historical
+> record), and `ADR-004-ai-context-archive-threshold-bump.md` (live rationale
+> for the `AI_CONTEXT.md` threshold + `/handoff` discipline); vendoring those
+> naïvely into a repo with its own ADR-001 silently corrupts the adopter's
+> ADR sequence.
 > Patch the inline references in `templates/AI_SESSION_START.md` (and any
 > other vendored docs that cross-link to template ADRs) to the
 > sub-namespace path you chose.
@@ -476,7 +479,8 @@ convenience.
 | `.github/workflows/check.yml` | Runs `check-template.sh` + gitleaks on every PR/push. Without it the template's security posture isn't enforced on adopter PRs. Skip only if your CI is wired up differently. |
 | `templates/ADR-template.md` | ADR scaffold (referenced by `/adr`). |
 | `docs/adr/ADR-001-vendor-with-source-pin.md` | Rationale for the `VENDORED.md` sidecar manifest. Sub-namespace if you maintain your own `docs/adr/` series (see § First-time adoption callout). |
-| `docs/adr/ADR-002-ai-context-archive-threshold.md` | Rationale for the 500-line `AI_CONTEXT.md` archive threshold (referenced from `templates/AI_SESSION_START.md` and CLAUDE.md's Context System). Same sub-namespacing caveat. |
+| `docs/adr/ADR-002-ai-context-archive-threshold.md` | Historical record — the original 500-line research-anchored derivation. Superseded by ADR-004 but kept in-repo (ADR-004 cites its evidence chain). Same sub-namespacing caveat. |
+| `docs/adr/ADR-004-ai-context-archive-threshold-bump.md` | Live rationale for the 750-line `AI_CONTEXT.md` archive threshold + `/handoff` state-sufficiency requirement (referenced from `templates/AI_SESSION_START.md` and CLAUDE.md's Context System). Same sub-namespacing caveat. |
 
 ### Adapt (copy, then customize)
 
