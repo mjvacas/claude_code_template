@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "_note": "Per-million-token pricing in USD. Verify against https://www.anthropic.com/pricing before each run. The runner pins which version of this file was used via bench_commit; historical results re-cost cleanly by editing this file and re-running aggregation. Set _verified_at to ISO-8601 UTC (e.g. '2026-06-08T14:22Z') when prices are confirmed.",
+  "_verified_at": null,
+  "currency": "USD",
+  "unit": "per_million_tokens",
+  "models": {
+    "claude-opus-4-8":           { "input": null, "output": null, "cache_read": null, "cache_write": null },
+    "claude-opus-4-7":           { "input": null, "output": null, "cache_read": null, "cache_write": null },
+    "claude-sonnet-4-6":         { "input": null, "output": null, "cache_read": null, "cache_write": null },
+    "claude-haiku-4-5-20251001": { "input": null, "output": null, "cache_read": null, "cache_write": null }
+  }
+}

@@ -16,7 +16,7 @@ Adoption is driven by a Claude Code session reading [`docs/ADOPTING.md`](docs/AD
 3. Paste one of these prompts:
 
    **New repo (or near-empty):**
-   > Read `../claude_code_template/docs/ADOPTING.md` and adopt this template into the current repo. **New project.** Tech stack: `<fill in>`. Follow the new-repo procedure.
+   > Read `../claude_code_template/docs/ADOPTING.md` and adopt this template into the current repo. **New project.** Follow the new-repo procedure.
 
    **Existing repo (Claude Code already in use):**
    > Read `../claude_code_template/docs/ADOPTING.md` and adopt this template into the current repo. **Existing project** — already has its own Claude Code config / `CLAUDE.md` / etc. Follow the existing-repo procedure.
