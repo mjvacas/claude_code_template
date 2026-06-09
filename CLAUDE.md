@@ -67,6 +67,7 @@ never a runtime toggle/UI. List this project's code-guarded invariants here, e.g
 
 - **[ADR-001](docs/adr/ADR-001-vendor-with-source-pin.md)** — adopters track vendored template files via a root `VENDORED.md` sidecar pinning upstream SHAs; per-file headers are optional.
 - **[ADR-002](docs/adr/ADR-002-ai-context-archive-threshold.md)** — `AI_CONTEXT.md` archives oldest blocks to `docs/summaries/YYYY-MM.md` once it exceeds **500 lines** (~6k tokens); derived from lost-in-the-middle research + Anthropic context-engineering guidance, enforced by SessionStart hook + `/handoff`.
+- **[ADR-003](docs/adr/ADR-003-cc-task-bench-scope.md)** — `cc-task-bench` V1 measures 3 deterministic task families (refactor, explore, test-write) across Opus 4.7/4.8, Sonnet 4.6, Haiku 4.5 with 5 runs/cell = **60 attempts per run**; methodology + fixture layout ship now, runner is V2.
 
 <!-- Add decisions as they're made. Format: -->
 <!-- - **Decision**: What was decided -->
@@ -90,7 +91,7 @@ Hybrid memory — two stores, kept from overlapping:
 - **docs/adr/ADR-NNN-*.md**: Architecture Decision Records — one per significant or hard-to-reverse decision (Status / Context / Decision / Consequences / Alternatives Considered). Don't re-litigate a decided ADR; if it genuinely needs revisiting, write a new one that supersedes it. Keep a one-line highlight per ADR in the "Architecture Decisions" section above.
 - **docs/summaries/YYYY-MM.md**: Monthly compressed recaps.
 - **docs/{PROJECT_SPEC,ARCHITECTURE,BUILD_PLAN}.md** (optional; scale to project size): the source-of-truth triad — the "why/what", the "how", and the "in what order". Read at session start; don't re-litigate decisions captured here (revisit via a new ADR). Skeletons in `templates/`.
-- **.claude/**: native Claude Code config — `settings.json` (permissions, statusline, SessionStart + PreToolUse + PreCompact hooks), `hooks/` (session-context, block-dangerous, precompact-snapshot), `commands/` (`/session-start`, `/handoff`, `/commit`, `/adr`), `skills/` (verify-refactor, tune-parameters, llm-eval). Code review is delegated to the `pr-review-toolkit@claude-plugins-official` baseline plugin installed during adoption (see docs/ADOPTING.md). See docs/claude-code-setup.md.
+- **.claude/**: native Claude Code config — `settings.json` (permissions, statusline, SessionStart + PreToolUse + PreCompact hooks), `hooks/` (session-context, block-dangerous, precompact-snapshot), `commands/` (`/session-start`, `/handoff`, `/commit`, `/adr`), `skills/` (verify-refactor, tune-parameters, llm-eval, cc-task-bench). Code review is delegated to the `pr-review-toolkit@claude-plugins-official` baseline plugin installed during adoption (see docs/ADOPTING.md). See docs/claude-code-setup.md.
 - **Rule**: Commit code + AI_CONTEXT.md updates together atomically.
 
 Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed. 
