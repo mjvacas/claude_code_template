@@ -9,25 +9,6 @@ date-stamped — this template isn't versioned. Convention validated against
 
 ## [Unreleased]
 
-### Changed
-- **`CLAUDE.md` skeleton de-opinionated** to match `docs/ADOPTING.md`'s
-  "language-agnostic — no framework lock-in" claim. The scaffold sections
-  (`## Tech Stack`, `## Project Structure`, `## Key Files`, `## Commands`)
-  previously defaulted to a React Native/TypeScript/npm stack; they now use
-  role-based placeholders with ecosystem-diverse examples (JS, Python, Go).
-  The `## Conventions` block — keep-verbatim on merge per the three-bucket
-  scheme, so its old React phrasing ("keep screens thin — push logic into
-  hooks") traveled into every adopter's repo — is de-flavored: entry-points-
-  thin replaces screens-thin, types-first drops the `types/` directory
-  assumption, defensive-defaults shows JS and Python fallback idioms.
-  Principle names (don't-duplicate, types-first,
-  defensive-defaults-at-boundaries, …) are unchanged, so the bucket
-  enumeration in `docs/ADOPTING.md` and the cross-references in
-  `templates/ARCHITECTURE.md` still resolve. Section headings are
-  unchanged, so the three-bucket merge tables need no edits. Also
-  de-flavors one AI-Integration-Patterns bullet ("across screens" →
-  "across call sites").
-
 ### Added
 - **`docs/adr/ADR-004-ai-context-archive-threshold-bump.md`** — supersedes
   ADR-002 (which stays in-repo as the original research-anchored historical
@@ -104,6 +85,23 @@ date-stamped — this template isn't versioned. Convention validated against
   `scripts/check-template.sh` doesn't catch them).
 
 ### Changed
+- **`CLAUDE.md` skeleton de-opinionated** to match `docs/ADOPTING.md`'s
+  "language-agnostic — no framework lock-in" claim. The scaffold sections
+  (`## Tech Stack`, `## Project Structure`, `## Key Files`, `## Commands`)
+  previously defaulted to a React Native/TypeScript/npm stack; they now use
+  role-based placeholders with ecosystem-diverse examples (JS, Python, Go).
+  The `## Conventions` block — keep-verbatim on merge per the three-bucket
+  scheme, so its old React phrasing ("keep screens thin — push logic into
+  hooks") traveled into every adopter's repo — is de-flavored: entry-points-
+  thin replaces screens-thin, types-first drops the `types/` directory
+  assumption, defensive-defaults shows JS and Python fallback idioms.
+  Principle names (don't-duplicate, types-first,
+  defensive-defaults-at-boundaries, …) are unchanged, so the bucket
+  enumeration in `docs/ADOPTING.md` and the cross-references in
+  `templates/ARCHITECTURE.md` still resolve. Section headings are
+  unchanged, so the three-bucket merge tables need no edits. Also
+  de-flavors one AI-Integration-Patterns bullet ("across screens" →
+  "across call sites").
 - **`AI_CONTEXT.md` archive threshold: 500 → 750 lines.** Origin: 500 was
   being hit after a single long session, generating archival friction
   (SessionStart nag, mid-flow `/handoff` interruption) that outweighed the
