@@ -98,6 +98,18 @@ date-stamped — this template isn't versioned. Convention validated against
   `scripts/check-template.sh` doesn't catch them).
 
 ### Changed
+- **Two workflow practices promoted from machine-local auto-memory into
+  the template** (`CLAUDE.md` `## Conventions` + `/commit` step 3), after
+  an adopter repo was observed not running PR review despite having the
+  plugin installed: (1) *review-before-commit* — run the review plugin's
+  `code-reviewer` agent on non-trivial diffs before committing; agents
+  are model-invoked and never fire on their own, so installing
+  `pr-review-toolkit` without this convention silently yields zero
+  reviews; (2) *no-amend-after-push* — add a fixup commit instead;
+  the PreToolUse hook already hard-blocks force-push, but stating the
+  practice saves sessions from learning it at hook-block time. Both are
+  Bucket-1 (keep-verbatim) content, so they reach adopters on merge;
+  `docs/ADOPTING.md`'s bucket-table enumeration updated to name them.
 - **`CLAUDE.md` skeleton de-opinionated** to match `docs/ADOPTING.md`'s
   "language-agnostic — no framework lock-in" claim. The scaffold sections
   (`## Tech Stack`, `## Project Structure`, `## Key Files`, `## Commands`)
