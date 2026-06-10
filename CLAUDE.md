@@ -42,6 +42,8 @@ src/                # or app/, lib/, cmd/ — follow your stack's idiom
 ## Conventions
 
 - Commit prefixes: `feat:`, `fix:`, `refactor:`, `docs:`, `chore:`
+- Before a non-trivial commit or PR, run your code-review plugin's reviewer agent on the diff (baseline: `pr-review-toolkit`'s `code-reviewer`) — review agents are model-invoked and never fire on their own
+- Once a branch is pushed, don't amend/force-push it — add a fixup commit instead (force-push is hard-blocked by the PreToolUse hook)
 - **Don't duplicate — share.** When logic appears twice, extract it into one shared module and fold the existing copies in; never let a third copy appear. If the same computation runs in two contexts (prod vs. tests/simulation, or sibling features), share the *exact* implementation so they can't silently drift. Grep for the pattern before writing a near-duplicate.
 - Keep entry points thin (screens, routes, CLI handlers) — push logic into services/modules
 - Types first: define data contracts (types/schemas/models) before building features

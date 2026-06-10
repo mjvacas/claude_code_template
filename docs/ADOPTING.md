@@ -366,7 +366,7 @@ into the adopter's `CLAUDE.md` unchanged.
 
 | Section | Why it's template-shared |
 |---------|--------------------------|
-| `## Conventions` block (the engineering principles: don't-duplicate, types-first, defensive-defaults-at-boundaries, refactor-verify against baseline, treat `.claude/` as deps) | These are the shared engineering stance the rest of the template assumes. Skills like `verify-refactor` reference the baseline-output rule directly. |
+| `## Conventions` block (the engineering principles: don't-duplicate, types-first, defensive-defaults-at-boundaries, refactor-verify against baseline, treat `.claude/` as deps, review-before-commit, no-amend-after-push) | These are the shared engineering stance the rest of the template assumes. Skills like `verify-refactor` reference the baseline-output rule directly. |
 | `## Context System` (entire section) | Load-bearing for `/handoff`, `/session-start`, hybrid-memory model, ADR/summaries archive mechanics. The template's commands, hooks, and skills assume this paragraph exists. |
 | Behavioral guidelines block at the bottom (the four principles: Think Before Coding, Simplicity First, Surgical Changes, Goal-Driven Execution) | Referenced as the "four principles" throughout AI sessions; dropping them changes the contract for what the model is being asked to optimize for. |
 
