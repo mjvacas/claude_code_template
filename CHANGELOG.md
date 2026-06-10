@@ -24,6 +24,19 @@ date-stamped — this template isn't versioned. Convention validated against
   that doesn't travel (how an adopter ended up with the review plugin
   installed but no reviews running). README layout + ADOPTING.md
   reference-only file-map row added.
+- **Session clock** — sessions have no inherent sense of time (the date
+  injected at session start goes stale across midnight/compaction, and
+  the model can't notice elapsed time on its own). Three pieces, two of
+  them always-on and free: the `SessionStart` hook now prints a
+  "Session started:" timestamp line (and is no longer a full no-op
+  outside git — the clock line still prints); `/handoff` and `/adr`
+  inject today's date at invocation instead of trusting context (new
+  `Bash(date:*)` in their allowed-tools). The third piece is opt-in:
+  `.claude/hooks/clock.sh`, a `UserPromptSubmit` heartbeat that injects
+  the current time on every prompt (elapsed session time = subtract the
+  session-start line) — ships **unwired** because it costs a few tokens
+  per prompt; enable via the snippet in `docs/claude-code-setup.md`
+  § Optional: session clock heartbeat.
 - **`docs/adr/ADR-004-ai-context-archive-threshold-bump.md`** — supersedes
   ADR-002 (which stays in-repo as the original research-anchored historical
   record). Records the 500 → 750 line `AI_CONTEXT.md` archive threshold bump
@@ -99,6 +112,18 @@ date-stamped — this template isn't versioned. Convention validated against
   `scripts/check-template.sh` doesn't catch them).
 
 ### Changed
+- **Two workflow practices promoted from machine-local auto-memory into
+  the template** (`CLAUDE.md` `## Conventions` + `/commit` step 3), after
+  an adopter repo was observed not running PR review despite having the
+  plugin installed: (1) *review-before-commit* — run the review plugin's
+  `code-reviewer` agent on non-trivial diffs before committing; agents
+  are model-invoked and never fire on their own, so installing
+  `pr-review-toolkit` without this convention silently yields zero
+  reviews; (2) *no-amend-after-push* — add a fixup commit instead;
+  the PreToolUse hook already hard-blocks force-push, but stating the
+  practice saves sessions from learning it at hook-block time. Both are
+  Bucket-1 (keep-verbatim) content, so they reach adopters on merge;
+  `docs/ADOPTING.md`'s bucket-table enumeration updated to name them.
 - **`CLAUDE.md` skeleton de-opinionated** to match `docs/ADOPTING.md`'s
   "language-agnostic — no framework lock-in" claim. The scaffold sections
   (`## Tech Stack`, `## Project Structure`, `## Key Files`, `## Commands`)

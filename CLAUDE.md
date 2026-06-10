@@ -42,6 +42,8 @@ src/                # or app/, lib/, cmd/ — follow your stack's idiom
 ## Conventions
 
 - Commit prefixes: `feat:`, `fix:`, `refactor:`, `docs:`, `chore:`
+- Before a non-trivial commit or PR, run your code-review plugin's reviewer agent on the diff (baseline: `pr-review-toolkit`'s `code-reviewer`) — review agents are model-invoked and never fire on their own
+- Once a branch is pushed, don't amend/force-push it — add a fixup commit instead (force-push is hard-blocked by the PreToolUse hook)
 - **Don't duplicate — share.** When logic appears twice, extract it into one shared module and fold the existing copies in; never let a third copy appear. If the same computation runs in two contexts (prod vs. tests/simulation, or sibling features), share the *exact* implementation so they can't silently drift. Grep for the pattern before writing a near-duplicate.
 - Keep entry points thin (screens, routes, CLI handlers) — push logic into services/modules
 - Types first: define data contracts (types/schemas/models) before building features
@@ -90,7 +92,7 @@ Hybrid memory — two stores, kept from overlapping:
 - **docs/adr/ADR-NNN-*.md**: Architecture Decision Records — one per significant or hard-to-reverse decision (Status / Context / Decision / Consequences / Alternatives Considered). Don't re-litigate a decided ADR; if it genuinely needs revisiting, write a new one that supersedes it. Keep a one-line highlight per ADR in the "Architecture Decisions" section above.
 - **docs/summaries/YYYY-MM.md**: Monthly compressed recaps.
 - **docs/{PROJECT_SPEC,ARCHITECTURE,BUILD_PLAN}.md** (optional; scale to project size): the source-of-truth triad — the "why/what", the "how", and the "in what order". Read at session start; don't re-litigate decisions captured here (revisit via a new ADR). Skeletons in `templates/`.
-- **.claude/**: native Claude Code config — `settings.json` (permissions, statusline, SessionStart + PreToolUse + PreCompact hooks), `hooks/` (session-context, block-dangerous, precompact-snapshot), `commands/` (`/session-start`, `/handoff`, `/commit`, `/adr`), `skills/` (verify-refactor, tune-parameters, llm-eval, cc-task-bench). Code review is delegated to the `pr-review-toolkit@claude-plugins-official` baseline plugin installed during adoption (see docs/ADOPTING.md). See docs/claude-code-setup.md.
+- **.claude/**: native Claude Code config — `settings.json` (permissions, statusline, SessionStart + PreToolUse + PreCompact hooks), `hooks/` (session-context, block-dangerous, precompact-snapshot, clock — opt-in), `commands/` (`/session-start`, `/handoff`, `/commit`, `/adr`), `skills/` (verify-refactor, tune-parameters, llm-eval, cc-task-bench). Code review is delegated to the `pr-review-toolkit@claude-plugins-official` baseline plugin installed during adoption (see docs/ADOPTING.md). See docs/claude-code-setup.md.
 - **Rule**: Commit code + AI_CONTEXT.md updates together atomically.
 
 Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed. 
