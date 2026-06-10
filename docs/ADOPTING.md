@@ -5,8 +5,8 @@
 > is driven by that session, not by manual `cp -r`. This doc tells the
 > session what to do.
 >
-> If you're sending a fix *back* to this repo, see (future) `CONTRIBUTING.md`
-> — different doc, different audience.
+> If you're sending a fix *back* to this repo, see
+> [`CONTRIBUTING.md`](../CONTRIBUTING.md) — different doc, different audience.
 
 ## What this template is
 
@@ -512,6 +512,7 @@ convenience.
 | `docs/claude-code-setup.md` | How this template wires into Claude Code. Read for ideas. |
 | `docs/skill-security.md` | Trust model + vetting procedures. Link rather than copy. |
 | `CHANGELOG.md` | This template's change log. Read to re-sync. |
+| `CONTRIBUTING.md` | Sending fixes back to this repo + its maintainer-side working agreements. Don't copy — write your own if your project needs one. |
 
 ### Skip
 

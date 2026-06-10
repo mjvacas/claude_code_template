@@ -30,6 +30,7 @@ CLAUDE.md                     # Project rules + conventions (auto-loaded every s
 AI_CONTEXT.md                 # Human-curated decision log (auto-loaded via @import)
 LICENSE                       # MIT
 SECURITY.md                   # How to report vulns; points at the AI-config trust model
+CONTRIBUTING.md               # Sending fixes back + this repo's working agreements
 .editorconfig                 # Universal, stack-neutral whitespace/EOL rules
 .gitignore                    # Ignores Claude-local files, secrets/env, .mcp.json, scan output
 .mcp.json.example             # Vetted-server template; copy to .mcp.json (gitignored) after review
