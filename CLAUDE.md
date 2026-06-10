@@ -9,45 +9,43 @@
 
 ## Tech Stack
 
-- **Framework**: [e.g., React Native + Expo, Next.js, FastAPI]
-- **Language**: [e.g., TypeScript, Python]
-- **Database**: [e.g., SQLite, PostgreSQL, Supabase]
-- **UI**: [e.g., React Native Paper, Tailwind, shadcn/ui]
+- **Language**: [e.g., TypeScript, Python, Go]
+- **Framework**: [e.g., Next.js, FastAPI, Rails — or "none"]
+- **Database**: [e.g., PostgreSQL, SQLite — or "none"]
+- **UI**: [e.g., React Native Paper, Tailwind — or "none" for CLIs/services]
 - **AI**: [e.g., Claude API, OpenAI API — or "none"]
 
 ## Project Structure
 
 ```
-src/
-├── screens/        # (or pages/, routes/) One file per screen/page
-├── components/     # Reusable UI components
-├── services/       # Business logic, API clients, database
-├── utils/          # Pure helper functions
-├── types/          # TypeScript type definitions
-└── hooks/          # Custom React hooks
+src/                # or app/, lib/, cmd/ — follow your stack's idiom
+├── <entrypoints>   # screens, routes, CLI commands, handlers
+├── <domain>        # business logic, services
+├── <shared>        # pure helpers, utilities
+└── <types>         # data contracts / schemas / models
 ```
 
 ## Key Files
 
-- `src/types/index.ts` — Core data types
-- `src/services/database.ts` — Database schema and queries
+- `[path to core data types/schemas]` — Core data contracts
+- `[path to database schema & queries — if any]`
 - [Add other important files as they emerge]
 
 ## Commands
 
 ```bash
-npm start           # Start dev server
-npm test            # Run tests
-npx tsc --noEmit    # Type check
+[dev command]       # e.g., npm start, uvicorn app:app, go run .
+[test command]      # e.g., npm test, pytest, go test ./...
+[check command]     # e.g., npx tsc --noEmit, ruff check, go vet
 ```
 
 ## Conventions
 
 - Commit prefixes: `feat:`, `fix:`, `refactor:`, `docs:`, `chore:`
-- **Don't duplicate — share.** When logic appears twice, extract it into one shared module (`src/utils/`, `src/services/`) and fold the existing copies in; never let a third copy appear. If the same computation runs in two contexts (prod vs. tests/simulation, or sibling features), share the *exact* implementation so they can't silently drift. Grep for the pattern before writing a near-duplicate.
-- Keep screens thin — push logic into hooks and services
-- Types first: define data contracts in `types/` before building features
-- Defensive defaults at boundaries only: normalize external/untrusted data (`?? 0` / `?? ''`); don't validate trusted internal calls
+- **Don't duplicate — share.** When logic appears twice, extract it into one shared module and fold the existing copies in; never let a third copy appear. If the same computation runs in two contexts (prod vs. tests/simulation, or sibling features), share the *exact* implementation so they can't silently drift. Grep for the pattern before writing a near-duplicate.
+- Keep entry points thin (screens, routes, CLI handlers) — push logic into services/modules
+- Types first: define data contracts (types/schemas/models) before building features
+- Defensive defaults at boundaries only: normalize external/untrusted data with safe fallbacks (JS `?? 0`, Python `.get(key, default)`); don't validate trusted internal calls
 - After refactoring deterministic code, verify behavior is unchanged against a saved baseline output — stronger than "tests still pass"
 - Treat `.claude/` skills/commands/agents/hooks and MCP servers as dependencies: vet before adding, review every update, keep unvetted ones out of version control — see docs/skill-security.md
 
@@ -78,7 +76,7 @@ never a runtime toggle/UI. List this project's code-guarded invariants here, e.g
 ## AI Integration Patterns (if applicable)
 
 - Provider-agnostic interface for LLM calls (easy to swap Claude/OpenAI/etc.)
-- Cache LLM responses to avoid inconsistent results across screens
+- Cache LLM responses to avoid inconsistent results across call sites
 - Log AI inputs/outputs for debugging: `[LLM] Input:`, `[LLM] Response:`
 - Validate and normalize all AI-generated data with defaults
 
