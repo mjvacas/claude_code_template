@@ -467,6 +467,7 @@ convenience.
 | `.claude/hooks/session-context.sh` | Safe SessionStart hook. |
 | `.claude/hooks/block-dangerous.sh` | **Critical**: PreToolUse hard-block of `rm -rf /`, `git push --force`, pipe-to-shell, etc. |
 | `.claude/hooks/precompact-snapshot.sh` | Pre-compaction breadcrumb snapshots. |
+| `.claude/hooks/clock.sh` | Opt-in per-prompt time heartbeat (ships unwired; a few tokens/prompt when enabled — see `docs/claude-code-setup.md`). |
 | `.claude/commands/commit.md` | `/commit` slash command. |
 | `.claude/commands/adr.md` | `/adr` slash command. |
 | `.claude/skills/verify-refactor/` | Golden-output byte-identical diffing. |

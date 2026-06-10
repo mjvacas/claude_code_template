@@ -1,7 +1,7 @@
 ---
 description: Scaffold a new Architecture Decision Record from the template, numbered to the next slot.
 argument-hint: "<short decision title>"
-allowed-tools: Bash(ls:*), Bash(git log:*), Read, Write
+allowed-tools: Bash(ls:*), Bash(git log:*), Bash(date:*), Read, Write
 ---
 
 Record a significant or hard-to-reverse decision as an ADR.
@@ -9,6 +9,7 @@ Record a significant or hard-to-reverse decision as an ADR.
 ## Existing ADRs
 
 - !`ls docs/adr/ 2>/dev/null | grep -E '^ADR-' || echo "(none yet)"`
+- Today's date: !`date '+%Y-%m-%d'` — use this for the Status date; dates remembered from context go stale
 
 ## Your task
 

@@ -39,9 +39,10 @@ SECURITY.md                   # How to report vulns; points at the AI-config tru
 ├── settings.local.json.example
 ├── settings.lockdown.json.example  # Opt-in egress denies for vetting untrusted skills
 ├── statusline.sh             # Status line: model · dir · branch · context warning
-├── hooks/session-context.sh  # Prints recent git activity at session start
+├── hooks/session-context.sh  # Prints session-start time + recent git activity at session start
 ├── hooks/block-dangerous.sh  # PreToolUse guard: hard-blocks catastrophic shell commands
 ├── hooks/precompact-snapshot.sh  # PreCompact: snapshots context to .claude/snapshots/ before compaction
+├── hooks/clock.sh            # Opt-in per-prompt time heartbeat (not wired by default)
 ├── commands/                 # /session-start, /handoff, /commit, /adr
 └── skills/                   # verify-refactor, tune-parameters, llm-eval
 scripts/
