@@ -10,6 +10,20 @@ date-stamped — this template isn't versioned. Convention validated against
 ## [Unreleased]
 
 ### Added
+- **`CONTRIBUTING.md`** — the contributor-facing sibling of
+  `docs/ADOPTING.md` (fixes flowing *in* vs the template flowing *out*),
+  previously referenced there as "(future)". Covers workflow (one concern
+  per PR, conventional commits, review-before-commit, no-amend-after-push,
+  stacked-branch rebase rule, secretless-CI constraint) and — new —
+  **repo-specific working agreements** that were previously encoded
+  nowhere in-repo: no `/handoff` here (`AI_CONTEXT.md` stays blank for
+  adopters), no named adopters in public docs, verify adopter-feedback
+  premises before shipping, recurring-token-cost features default to
+  opt-in. Closes with a "promote practices out of auto-memory" routine —
+  the structural fix for practices accumulating in machine-local memory
+  that doesn't travel (how an adopter ended up with the review plugin
+  installed but no reviews running). README layout + ADOPTING.md
+  reference-only file-map row added.
 - **Session clock** — sessions have no inherent sense of time (the date
   injected at session start goes stale across midnight/compaction, and
   the model can't notice elapsed time on its own). Three pieces, two of
