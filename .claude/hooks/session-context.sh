@@ -1,15 +1,22 @@
 #!/usr/bin/env bash
-# SessionStart hook — surfaces recent repo activity so every session opens with
-# current state. stdout is injected into Claude's context. Safe no-op outside a
-# git repo. Remove this hook or this script freely; see docs/claude-code-setup.md.
+# SessionStart hook — anchors the session in time and surfaces recent repo
+# activity so every session opens with current state. stdout is injected into
+# Claude's context. Outside a git repo only the clock line prints. Remove this
+# hook or this script freely; see docs/claude-code-setup.md.
 set -euo pipefail
 
 cd "${CLAUDE_PROJECT_DIR:-.}" 2>/dev/null || exit 0
+
+# Session-start clock anchor. The opt-in per-prompt clock.sh heartbeat (see
+# docs/claude-code-setup.md) keeps time current; subtracting this line from
+# its output gives elapsed session time.
+echo "Session started: $(date '+%Y-%m-%d %H:%M %Z (%A)')"
 
 if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   exit 0
 fi
 
+echo
 echo "## Recent repo activity (SessionStart hook)"
 echo
 echo "### Last 5 commits"

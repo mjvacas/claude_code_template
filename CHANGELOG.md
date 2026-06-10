@@ -10,6 +10,19 @@ date-stamped — this template isn't versioned. Convention validated against
 ## [Unreleased]
 
 ### Added
+- **Session clock** — sessions have no inherent sense of time (the date
+  injected at session start goes stale across midnight/compaction, and
+  the model can't notice elapsed time on its own). Three pieces, two of
+  them always-on and free: the `SessionStart` hook now prints a
+  "Session started:" timestamp line (and is no longer a full no-op
+  outside git — the clock line still prints); `/handoff` and `/adr`
+  inject today's date at invocation instead of trusting context (new
+  `Bash(date:*)` in their allowed-tools). The third piece is opt-in:
+  `.claude/hooks/clock.sh`, a `UserPromptSubmit` heartbeat that injects
+  the current time on every prompt (elapsed session time = subtract the
+  session-start line) — ships **unwired** because it costs a few tokens
+  per prompt; enable via the snippet in `docs/claude-code-setup.md`
+  § Optional: session clock heartbeat.
 - **`docs/adr/ADR-004-ai-context-archive-threshold-bump.md`** — supersedes
   ADR-002 (which stays in-repo as the original research-anchored historical
   record). Records the 500 → 750 line `AI_CONTEXT.md` archive threshold bump

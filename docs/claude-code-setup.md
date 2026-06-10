@@ -9,7 +9,8 @@ after you copy it into a new project.
 |------|--------------|-----------|
 | `settings.json` | Permissions (Read-tool denies for secret files; a minimal shell allow-list — only `ls` + read-only `git`; `defaultMode: acceptEdits` **auto-applies file edits without prompting**), statusline, and SessionStart/PreToolUse/PreCompact hooks. Committed, team-shared. | Yes — add your build/test/lint to the allow list. |
 | `settings.local.json` | Your personal overrides. **Gitignored.** Copy `settings.local.json.example` to start. | Personal. |
-| `hooks/session-context.sh` | `SessionStart` hook: prints recent commits + working-tree status into context. Safe no-op outside git. | Optional — delete the hook entry in `settings.json` to disable. |
+| `hooks/session-context.sh` | `SessionStart` hook: prints the session-start time, recent commits + working-tree status into context. Outside git only the clock line prints. | Optional — delete the hook entry in `settings.json` to disable. |
+| `hooks/clock.sh` | `UserPromptSubmit` heartbeat (**opt-in, not wired by default**): injects the current time into context on every prompt, so the session can notice elapsed time and date rollovers. | Opt-in — see [§ Optional: session clock heartbeat](#optional-session-clock-heartbeat). |
 | `hooks/block-dangerous.sh` | `PreToolUse(Bash)` guard: hard-blocks catastrophic commands (`rm -rf /`, `git reset --hard`, `git push --force`, pipe-to-shell, `dd`/`mkfs`, fork bomb) via exit 2. A safety net, **not** a sandbox. | Tune the pattern list to your needs. |
 | `hooks/precompact-snapshot.sh` | `PreCompact` hook: before the context is compacted, writes a recovery breadcrumb (transcript pointer + recent turns) to `.claude/snapshots/` (gitignored). A safety net, not a replacement for `/handoff`. | Optional — delete the hook entry in `settings.json` to disable. |
 | `statusline.sh` | Status line: model · dir · git branch · context warning. | Optional — remove the `statusLine` key in `settings.json` to disable. |
@@ -116,6 +117,38 @@ add a `PostToolUse` hook to `settings.json` and adjust the formatter:
 ```
 
 (Use `black`/`ruff`, `gofmt`, `rustfmt`, etc. for other languages.)
+
+## Optional: session clock heartbeat
+
+Sessions have no inherent sense of time: the date injected at session start goes
+stale (midnight rollover, compaction), and the model can't notice elapsed time on
+its own — so it won't think to run `date` precisely when timing matters. The
+template anchors time in two always-on, zero-cost places: the `SessionStart` hook
+prints a "Session started:" line, and `/handoff` + `/adr` inject today's date at
+invocation rather than trusting context.
+
+For a *live* clock, `hooks/clock.sh` ships unwired: a `UserPromptSubmit` hook that
+injects the current time on every prompt (elapsed session time = subtract the
+session-start line). It costs a few tokens per prompt, which is why it's opt-in.
+To enable, add to `settings.json` (team-shared) or `settings.local.json` (just you):
+
+```json
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR/.claude/hooks/clock.sh\"", "timeout": 5 }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Most useful in long-running sessions: it lets the model notice "this session is
+hours old" and suggest `/handoff` before context death, and keeps dates honest
+across midnight.
 
 ## Where the long-form guidance lives
 

@@ -1,12 +1,13 @@
 ---
 description: End-of-session handoff — record decisions in AI_CONTEXT.md and commit code + context together atomically.
-allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git add:*), Bash(git commit:*), Bash(wc:*), Read, Edit
+allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git add:*), Bash(git commit:*), Bash(wc:*), Bash(date:*), Read, Edit
 ---
 
 Close out the session so the next one can resume cleanly.
 
 ## What changed
 
+- Today's date: !`date '+%Y-%m-%d'` — use this for the session block header; dates remembered from context go stale (midnight rollover, compaction)
 - Working tree: !`git status --short`
 - Staged + unstaged diff summary: !`git diff --stat HEAD`
 - `AI_CONTEXT.md` size: !`wc -l < AI_CONTEXT.md | tr -d ' '` lines (archive oldest blocks to `docs/summaries/YYYY-MM.md` if > 750 — see @docs/adr/ADR-004-ai-context-archive-threshold-bump.md)
