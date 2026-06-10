@@ -164,6 +164,16 @@ date-stamped — this template isn't versioned. Convention validated against
   start step 1 and the `old/` line in the Layout block.
 
 ### Fixed
+- **`scripts/check-template.sh` § 3b source-repo detection** rewritten
+  from env-var gating (`CHECK_TEMPLATE_SOURCE`) to auto-detection by
+  `docs/ADOPTING.md` presence (template-internal; adopters read it from
+  the template clone and never vendor it). The env-var design failed in
+  both directions: the documented local run
+  (`bash scripts/check-template.sh`) failed in the source repo on its
+  own correct `@templates/` refs, and the vendored-as-is
+  `.github/workflows/check.yml` hardcoded the variable — so adopter CI
+  never ran the adopter-side check it was built for. The variable is
+  removed from both the script and the workflow.
 - **Plugin vetting reframed from marketplace-based to authorship-based**
   in `docs/ADOPTING.md`. The previous wording assumed
   "Anthropic-official marketplace ⇒ Anthropic-authored ⇒ trusted, skip

@@ -98,10 +98,12 @@ then fail=1; fi
 echo "== 3b. @-references avoid template-internal paths (adopter check) =="
 # Refs into `templates/` are correct in this source repo but break in adopter
 # repos after vendoring (the adopter typically relocates or strips `templates/`).
-# CHECK_TEMPLATE_SOURCE=1 suppresses this check — set in this repo's CI so the
-# source tree doesn't fail itself. Adopters get loud-by-default detection.
-if [ -n "${CHECK_TEMPLATE_SOURCE:-}" ]; then
-  ok "skipped — CHECK_TEMPLATE_SOURCE set (template source repo)"
+# Source-repo detection: docs/ADOPTING.md is template-internal — adopters read it
+# from the template clone and never vendor it (absent from the file map) — so its
+# presence means this is the template source tree. Adopter repos get
+# loud-by-default detection, both locally and in their vendored CI.
+if [ -f docs/ADOPTING.md ]; then
+  ok "skipped — template source repo (docs/ADOPTING.md present)"
 else
   hits=$(grep -rn --include='*.md' '@templates/' .claude/commands .claude/skills 2>/dev/null || true)
   if [ -n "$hits" ]; then
