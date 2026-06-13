@@ -69,9 +69,12 @@ numbers live.
 > [`skill-security.md`](skill-security.md) applies to setting keys.
 
 For an always-on view, the bundled `.claude/statusline.sh` renders the live
-context % and session cost (and, on subscription plans, 5-hour rate-limit usage)
-right in the status line. It's a `free-local` signal — the status line never
-enters the model's context, so surfacing cost there costs zero tokens.
+context % in the status line, plus the signal that reflects your *actual*
+constraint: an estimated session cost (`~$`, computed at API list prices) on
+pay-as-you-go plans, or 5-hour rate-limit usage on subscription plans — where
+the dollar figure is notional (a flat subscription, not per-token billing), so
+it's hidden to avoid reading as a charge. It's a `free-local` signal — the
+status line never enters the model's context, so this costs zero tokens.
 
 The single largest fixed item is usually a full `AI_CONTEXT.md`; its budget is
 owned by [ADR-004](adr/ADR-004-ai-context-archive-threshold-bump.md) — don't copy

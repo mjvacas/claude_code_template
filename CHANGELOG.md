@@ -35,15 +35,19 @@ date-stamped — this template isn't versioned. Convention validated against
   stays in the backlog.
 - **Statusline live cost/context signals** — `.claude/statusline.sh` now
   renders, when the status event carries them, the live **context-window
-  fill %** (`context_window.used_percentage`), **session cost**
-  (`cost.total_cost_usd`), and — on subscription plans — **5-hour
-  rate-limit usage** (`rate_limits.five_hour.used_percentage`), each with a
-  ⚠ marker at ≥80%. The context % replaces the old binary `>200k` warning as
-  the primary signal (and is only fallen back to when the % is absent), which
-  fixes over-warning on 1M-context models where `exceeds_200k_tokens` fires at
-  ~20%. All fields are read defensively and omitted when missing. This is a
-  `free-local` signal — the status line never enters the model's context, so
-  it costs zero tokens and ships wired (unlike the per-prompt clock heartbeat).
+  fill %** (`context_window.used_percentage`), **5-hour rate-limit usage**
+  (`rate_limits.five_hour.used_percentage`, subscription plans), and an
+  **estimated session cost** (`cost.total_cost_usd`, shown as `~$`), each with
+  a ⚠ marker at ≥80%. The cost is **plan-aware**: on subscription plans the
+  dollar figure is notional (flat subscription, not per-token billing), so it
+  reads as a charge and is **hidden** — the 5h limit is the real constraint
+  there; `~$` shows only on pay-as-you-go events (no `rate_limits`), where it's
+  a real cost. The context % replaces the old binary `>200k` warning as the
+  primary signal (falling back to it only when the % is absent), which fixes
+  over-warning on 1M-context models where `exceeds_200k_tokens` fires at ~20%.
+  All fields are read defensively and omitted when missing. This is a
+  `free-local` signal — the status line never enters the model's context, so it
+  costs zero tokens and ships wired (unlike the per-prompt clock heartbeat).
 - **`docs/adr/ADR-005-token-awareness-legibility.md`** — records the
   decision to ship token awareness as a *legibility* layer now (cost
   classes + native `/context`/`/usage`) while *measurement* stays deferred

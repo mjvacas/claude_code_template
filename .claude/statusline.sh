@@ -50,6 +50,11 @@ ctx = num(g(d, "context_window", "used_percentage"))
 warn200 = bool(d.get("exceeds_200k_tokens"))
 cost = num(g(d, "cost", "total_cost_usd"))
 rl5 = num(g(d, "rate_limits", "five_hour", "used_percentage"))
+# rate_limits present ⇒ a subscription plan, where total_cost_usd is a *notional*
+# equivalent-API-cost (you pay a flat subscription, not per token), which reads as
+# a charge and confuses. Hide it there — the 5h%% below is the real constraint.
+# Pay-as-you-go events carry no rate_limits, so the cost there is real → show it.
+on_subscription = isinstance(d.get("rate_limits"), dict)
 
 segs = []
 if ctx is not None:                         # real fill % beats the fixed 200k flag
@@ -57,8 +62,8 @@ if ctx is not None:                         # real fill % beats the fixed 200k f
     segs.append(("⚠ " if p >= 80 else "") + "ctx %d%%" % p)
 elif warn200:                               # fallback only when % is unavailable
     segs.append("⚠ >200k ctx")
-if cost is not None:
-    segs.append("$%.2f" % cost)
+if cost is not None and not on_subscription:
+    segs.append("~$%.2f" % cost)            # ~ flags estimate (computed at API list prices)
 if rl5 is not None:                         # subscription plans only; absent for API use
     p = int(round(rl5))
     segs.append(("⚠ " if p >= 80 else "") + "5h %d%%" % p)
