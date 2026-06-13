@@ -24,13 +24,13 @@ err() { printf '  FAIL %s\n' "$*"; fail=1; }
 # etc. for free), else a pruned find fallback for a non-git checkout.
 list_files() {
   if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    git ls-files -- "$@" ':!old/'
+    git ls-files -- "$@"
   else
     local args=() pat
     for pat in "$@"; do args+=(-o -name "$pat"); done
     find . \( -path './.git' -o -path '*/node_modules' -o -path '*/.venv' \
       -o -path '*/venv' -o -path '*/dist' -o -path '*/build' \
-      -o -path './old' -o -path './.claude/snapshots' \) -prune -o \
+      -o -path './.claude/snapshots' \) -prune -o \
       \( "${args[@]:1}" \) -type f -print
   fi
 }
@@ -129,7 +129,7 @@ if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   # -e marks the pattern explicitly; without it git grep reads the leading
   # "-----BEGIN…" as an option and aborts (the scan would silently never run).
   # cut redacts to file:line so a matched secret never lands in logs/CI output.
-  hits=$(git grep -nIE -e "$secret_re" -- ':!old/' ':!*.example' ':!scripts/check-template.sh' 2>/dev/null | cut -d: -f1,2 || true)
+  hits=$(git grep -nIE -e "$secret_re" -- ':!*.example' ':!scripts/check-template.sh' 2>/dev/null | cut -d: -f1,2 || true)
   if [ -n "$hits" ]; then
     err "possible secret material in tracked files:"; printf '       %s\n' "$hits"
   else

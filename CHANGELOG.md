@@ -3,11 +3,20 @@
 User-visible changes to this template. Adopters consult this when deciding
 whether to re-sync vendored files; rationale lives in `docs/adr/`.
 
-Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries are
-date-stamped — this template isn't versioned. Convention validated against
-`cookiecutter-django` and similar template projects.
+Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) +
+[Semantic Versioning](https://semver.org/). The template is versioned as of
+**v0.1.0** (beta) — see
+[ADR-006](docs/adr/ADR-006-versioning-and-release-management.md) for what
+MAJOR/MINOR/PATCH mean for a vendored template and why we start in beta.
+Pre-0.1.0 history is kept below in the original date-stamped sections.
 
 ## [Unreleased]
+
+## [0.1.0] - 2026-06-13
+
+_First versioned release — **beta** (`v0.1.0`). SemVer per
+[ADR-006](docs/adr/ADR-006-versioning-and-release-management.md); the go-public
+commit is tagged `v0.1.0`. Entries below were previously under `[Unreleased]`._
 
 ### Added
 - **Token awareness (legibility layer)** — new `docs/token-awareness.md`
@@ -375,3 +384,6 @@ date-stamped — this template isn't versioned. Convention validated against
 
 ### Changed
 - `SECURITY.md` `Scope` section: customize-me placeholder for adopters. (#4)
+
+[unreleased]: https://github.com/mjvacas/claude_code_template/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/mjvacas/claude_code_template/releases/tag/v0.1.0

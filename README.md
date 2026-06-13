@@ -114,7 +114,8 @@ standards.
   guidelines in `CLAUDE.md` (think-before-coding, simplicity-first,
   surgical-changes, goal-driven-execution) trace to this collection.
 - **[Keep a Changelog](https://keepachangelog.com)** — the `CHANGELOG.md`
-  format (date-stamped rather than semver, since templates aren't versioned).
+  format (Keep a Changelog + SemVer as of v0.1.0; see
+  [ADR-006](docs/adr/ADR-006-versioning-and-release-management.md)).
 - **Security posture standards** — specific patterns trace to specific sources:
   - **Deny-list (Read + Bash)** in `.claude/settings.json`:
     [OWASP Top 10 Proactive Controls — C5 "Secure by Default"](https://top10proactive.owasp.org/the-top-10/c5-secure-by-default/).

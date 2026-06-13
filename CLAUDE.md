@@ -70,6 +70,7 @@ never a runtime toggle/UI. List this project's code-guarded invariants here, e.g
 - **[ADR-003](docs/adr/ADR-003-cc-task-bench-scope.md)** — `cc-task-bench` V1 measures 3 deterministic task families (refactor, explore, test-write) across Opus 4.7/4.8, Sonnet 4.6, Haiku 4.5 with 5 runs/cell = **60 attempts per run**; methodology + fixture layout ship now, runner is V2.
 - **[ADR-004](docs/adr/ADR-004-ai-context-archive-threshold-bump.md)** — `AI_CONTEXT.md` archive threshold raised to **750 lines** (~9k tokens) AND `/handoff` now requires each session block to be state-sufficient for cold pickup; the discipline makes archival safe at the higher cap.
 - **[ADR-005](docs/adr/ADR-005-token-awareness-legibility.md)** — token awareness ships as a **legibility** layer now (cost classes + native `/context`/`/usage`, a per-session cost ledger, a model-routing heuristic in `docs/token-awareness.md`); empirical **measurement** stays deferred to `cc-task-bench` V2, which supersedes the routing heuristic.
+- **[ADR-006](docs/adr/ADR-006-versioning-and-release-management.md)** — the template is now **versioned** (SemVer, starting **v0.1.0 / beta**), superseding the date-stamped "unversioned" `CHANGELOG` convention. MAJOR/MINOR/PATCH are defined against the *adoption contract*; adopters pin `VENDORED.md` to a **release tag** so re-sync can answer "am I behind / is it breaking?". v1.0.0 waits on external-feedback validation.
 
 <!-- Add decisions as they're made. Format: -->
 <!-- - **Decision**: What was decided -->

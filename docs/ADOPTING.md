@@ -406,13 +406,18 @@ add up to ~30 lines together; the rest is the project's responsibility.
 on first adoption and updates it on each re-sync. Single source of truth
 for what's been vendored and from which upstream commit.
 
+Pin to a **release tag** (e.g. `v0.1.0`) where you can — SemVer makes the
+upgrade legible (am I behind? is it breaking?), per
+[ADR-006](adr/ADR-006-versioning-and-release-management.md). The commit SHA
+stays the exact anchor for anything vendored between releases.
+
 Format (proposed; adopters can customize):
 
 ```markdown
 # Vendored from claude_code_template
 
 Upstream: https://github.com/mjvacas/claude_code_template
-Last sync: 2026-06-01 @ 80768f7
+Last sync: v0.1.0 @ 80768f7
 
 ## Files
 
@@ -492,7 +497,7 @@ convenience.
 | `.claude/commands/handoff.md` | Minor tone customization. |
 | `.github/CODEOWNERS` | Replace `@<owner>` with team handles. |
 | `.gitignore` | Keep the security entries; append project patterns. |
-| `SECURITY.md` | Fill contact placeholder; customize scope. |
+| `SECURITY.md` | Add a private contact if you want one; customize scope. |
 | `LICENSE` | Update copyright holder. |
 
 ### Skeleton to copy (heavy edits expected)
@@ -514,6 +519,7 @@ convenience.
 | `docs/claude-code-setup.md` | How this template wires into Claude Code. Read for ideas. |
 | `docs/skill-security.md` | Trust model + vetting procedures. Link rather than copy. |
 | `docs/token-awareness.md` | Cost classes, the per-session context tax, and model-routing heuristic. Read; link rather than copy. |
+| `.claude/skills/cc-task-bench/` | Model-routing benchmark *methodology* (V1 = design + fixture layout; runner is V2, per ADR-003). Read if you want to benchmark which model to route a task type to; not needed to adopt the template. |
 | `CHANGELOG.md` | This template's change log. Read to re-sync. |
 | `CONTRIBUTING.md` | Sending fixes back to this repo + its maintainer-side working agreements. Don't copy — write your own if your project needs one. |
 
@@ -521,7 +527,7 @@ convenience.
 
 | Path | Why |
 |------|-----|
-| `old/` | Historical artifacts. |
+| `bench/` | The template's own benchmark corpus, schema, and `pricing.json` (per ADR-003). Template-internal; read the schema via the `cc-task-bench` skill above if designing your own fixtures. |
 
 ## Re-syncing template updates
 
@@ -530,16 +536,18 @@ Claude Code session:
 
 > Re-sync vendored files from `claude_code_template` (at
 > `../claude_code_template`). Check the template's `CHANGELOG.md` since
-> the SHA in `VENDORED.md`; show me what's changed and propose updates.
+> the version/SHA in `VENDORED.md`; show me what's changed and propose updates.
 
 The session will:
 
 1. Read `VENDORED.md` to get the current pinned SHA(s), vendored paths,
    and installed plugins.
-2. Read the template's `CHANGELOG.md`; identify entries affecting
-   vendored paths or baseline plugins.
+2. Read the template's `CHANGELOG.md` between your pinned version and the
+   latest release; a MAJOR (or, in 0.x beta, MINOR) bump flags a breaking
+   adoption-contract change. Identify entries affecting vendored paths or
+   baseline plugins.
 3. Run, against the template repo:
-   `git log --oneline <pinned-sha>..HEAD -- <vendored-paths>`.
+   `git log --oneline <pinned-tag-or-sha>..HEAD -- <vendored-paths>`.
 4. **Check baseline plugins** (`claude plugin list`) — install any
    baseline newly recommended by the template (per upstream
    [Plugins](#plugins)) and not yet installed; prompt opt-in per plugin.
@@ -550,7 +558,7 @@ The session will:
    Prompt for `/reload-plugins` again if any plugins were installed.
 6. Propose specific diffs for each changed file; ask the user to approve,
    modify, or skip each.
-7. Apply approved changes; bump the SHA(s) in `VENDORED.md`; update the
+7. Apply approved changes; bump the tag/SHA(s) in `VENDORED.md`; update the
    "Installed plugins" section.
 8. Re-run `bash scripts/check-template.sh` and
    `bash scripts/audit-config.sh .claude/`.
