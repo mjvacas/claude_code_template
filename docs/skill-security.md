@@ -99,6 +99,9 @@ Read it like untrusted code:
 - [ ] **Provenance:** who publishes it, is it pinned, is the source maintained?
 - [ ] **Default posture:** install with `disable-model-invocation`, run once in a
       sandbox/throwaway dir with the lockdown overlay (below), watch what it does.
+- [ ] **Token cost:** which class — `free-local` / `on-use` / `session` / `per-prompt`
+      ([docs/token-awareness.md](token-awareness.md))? Anything `session` or `per-prompt`
+      defaults to opt-in; weigh the recurring context tax against the value.
 
 ## Tools in this template
 
