@@ -406,10 +406,12 @@ add up to ~30 lines together; the rest is the project's responsibility.
 on first adoption and updates it on each re-sync. Single source of truth
 for what's been vendored and from which upstream commit.
 
-Pin to a **release tag** (e.g. `v0.1.0`) where you can — SemVer makes the
-upgrade legible (am I behind? is it breaking?), per
-[ADR-006](adr/ADR-006-versioning-and-release-management.md). The commit SHA
-stays the exact anchor for anything vendored between releases.
+Pin to a **release tag** (e.g. `v0.1.0`) once releases are cut — SemVer makes
+the upgrade legible (am I behind? is it breaking?), per
+[ADR-006](adr/ADR-006-versioning-and-release-management.md). Until the first
+tag exists (or for anything vendored between releases) pin by **commit SHA** —
+the SHA is always the exact anchor, and the `<tag-or-sha>` placeholders below
+work either way.
 
 Format (proposed; adopters can customize):
 
@@ -540,30 +542,49 @@ Claude Code session:
 
 The session will:
 
-1. Read `VENDORED.md` to get the current pinned SHA(s), vendored paths,
+1. Read `VENDORED.md` to get the current pinned tag/SHA(s), vendored paths,
    and installed plugins.
 2. Read the template's `CHANGELOG.md` between your pinned version and the
-   latest release; a MAJOR (or, in 0.x beta, MINOR) bump flags a breaking
-   adoption-contract change. Identify entries affecting vendored paths or
-   baseline plugins.
+   latest release (or `HEAD` if no tag is cut yet); a MAJOR (or, in 0.x beta,
+   MINOR) bump flags a breaking adoption-contract change. Identify entries
+   affecting vendored paths or baseline plugins — including **file deletions,
+   additions, and plugin swaps**. If your pin predates `v0.1.0`, also read the
+   date-stamped pre-history sections: changes there won't show as a SemVer bump.
 3. Run, against the template repo:
-   `git log --oneline <pinned-tag-or-sha>..HEAD -- <vendored-paths>`.
-4. **Check baseline plugins** (`claude plugin list`) — install any
+   `git log --oneline <pinned-tag-or-sha>..HEAD -- <vendored-paths>`. Add
+   `--diff-filter=D` to spot files **deleted upstream** (handled in step 7).
+4. **Check for newly-vendored files.** Compare the template's current
+   [File map](#file-map) against the paths in your `VENDORED.md`; propose
+   **adding** any vendor-as-is file you never picked up — most importantly
+   `.github/workflows/check.yml`, without which the security self-check isn't
+   enforced on your PRs.
+5. **Check baseline plugins** (`claude plugin list`) — install any
    baseline newly recommended by the template (per upstream
    [Plugins](#plugins)) and not yet installed; prompt opt-in per plugin.
    **If any were installed, prompt the user to run `/reload-plugins`**
    (see [Activation caveat](#activation-caveat-silent-failure-trap)).
-5. **Re-run plugin + MCP discovery** for anything newly relevant to the
+6. **Re-run plugin + MCP discovery** for anything newly relevant to the
    project (new project areas, new ecosystem entries since last sync).
    Prompt for `/reload-plugins` again if any plugins were installed.
-6. Propose specific diffs for each changed file; ask the user to approve,
-   modify, or skip each.
-7. Apply approved changes; bump the tag/SHA(s) in `VENDORED.md`; update the
-   "Installed plugins" section.
-8. Re-run `bash scripts/check-template.sh` and
+7. Propose changes **batched by action** (update / add / delete / merge) —
+   not one approval per file:
+   - **Update** — for changed vendor-as-is files, propose the latest copy.
+   - **Add** — the newly-vendored files from step 4.
+   - **Delete** — for files removed upstream, propose removing the local copy
+     **and its `VENDORED.md` row**; if the `CHANGELOG` notes a replacement
+     (e.g. a dropped agent superseded by a baseline plugin), surface that swap.
+   - **Merge** — for adapted/skeleton files you customized, don't blind-copy.
+     If `CLAUDE.md` changed upstream, re-apply only the bucket-1 (keep-verbatim)
+     changes per [§ Merging the template's `CLAUDE.md`](#merging-the-templates-claudemd);
+     leave your project-specific content alone.
+8. Apply approved changes; bump the tag/SHA(s) in `VENDORED.md`; update the
+   "Installed plugins" section. **Backfill any `VENDORED.md` sections missing
+   relative to the current schema above** (e.g. "Installed plugins" for a pin
+   that predates it).
+9. Re-run `bash scripts/check-template.sh` and
    `bash scripts/audit-config.sh .claude/`.
-9. Stage one atomic commit:
-   `chore: re-sync claude_code_template <old-sha>..<new-sha>`.
+10. Stage one atomic commit:
+    `chore: re-sync claude_code_template <old-ref>..<new-ref>`.
 
 ## Verification
 

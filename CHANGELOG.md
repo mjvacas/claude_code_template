@@ -19,6 +19,13 @@ _First versioned release — **beta** (`v0.1.0`). SemVer per
 commit is tagged `v0.1.0`. Entries below were previously under `[Unreleased]`._
 
 ### Added
+- **Versioning & release management** — the template is now versioned with
+  SemVer, starting at **v0.1.0 (beta)**, replacing the date-stamped
+  "unversioned" convention. MAJOR/MINOR/PATCH are defined against the
+  *adoption contract*; adopters pin `VENDORED.md` to a release tag (the SHA
+  stays the exact anchor) so re-sync can answer "am I behind / is it
+  breaking?". Rationale and the path to v1.0.0 in
+  [ADR-006](docs/adr/ADR-006-versioning-and-release-management.md).
 - **Token awareness (legibility layer)** — new `docs/token-awareness.md`
   hub makes already-known token costs legible at the decision point
   (adopting a plugin, wiring a feature, choosing a model), motivated by
@@ -166,6 +173,20 @@ commit is tagged `v0.1.0`. Entries below were previously under `[Unreleased]`._
   `scripts/check-template.sh` doesn't catch them).
 
 ### Changed
+- **Re-sync procedure hardened for large multi-PR jumps** (`docs/ADOPTING.md`
+  § Re-syncing), from a downstream dogfooding pilot. The steady-state procedure
+  only *updated* already-vendored files; it now also **adds** newly-vendored
+  files an adopter never picked up (e.g. `.github/workflows/check.yml`),
+  **deletes** files removed upstream and surfaces their replacements (e.g. an
+  agent superseded by a baseline plugin), routes a changed `CLAUDE.md` through
+  the bucket-1 merge guide instead of a blind diff, backfills `VENDORED.md`
+  sections missing from older pins, and reads pre-`v0.1.0` date-stamped history
+  for deletions/additions that don't show as a SemVer bump. Tag-based pins
+  degrade gracefully to SHA before the first tag is cut.
+- **Public-readiness doc cleanups** — `SECURITY.md` drops the unfilled email
+  placeholder in favor of GitHub private vulnerability reporting; the
+  `docs/ADOPTING.md` file map adds the `cc-task-bench` skill (reference-only)
+  and `bench/` (skip) and drops the removed `old/` directory.
 - **Two workflow practices promoted from machine-local auto-memory into
   the template** (`CLAUDE.md` `## Conventions` + `/commit` step 3), after
   an adopter repo was observed not running PR review despite having the
