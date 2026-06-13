@@ -10,6 +10,36 @@ date-stamped — this template isn't versioned. Convention validated against
 ## [Unreleased]
 
 ### Added
+- **Token awareness (legibility layer)** — new `docs/token-awareness.md`
+  hub makes already-known token costs legible at the decision point
+  (adopting a plugin, wiring a feature, choosing a model), motivated by
+  higher-consumption models like Fable. Three parts: a **cost-class
+  taxonomy** (`free-local` / `on-use` / `session` / `per-prompt`) defined
+  once and mapped onto the plugin catalog's two cost axes
+  (`tokens.*.always_on` / `on_invoke`) so both speak one vocabulary; a
+  **per-session cost ledger** that itemizes the always-on context tax but
+  defers the *numbers* to Claude Code's native `/context` and `/usage`
+  (which can break cost down per component depending on plan) rather than
+  freezing figures that rot; and a tier-based
+  **model-routing heuristic**, explicitly provisional, to be superseded
+  by `cc-task-bench` V2 measured data. Thin pointers, no duplication: a
+  **`Cost` column** on the `.claude/` table in `docs/claude-code-setup.md`,
+  a vetting-checklist line in `docs/skill-security.md`, cross-links from
+  `CONTRIBUTING.md`'s opt-in principle and `docs/ADOPTING.md` (plugin
+  discovery + a "Reference only" file-map row), a `CLAUDE.md` Context-
+  System pointer, and a `README.md` layout row. The guiding rule —
+  *a stale cost number is worse than none* — keeps the design on cost
+  *classes* and live native tools; the one anchored figure (~9k tokens
+  for a maxed `AI_CONTEXT.md`) stays owned by ADR-004 and is linked, not
+  restated. Empirical **measurement** (the `cc-task-bench` V2 runner)
+  stays in the backlog.
+- **`docs/adr/ADR-005-token-awareness-legibility.md`** — records the
+  decision to ship token awareness as a *legibility* layer now (cost
+  classes + native `/context`/`/usage`) while *measurement* stays deferred
+  to `cc-task-bench` V2. Reconciles the apparent tension with ADR-003's
+  measurement-first stance (a labeled heuristic is not a measured claim and
+  carries a clean supersession target) and cites ADR-004 for the
+  `AI_CONTEXT.md` token figure it inventories.
 - **`CONTRIBUTING.md`** — the contributor-facing sibling of
   `docs/ADOPTING.md` (fixes flowing *in* vs the template flowing *out*),
   previously referenced there as "(future)". Covers workflow (one concern

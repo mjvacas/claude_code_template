@@ -51,7 +51,7 @@ adopters to do otherwise:
   always-on or per-prompt context cost ships *unwired*, with a documented
   enable snippet (precedents: the format-on-edit hook, the lockdown settings
   overlay, the clock heartbeat — see `docs/claude-code-setup.md`). Valuable ≠
-  on-by-default.
+  on-by-default. Cost classes + the per-session context tax: `docs/token-awareness.md`.
 
 ## Promote practices out of auto-memory
 

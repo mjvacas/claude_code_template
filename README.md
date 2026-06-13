@@ -52,6 +52,7 @@ scripts/
 docs/
 ├── claude-code-setup.md      # How the native config is wired; what to customize
 ├── skill-security.md         # Trust model, vetting checklist (incl. MCP), SAST options
+├── token-awareness.md        # Cost classes, per-session context tax, model-routing heuristic
 ├── adr/                      # Filled-in Architecture Decision Records (scaffold with /adr)
 └── summaries/                # Monthly compressed recaps (YYYY-MM.md)
 templates/                    # Reference docs + blank templates (loaded on demand)

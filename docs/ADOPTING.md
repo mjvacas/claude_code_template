@@ -86,7 +86,8 @@ entry — no guessing):
 - **Maintainer + last commit** (`marketplace_entry.author.name`,
   `last_updated`)
 - **Per-session token cost** (`tokens.<model>.always_on` and
-  `tokens.<model>.on_invoke`)
+  `tokens.<model>.on_invoke` — the `session` / `on-use` cost classes in
+  [`docs/token-awareness.md`](token-awareness.md))
 - **How it relates to this template** (orthogonal / complementary /
   overlapping)
 
@@ -512,6 +513,7 @@ convenience.
 |------|-----|
 | `docs/claude-code-setup.md` | How this template wires into Claude Code. Read for ideas. |
 | `docs/skill-security.md` | Trust model + vetting procedures. Link rather than copy. |
+| `docs/token-awareness.md` | Cost classes, the per-session context tax, and model-routing heuristic. Read; link rather than copy. |
 | `CHANGELOG.md` | This template's change log. Read to re-sync. |
 | `CONTRIBUTING.md` | Sending fixes back to this repo + its maintainer-side working agreements. Don't copy — write your own if your project needs one. |
 

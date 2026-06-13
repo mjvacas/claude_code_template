@@ -5,22 +5,28 @@ after you copy it into a new project.
 
 ## What ships in `.claude/`
 
-| Path | What it does | Customize? |
-|------|--------------|-----------|
-| `settings.json` | Permissions (Read-tool denies for secret files; a minimal shell allow-list — only `ls` + read-only `git`; `defaultMode: acceptEdits` **auto-applies file edits without prompting**), statusline, and SessionStart/PreToolUse/PreCompact hooks. Committed, team-shared. | Yes — add your build/test/lint to the allow list. |
-| `settings.local.json` | Your personal overrides. **Gitignored.** Copy `settings.local.json.example` to start. | Personal. |
-| `hooks/session-context.sh` | `SessionStart` hook: prints the session-start time, recent commits + working-tree status into context. Outside git only the clock line prints. | Optional — delete the hook entry in `settings.json` to disable. |
-| `hooks/clock.sh` | `UserPromptSubmit` heartbeat (**opt-in, not wired by default**): injects the current time into context on every prompt, so the session can notice elapsed time and date rollovers. | Opt-in — see [§ Optional: session clock heartbeat](#optional-session-clock-heartbeat). |
-| `hooks/block-dangerous.sh` | `PreToolUse(Bash)` guard: hard-blocks catastrophic commands (`rm -rf /`, `git reset --hard`, `git push --force`, pipe-to-shell, `dd`/`mkfs`, fork bomb) via exit 2. A safety net, **not** a sandbox. | Tune the pattern list to your needs. |
-| `hooks/precompact-snapshot.sh` | `PreCompact` hook: before the context is compacted, writes a recovery breadcrumb (transcript pointer + recent turns) to `.claude/snapshots/` (gitignored). A safety net, not a replacement for `/handoff`. | Optional — delete the hook entry in `settings.json` to disable. |
-| `statusline.sh` | Status line: model · dir · git branch · context warning. | Optional — remove the `statusLine` key in `settings.json` to disable. |
-| `commands/session-start.md` | `/session-start` — restore context and orient before coding. | As needed. |
-| `commands/handoff.md` | `/handoff` — record decisions in `AI_CONTEXT.md` and commit code + context atomically. | As needed. |
-| `commands/commit.md` | `/commit` — one atomic, conventional-prefix commit; enforces the code + `AI_CONTEXT.md` rule. | As needed. |
-| `commands/adr.md` | `/adr "<title>"` — scaffold the next ADR from `templates/ADR-template.md` into `docs/adr/`. | As needed. |
-| `skills/verify-refactor/` | Prove a refactor preserved behavior via golden-output diff. | As needed. |
-| `skills/tune-parameters/` | Pick a parameter by reading the metric surface, not the peak. | As needed. |
-| `skills/llm-eval/` | Ground-truth accuracy harness for AI features. | As needed. |
+| Path | What it does | Cost | Customize? |
+|------|--------------|------|-----------|
+| `settings.json` | Permissions (Read-tool denies for secret files; a minimal shell allow-list — only `ls` + read-only `git`; `defaultMode: acceptEdits` **auto-applies file edits without prompting**), statusline, and SessionStart/PreToolUse/PreCompact hooks. Committed, team-shared. | `free-local` | Yes — add your build/test/lint to the allow list. |
+| `settings.local.json` | Your personal overrides. **Gitignored.** Copy `settings.local.json.example` to start. | `free-local` | Personal. |
+| `hooks/session-context.sh` | `SessionStart` hook: prints the session-start time, recent commits + working-tree status into context. Outside git only the clock line prints. | `session` | Optional — delete the hook entry in `settings.json` to disable. |
+| `hooks/clock.sh` | `UserPromptSubmit` heartbeat (**opt-in, not wired by default**): injects the current time into context on every prompt, so the session can notice elapsed time and date rollovers. | `per-prompt` | Opt-in — see [§ Optional: session clock heartbeat](#optional-session-clock-heartbeat). |
+| `hooks/block-dangerous.sh` | `PreToolUse(Bash)` guard: hard-blocks catastrophic commands (`rm -rf /`, `git reset --hard`, `git push --force`, pipe-to-shell, `dd`/`mkfs`, fork bomb) via exit 2. A safety net, **not** a sandbox. | `free-local` | Tune the pattern list to your needs. |
+| `hooks/precompact-snapshot.sh` | `PreCompact` hook: before the context is compacted, writes a recovery breadcrumb (transcript pointer + recent turns) to `.claude/snapshots/` (gitignored). A safety net, not a replacement for `/handoff`. | `free-local` | Optional — delete the hook entry in `settings.json` to disable. |
+| `statusline.sh` | Status line: model · dir · git branch · context warning. | `free-local` | Optional — remove the `statusLine` key in `settings.json` to disable. |
+| `commands/session-start.md` | `/session-start` — restore context and orient before coding. | `on-use` | As needed. |
+| `commands/handoff.md` | `/handoff` — record decisions in `AI_CONTEXT.md` and commit code + context atomically. | `on-use` | As needed. |
+| `commands/commit.md` | `/commit` — one atomic, conventional-prefix commit; enforces the code + `AI_CONTEXT.md` rule. | `on-use` | As needed. |
+| `commands/adr.md` | `/adr "<title>"` — scaffold the next ADR from `templates/ADR-template.md` into `docs/adr/`. | `on-use` | As needed. |
+| `skills/verify-refactor/` | Prove a refactor preserved behavior via golden-output diff. | `on-use` | As needed. |
+| `skills/tune-parameters/` | Pick a parameter by reading the metric surface, not the peak. | `on-use` | As needed. |
+| `skills/llm-eval/` | Ground-truth accuracy harness for AI features. | `on-use` | As needed. |
+
+The **Cost** column uses the four classes from
+[`docs/token-awareness.md`](token-awareness.md) (`free-local` / `on-use` /
+`session` / `per-prompt`). Every new `.claude/` artifact gets a tag here — this
+table is the canonical place, so cost stays legible without an inert frontmatter
+field Claude Code wouldn't read.
 
 > Code review is delegated to the **`pr-review-toolkit@claude-plugins-official`**
 > baseline plugin installed during adoption (see `docs/ADOPTING.md`). This
@@ -159,6 +165,8 @@ write-ups so nothing is duplicated:
 - `.claude/skills/{verify-refactor,tune-parameters,llm-eval}/SKILL.md` — each carries
   its own inline rationale (golden-output diffing; surface-shape parameter tuning;
   ground-truth accuracy harness).
+- `docs/token-awareness.md` — the cost classes behind the **Cost** column above, the
+  per-session context tax, and model-routing guidance.
 
 These are loaded on demand (when a command/skill references them), not on every session,
 which keeps the always-loaded context lean.

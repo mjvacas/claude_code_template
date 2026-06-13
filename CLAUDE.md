@@ -69,6 +69,7 @@ never a runtime toggle/UI. List this project's code-guarded invariants here, e.g
 - **[ADR-002](docs/adr/ADR-002-ai-context-archive-threshold.md)** *(superseded by [ADR-004](docs/adr/ADR-004-ai-context-archive-threshold-bump.md))* — original 500-line / 6k-token research-anchored derivation of the `AI_CONTEXT.md` archive threshold.
 - **[ADR-003](docs/adr/ADR-003-cc-task-bench-scope.md)** — `cc-task-bench` V1 measures 3 deterministic task families (refactor, explore, test-write) across Opus 4.7/4.8, Sonnet 4.6, Haiku 4.5 with 5 runs/cell = **60 attempts per run**; methodology + fixture layout ship now, runner is V2.
 - **[ADR-004](docs/adr/ADR-004-ai-context-archive-threshold-bump.md)** — `AI_CONTEXT.md` archive threshold raised to **750 lines** (~9k tokens) AND `/handoff` now requires each session block to be state-sufficient for cold pickup; the discipline makes archival safe at the higher cap.
+- **[ADR-005](docs/adr/ADR-005-token-awareness-legibility.md)** — token awareness ships as a **legibility** layer now (cost classes + native `/context`/`/usage`, a per-session cost ledger, a model-routing heuristic in `docs/token-awareness.md`); empirical **measurement** stays deferred to `cc-task-bench` V2, which supersedes the routing heuristic.
 
 <!-- Add decisions as they're made. Format: -->
 <!-- - **Decision**: What was decided -->
@@ -93,6 +94,7 @@ Hybrid memory — two stores, kept from overlapping:
 - **docs/summaries/YYYY-MM.md**: Monthly compressed recaps.
 - **docs/{PROJECT_SPEC,ARCHITECTURE,BUILD_PLAN}.md** (optional; scale to project size): the source-of-truth triad — the "why/what", the "how", and the "in what order". Read at session start; don't re-litigate decisions captured here (revisit via a new ADR). Skeletons in `templates/`.
 - **.claude/**: native Claude Code config — `settings.json` (permissions, statusline, SessionStart + PreToolUse + PreCompact hooks), `hooks/` (session-context, block-dangerous, precompact-snapshot, clock — opt-in), `commands/` (`/session-start`, `/handoff`, `/commit`, `/adr`), `skills/` (verify-refactor, tune-parameters, llm-eval, cc-task-bench). Code review is delegated to the `pr-review-toolkit@claude-plugins-official` baseline plugin installed during adoption (see docs/ADOPTING.md). See docs/claude-code-setup.md.
+- **docs/token-awareness.md**: token cost of the context system — cost classes (`free-local`/`on-use`/`session`/`per-prompt`), the per-session context tax, and a model-routing heuristic. Loaded on demand, not auto-loaded.
 - **Rule**: Commit code + AI_CONTEXT.md updates together atomically.
 
 Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed. 
