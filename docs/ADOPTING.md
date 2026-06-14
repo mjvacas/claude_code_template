@@ -238,7 +238,10 @@ The session will:
 7. **Repoint `@templates/...` references.** Four `@`-refs across three
    files in `.claude/commands/` point at `@templates/...`. If this
    adoption relocated or stripped `templates/`, repoint each match to
-   the local layout:
+   the local layout. When relocating, prefer a namespaced subdir like
+   `docs/claude-code-template/` over a flat `docs/` — a flat `docs/` collides
+   with the CLAUDE.md-reserved `docs/{PROJECT_SPEC,ARCHITECTURE,BUILD_PLAN}.md`
+   triad:
 
    | File | `@templates/...` refs carried |
    |------|-------------------------------|
@@ -253,9 +256,10 @@ The session will:
    `scripts/check-template.sh` doesn't catch them, but they break the same way.
    Adopters with their own `docs/adr/` series should sub-namespace template
    ADRs (see the callout above).
-   `scripts/check-template.sh` (step 11 below) catches surviving `@templates/`
-   refs — but can't catch refs that resolve to the wrong file, so do this
-   step even if `templates/` was kept.
+   `scripts/check-template.sh` § 3b (step 11 below) fails on `@templates/` refs
+   whose target file is missing — so a verbatim-vendored `templates/` passes
+   without repointing. It can't verify a *resolved* ref points at the intended
+   file, so double-check after relocating.
 8. **Install baseline plugins** per [Plugins](#plugins). First check
    `claude plugin list`; for any baseline already installed at user
    scope, confirm it's enabled and skip — no re-install or re-prompt.
@@ -313,7 +317,10 @@ The session will:
 6. **Repoint `@templates/...` references.** Four `@`-refs across three
    files in `.claude/commands/` point at `@templates/...`. If this
    adoption relocated or stripped `templates/`, repoint each match to
-   the local layout:
+   the local layout. When relocating, prefer a namespaced subdir like
+   `docs/claude-code-template/` over a flat `docs/` — a flat `docs/` collides
+   with the CLAUDE.md-reserved `docs/{PROJECT_SPEC,ARCHITECTURE,BUILD_PLAN}.md`
+   triad:
 
    | File | `@templates/...` refs carried |
    |------|-------------------------------|
@@ -328,9 +335,10 @@ The session will:
    `scripts/check-template.sh` doesn't catch them, but they break the same way.
    Adopters with their own `docs/adr/` series should sub-namespace template
    ADRs (see the callout above).
-   `scripts/check-template.sh` (step 10 below) catches surviving `@templates/`
-   refs — but can't catch refs that resolve to the wrong file, so do this
-   step even if `templates/` was kept.
+   `scripts/check-template.sh` § 3b (step 10 below) fails on `@templates/` refs
+   whose target file is missing — so a verbatim-vendored `templates/` passes
+   without repointing. It can't verify a *resolved* ref points at the intended
+   file, so double-check after relocating.
 7. **Detect already-installed plugins** via `claude plugin list`. For any
    baseline plugin not yet installed, prompt the user to opt in (default
    install). Don't double-suggest what's already there.

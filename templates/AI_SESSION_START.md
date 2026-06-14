@@ -114,12 +114,15 @@ Key files: `CLAUDE.md` · `AI_CONTEXT.md` · `docs/adr/` · `docs/summaries/` ·
 **Reference guide.** In this template it lives in `templates/` and is loaded on demand —
 the `/session-start` and `/handoff` commands link to it as `@templates/AI_SESSION_START.md`.
 Copy it into your own project and adapt the command names and paths to match your setup.
-*Example:* if you relocate this guide to `docs/`, also rewrite the two
-`@templates/AI_SESSION_START.md` references in `.claude/commands/session-start.md` and
-`handoff.md` to `@docs/AI_SESSION_START.md`. Portable across BSD/macOS and GNU sed:
+*Example:* if you relocate this guide, prefer a namespaced subdir like
+`docs/claude-code-template/` over a flat `docs/` — a flat `docs/` collides with
+the CLAUDE.md-reserved `docs/{PROJECT_SPEC,ARCHITECTURE,BUILD_PLAN}.md` triad.
+Then rewrite the two `@templates/AI_SESSION_START.md` references in
+`.claude/commands/session-start.md` and `handoff.md` to
+`@docs/claude-code-template/AI_SESSION_START.md`. Portable across BSD/macOS and GNU sed:
 
 ```bash
-sed -i.bak 's|@templates/AI_SESSION_START\.md|@docs/AI_SESSION_START.md|' \
+sed -i.bak 's|@templates/AI_SESSION_START\.md|@docs/claude-code-template/AI_SESSION_START.md|' \
   .claude/commands/session-start.md .claude/commands/handoff.md \
   && rm .claude/commands/session-start.md.bak .claude/commands/handoff.md.bak
 ```

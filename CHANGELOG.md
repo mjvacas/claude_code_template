@@ -278,6 +278,19 @@ commit is tagged `v0.1.0`. Entries below were previously under `[Unreleased]`._
   start step 1 and the `old/` line in the Layout block.
 
 ### Fixed
+- **`scripts/check-template.sh` § 3b is now a resolution check, not a substring
+  grep** (from a downstream dogfooding pilot). It previously failed on *any*
+  `@templates/...` occurrence in `.claude/commands` / `.claude/skills`, which
+  contradicted `docs/ADOPTING.md`'s "repoint *if* you relocated or stripped
+  `templates/`" framing: an adopter who vendored `templates/` verbatim (refs
+  still resolve) passed § 3 but failed § 3b, making relocation effectively
+  mandatory. § 3b now fails only on refs whose **target file is missing**, so a
+  verbatim-vendored `templates/` passes. Also fixed the now-stale "do this step
+  even if `templates/` was kept" wording in both first-time procedures, and
+  changed the relocation example (here and in `templates/AI_SESSION_START.md`)
+  to recommend a **namespaced subdir** (`docs/claude-code-template/`) instead of
+  a flat `docs/`, which collided with the CLAUDE.md-reserved
+  `docs/{PROJECT_SPEC,ARCHITECTURE,BUILD_PLAN}.md` triad.
 - **`scripts/check-template.sh` § 3b source-repo detection** rewritten
   from env-var gating (`CHECK_TEMPLATE_SOURCE`) to auto-detection by
   `docs/ADOPTING.md` presence (template-internal; adopters read it from
