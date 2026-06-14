@@ -72,8 +72,9 @@ For an always-on view, the bundled `.claude/statusline.sh` renders the live
 session context as absolute tokens against the window (`ctx 152k/1M`, with a `⚠`
 nudge at ~200k regardless of window size), plus the signal that reflects your
 *actual* constraint: an estimated session cost (`~$`, computed at API list
-prices) on pay-as-you-go plans, or 5-hour and weekly rate-limit usage
-(`5h` / `7d`) on subscription plans — where the dollar figure is notional (a
+prices) on pay-as-you-go plans, or 5-hour and weekly rate-limit usage, each with
+its reset clock (`5h 24% (16:30)` / `7d 41% (Tue 16:30)`), on subscription plans
+— where the dollar figure is notional (a
 flat subscription, not per-token billing), so it's hidden to avoid reading as a
 charge (the rate-limit windows carry the real signal there). Context and budget
 are two different meters — see [Session context vs. budget](#session-context-vs-budget)
@@ -93,9 +94,10 @@ oppositely:
 - **Session context** — `ctx 152k/1M`: how full the current window is. It is
   **resettable** — `/clear` or `/handoff` starts a fresh window and the count
   drops back toward zero.
-- **Rate-limit budget** — `5h 24%` / `7d 41%`: how much of your 5-hour and
-  weekly (`seven_day`) allowance you have burned. It is **cumulative** — it
-  keeps climbing across sessions, and a context reset does **not** refund it.
+- **Rate-limit budget** — `5h 24% (16:30)` / `7d 41% (Tue 16:30)`: how much of
+  your 5-hour and weekly (`seven_day`) allowance you have burned, each with the
+  wall-clock time it resets. It is **cumulative** — it keeps climbing across
+  sessions, and a context reset does **not** refund it.
 
 Two consequences worth holding onto:
 

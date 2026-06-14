@@ -4,13 +4,13 @@
 # and dependency-free (bash, python3, git). Shows: model · dir · git-branch, plus live
 # signals when the event carries them — session-context tokens (absolute, vs the window
 # size, with a ~200k nudge), session cost (USD), and (subscription plans only) 5-hour and
-# 7-day rate-limit usage. These render to the terminal only;
+# 7-day rate-limit usage each with its reset clock time. These render to the terminal only;
 # the status line never enters the model's context, so it costs zero tokens (free-local).
 #
 # Schema note: field names in the status event have evolved across Claude Code versions
 # (e.g. model.display_name, workspace.current_dir, cost.total_cost_usd,
 # context_window.used_percentage, context_window.context_window_size,
-# rate_limits.five_hour.used_percentage, rate_limits.seven_day.used_percentage). This
+# rate_limits.five_hour.used_percentage, rate_limits.{five_hour,seven_day}.resets_at). This
 # script reads them defensively and omits anything missing — adjust if your version differs.
 set -euo pipefail
 
@@ -21,7 +21,7 @@ input=$(cat 2>/dev/null || echo '{}')
 # absent or prints fewer lines.
 { read -r model || true; read -r dir || true; read -r metrics || true; } <<EOF
 $(printf '%s' "$input" | python3 -c '
-import json, sys, os
+import json, sys, os, time
 
 try:
     d = json.load(sys.stdin)
@@ -54,6 +54,8 @@ warn200 = bool(d.get("exceeds_200k_tokens"))
 cost = num(g(d, "cost", "total_cost_usd"))
 rl5 = num(g(d, "rate_limits", "five_hour", "used_percentage"))
 rl7 = num(g(d, "rate_limits", "seven_day", "used_percentage"))
+rl5_reset = num(g(d, "rate_limits", "five_hour", "resets_at"))
+rl7_reset = num(g(d, "rate_limits", "seven_day", "resets_at"))
 # rate_limits present ⇒ a subscription plan, where total_cost_usd is a *notional*
 # equivalent-API-cost (you pay a flat subscription, not per token), which reads as
 # a charge and confuses. Hide it there — the 5h/7d windows below are the real signal.
@@ -67,6 +69,14 @@ def toks(n):                                # compact token count: 152000→"152
     if n >= 1000:
         return "%dk" % round(n / 1000.0)
     return "%d" % n
+
+def clock(ts, with_day):                    # epoch seconds → local wall-clock "16:30"/"Tue 16:30"
+    if not (1_000_000_000 <= ts <= 10_000_000_000):   # reject ms-vs-seconds mix / absurd values
+        return None
+    try:
+        return time.strftime("%a %H:%M" if with_day else "%H:%M", time.localtime(ts))
+    except (OverflowError, OSError, ValueError):       # never let a bad ts blank the whole line
+        return None
 
 segs = []
 # Session context — resettable per conversation (a /clear or handoff resets it). Show
@@ -90,10 +100,18 @@ if cost is not None and not on_subscription:
 # Subscription plans only; absent for API use, and each window can be independently absent.
 if rl5 is not None:
     p = int(round(rl5))
-    segs.append(("⚠ " if p >= 80 else "") + "5h %d%%" % p)
+    seg = ("⚠ " if p >= 80 else "") + "5h %d%%" % p
+    r = clock(rl5_reset, False) if rl5_reset is not None else None
+    if r:                                   # append reset clock only when renderable
+        seg += " (%s)" % r
+    segs.append(seg)
 if rl7 is not None:
     p = int(round(rl7))
-    segs.append(("⚠ " if p >= 80 else "") + "7d %d%%" % p)
+    seg = ("⚠ " if p >= 80 else "") + "7d %d%%" % p
+    r = clock(rl7_reset, True) if rl7_reset is not None else None
+    if r:
+        seg += " (%s)" % r
+    segs.append(seg)
 
 print(clean(model))
 print(clean(os.path.basename(cwd) or "/"))
