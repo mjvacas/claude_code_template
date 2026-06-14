@@ -3,13 +3,29 @@
 User-visible changes to this template. Adopters consult this when deciding
 whether to re-sync vendored files; rationale lives in `docs/adr/`.
 
-Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries are
-date-stamped — this template isn't versioned. Convention validated against
-`cookiecutter-django` and similar template projects.
+Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) +
+[Semantic Versioning](https://semver.org/). The template is versioned as of
+**v0.1.0** (beta) — see
+[ADR-006](docs/adr/ADR-006-versioning-and-release-management.md) for what
+MAJOR/MINOR/PATCH mean for a vendored template and why we start in beta.
+Pre-0.1.0 history is kept below in the original date-stamped sections.
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-06-13
+
+_First versioned release — **beta** (`v0.1.0`). SemVer per
+[ADR-006](docs/adr/ADR-006-versioning-and-release-management.md); the go-public
+commit is tagged `v0.1.0`. Entries below were previously under `[Unreleased]`._
+
 ### Added
+- **Versioning & release management** — the template is now versioned with
+  SemVer, starting at **v0.1.0 (beta)**, replacing the date-stamped
+  "unversioned" convention. MAJOR/MINOR/PATCH are defined against the
+  *adoption contract*; adopters pin `VENDORED.md` to a release tag (the SHA
+  stays the exact anchor) so re-sync can answer "am I behind / is it
+  breaking?". Rationale and the path to v1.0.0 in
+  [ADR-006](docs/adr/ADR-006-versioning-and-release-management.md).
 - **Token awareness (legibility layer)** — new `docs/token-awareness.md`
   hub makes already-known token costs legible at the decision point
   (adopting a plugin, wiring a feature, choosing a model), motivated by
@@ -157,6 +173,20 @@ date-stamped — this template isn't versioned. Convention validated against
   `scripts/check-template.sh` doesn't catch them).
 
 ### Changed
+- **Re-sync procedure hardened for large multi-PR jumps** (`docs/ADOPTING.md`
+  § Re-syncing), from a downstream dogfooding pilot. The steady-state procedure
+  only *updated* already-vendored files; it now also **adds** newly-vendored
+  files an adopter never picked up (e.g. `.github/workflows/check.yml`),
+  **deletes** files removed upstream and surfaces their replacements (e.g. an
+  agent superseded by a baseline plugin), routes a changed `CLAUDE.md` through
+  the bucket-1 merge guide instead of a blind diff, backfills `VENDORED.md`
+  sections missing from older pins, and reads pre-`v0.1.0` date-stamped history
+  for deletions/additions that don't show as a SemVer bump. Tag-based pins
+  degrade gracefully to SHA before the first tag is cut.
+- **Public-readiness doc cleanups** — `SECURITY.md` drops the unfilled email
+  placeholder in favor of GitHub private vulnerability reporting; the
+  `docs/ADOPTING.md` file map adds the `cc-task-bench` skill (reference-only)
+  and `bench/` (skip) and drops the removed `old/` directory.
 - **Two workflow practices promoted from machine-local auto-memory into
   the template** (`CLAUDE.md` `## Conventions` + `/commit` step 3), after
   an adopter repo was observed not running PR review despite having the
@@ -248,6 +278,19 @@ date-stamped — this template isn't versioned. Convention validated against
   start step 1 and the `old/` line in the Layout block.
 
 ### Fixed
+- **`scripts/check-template.sh` § 3b is now a resolution check, not a substring
+  grep** (from a downstream dogfooding pilot). It previously failed on *any*
+  `@templates/...` occurrence in `.claude/commands` / `.claude/skills`, which
+  contradicted `docs/ADOPTING.md`'s "repoint *if* you relocated or stripped
+  `templates/`" framing: an adopter who vendored `templates/` verbatim (refs
+  still resolve) passed § 3 but failed § 3b, making relocation effectively
+  mandatory. § 3b now fails only on refs whose **target file is missing**, so a
+  verbatim-vendored `templates/` passes. Also fixed the now-stale "do this step
+  even if `templates/` was kept" wording in both first-time procedures, and
+  changed the relocation example (here and in `templates/AI_SESSION_START.md`)
+  to recommend a **namespaced subdir** (`docs/claude-code-template/`) instead of
+  a flat `docs/`, which collided with the CLAUDE.md-reserved
+  `docs/{PROJECT_SPEC,ARCHITECTURE,BUILD_PLAN}.md` triad.
 - **`scripts/check-template.sh` § 3b source-repo detection** rewritten
   from env-var gating (`CHECK_TEMPLATE_SOURCE`) to auto-detection by
   `docs/ADOPTING.md` presence (template-internal; adopters read it from
@@ -375,3 +418,6 @@ date-stamped — this template isn't versioned. Convention validated against
 
 ### Changed
 - `SECURITY.md` `Scope` section: customize-me placeholder for adopters. (#4)
+
+[unreleased]: https://github.com/mjvacas/claude_code_template/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/mjvacas/claude_code_template/releases/tag/v0.1.0

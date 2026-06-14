@@ -238,7 +238,10 @@ The session will:
 7. **Repoint `@templates/...` references.** Four `@`-refs across three
    files in `.claude/commands/` point at `@templates/...`. If this
    adoption relocated or stripped `templates/`, repoint each match to
-   the local layout:
+   the local layout. When relocating, prefer a namespaced subdir like
+   `docs/claude-code-template/` over a flat `docs/` — a flat `docs/` collides
+   with the CLAUDE.md-reserved `docs/{PROJECT_SPEC,ARCHITECTURE,BUILD_PLAN}.md`
+   triad:
 
    | File | `@templates/...` refs carried |
    |------|-------------------------------|
@@ -253,9 +256,10 @@ The session will:
    `scripts/check-template.sh` doesn't catch them, but they break the same way.
    Adopters with their own `docs/adr/` series should sub-namespace template
    ADRs (see the callout above).
-   `scripts/check-template.sh` (step 11 below) catches surviving `@templates/`
-   refs — but can't catch refs that resolve to the wrong file, so do this
-   step even if `templates/` was kept.
+   `scripts/check-template.sh` § 3b (step 11 below) fails on `@templates/` refs
+   whose target file is missing — so a verbatim-vendored `templates/` passes
+   without repointing. It can't verify a *resolved* ref points at the intended
+   file, so double-check after relocating.
 8. **Install baseline plugins** per [Plugins](#plugins). First check
    `claude plugin list`; for any baseline already installed at user
    scope, confirm it's enabled and skip — no re-install or re-prompt.
@@ -313,7 +317,10 @@ The session will:
 6. **Repoint `@templates/...` references.** Four `@`-refs across three
    files in `.claude/commands/` point at `@templates/...`. If this
    adoption relocated or stripped `templates/`, repoint each match to
-   the local layout:
+   the local layout. When relocating, prefer a namespaced subdir like
+   `docs/claude-code-template/` over a flat `docs/` — a flat `docs/` collides
+   with the CLAUDE.md-reserved `docs/{PROJECT_SPEC,ARCHITECTURE,BUILD_PLAN}.md`
+   triad:
 
    | File | `@templates/...` refs carried |
    |------|-------------------------------|
@@ -328,9 +335,10 @@ The session will:
    `scripts/check-template.sh` doesn't catch them, but they break the same way.
    Adopters with their own `docs/adr/` series should sub-namespace template
    ADRs (see the callout above).
-   `scripts/check-template.sh` (step 10 below) catches surviving `@templates/`
-   refs — but can't catch refs that resolve to the wrong file, so do this
-   step even if `templates/` was kept.
+   `scripts/check-template.sh` § 3b (step 10 below) fails on `@templates/` refs
+   whose target file is missing — so a verbatim-vendored `templates/` passes
+   without repointing. It can't verify a *resolved* ref points at the intended
+   file, so double-check after relocating.
 7. **Detect already-installed plugins** via `claude plugin list`. For any
    baseline plugin not yet installed, prompt the user to opt in (default
    install). Don't double-suggest what's already there.
@@ -406,13 +414,20 @@ add up to ~30 lines together; the rest is the project's responsibility.
 on first adoption and updates it on each re-sync. Single source of truth
 for what's been vendored and from which upstream commit.
 
+Pin to a **release tag** (e.g. `v0.1.0`) once releases are cut — SemVer makes
+the upgrade legible (am I behind? is it breaking?), per
+[ADR-006](adr/ADR-006-versioning-and-release-management.md). Until the first
+tag exists (or for anything vendored between releases) pin by **commit SHA** —
+the SHA is always the exact anchor, and the `<tag-or-sha>` placeholders below
+work either way.
+
 Format (proposed; adopters can customize):
 
 ```markdown
 # Vendored from claude_code_template
 
 Upstream: https://github.com/mjvacas/claude_code_template
-Last sync: 2026-06-01 @ 80768f7
+Last sync: v0.1.0 @ 80768f7
 
 ## Files
 
@@ -492,7 +507,7 @@ convenience.
 | `.claude/commands/handoff.md` | Minor tone customization. |
 | `.github/CODEOWNERS` | Replace `@<owner>` with team handles. |
 | `.gitignore` | Keep the security entries; append project patterns. |
-| `SECURITY.md` | Fill contact placeholder; customize scope. |
+| `SECURITY.md` | Add a private contact if you want one; customize scope. |
 | `LICENSE` | Update copyright holder. |
 
 ### Skeleton to copy (heavy edits expected)
@@ -514,6 +529,7 @@ convenience.
 | `docs/claude-code-setup.md` | How this template wires into Claude Code. Read for ideas. |
 | `docs/skill-security.md` | Trust model + vetting procedures. Link rather than copy. |
 | `docs/token-awareness.md` | Cost classes, the per-session context tax, and model-routing heuristic. Read; link rather than copy. |
+| `.claude/skills/cc-task-bench/` | Model-routing benchmark *methodology* (V1 = design + fixture layout; runner is V2, per ADR-003). Read if you want to benchmark which model to route a task type to; not needed to adopt the template. |
 | `CHANGELOG.md` | This template's change log. Read to re-sync. |
 | `CONTRIBUTING.md` | Sending fixes back to this repo + its maintainer-side working agreements. Don't copy — write your own if your project needs one. |
 
@@ -521,7 +537,7 @@ convenience.
 
 | Path | Why |
 |------|-----|
-| `old/` | Historical artifacts. |
+| `bench/` | The template's own benchmark corpus, schema, and `pricing.json` (per ADR-003). Template-internal; read the schema via the `cc-task-bench` skill above if designing your own fixtures. |
 
 ## Re-syncing template updates
 
@@ -530,32 +546,53 @@ Claude Code session:
 
 > Re-sync vendored files from `claude_code_template` (at
 > `../claude_code_template`). Check the template's `CHANGELOG.md` since
-> the SHA in `VENDORED.md`; show me what's changed and propose updates.
+> the version/SHA in `VENDORED.md`; show me what's changed and propose updates.
 
 The session will:
 
-1. Read `VENDORED.md` to get the current pinned SHA(s), vendored paths,
+1. Read `VENDORED.md` to get the current pinned tag/SHA(s), vendored paths,
    and installed plugins.
-2. Read the template's `CHANGELOG.md`; identify entries affecting
-   vendored paths or baseline plugins.
+2. Read the template's `CHANGELOG.md` between your pinned version and the
+   latest release (or `HEAD` if no tag is cut yet); a MAJOR (or, in 0.x beta,
+   MINOR) bump flags a breaking adoption-contract change. Identify entries
+   affecting vendored paths or baseline plugins — including **file deletions,
+   additions, and plugin swaps**. If your pin predates `v0.1.0`, also read the
+   date-stamped pre-history sections: changes there won't show as a SemVer bump.
 3. Run, against the template repo:
-   `git log --oneline <pinned-sha>..HEAD -- <vendored-paths>`.
-4. **Check baseline plugins** (`claude plugin list`) — install any
+   `git log --oneline <pinned-tag-or-sha>..HEAD -- <vendored-paths>`. Add
+   `--diff-filter=D` to spot files **deleted upstream** (handled in step 7).
+4. **Check for newly-vendored files.** Compare the template's current
+   [File map](#file-map) against the paths in your `VENDORED.md`; propose
+   **adding** any vendor-as-is file you never picked up — most importantly
+   `.github/workflows/check.yml`, without which the security self-check isn't
+   enforced on your PRs.
+5. **Check baseline plugins** (`claude plugin list`) — install any
    baseline newly recommended by the template (per upstream
    [Plugins](#plugins)) and not yet installed; prompt opt-in per plugin.
    **If any were installed, prompt the user to run `/reload-plugins`**
    (see [Activation caveat](#activation-caveat-silent-failure-trap)).
-5. **Re-run plugin + MCP discovery** for anything newly relevant to the
+6. **Re-run plugin + MCP discovery** for anything newly relevant to the
    project (new project areas, new ecosystem entries since last sync).
    Prompt for `/reload-plugins` again if any plugins were installed.
-6. Propose specific diffs for each changed file; ask the user to approve,
-   modify, or skip each.
-7. Apply approved changes; bump the SHA(s) in `VENDORED.md`; update the
-   "Installed plugins" section.
-8. Re-run `bash scripts/check-template.sh` and
+7. Propose changes **batched by action** (update / add / delete / merge) —
+   not one approval per file:
+   - **Update** — for changed vendor-as-is files, propose the latest copy.
+   - **Add** — the newly-vendored files from step 4.
+   - **Delete** — for files removed upstream, propose removing the local copy
+     **and its `VENDORED.md` row**; if the `CHANGELOG` notes a replacement
+     (e.g. a dropped agent superseded by a baseline plugin), surface that swap.
+   - **Merge** — for adapted/skeleton files you customized, don't blind-copy.
+     If `CLAUDE.md` changed upstream, re-apply only the bucket-1 (keep-verbatim)
+     changes per [§ Merging the template's `CLAUDE.md`](#merging-the-templates-claudemd);
+     leave your project-specific content alone.
+8. Apply approved changes; bump the tag/SHA(s) in `VENDORED.md`; update the
+   "Installed plugins" section. **Backfill any `VENDORED.md` sections missing
+   relative to the current schema above** (e.g. "Installed plugins" for a pin
+   that predates it).
+9. Re-run `bash scripts/check-template.sh` and
    `bash scripts/audit-config.sh .claude/`.
-9. Stage one atomic commit:
-   `chore: re-sync claude_code_template <old-sha>..<new-sha>`.
+10. Stage one atomic commit:
+    `chore: re-sync claude_code_template <old-ref>..<new-ref>`.
 
 ## Verification
 

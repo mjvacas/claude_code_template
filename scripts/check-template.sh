@@ -24,13 +24,13 @@ err() { printf '  FAIL %s\n' "$*"; fail=1; }
 # etc. for free), else a pruned find fallback for a non-git checkout.
 list_files() {
   if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    git ls-files -- "$@" ':!old/'
+    git ls-files -- "$@"
   else
     local args=() pat
     for pat in "$@"; do args+=(-o -name "$pat"); done
     find . \( -path './.git' -o -path '*/node_modules' -o -path '*/.venv' \
       -o -path '*/venv' -o -path '*/dist' -o -path '*/build' \
-      -o -path './old' -o -path './.claude/snapshots' \) -prune -o \
+      -o -path './.claude/snapshots' \) -prune -o \
       \( "${args[@]:1}" \) -type f -print
   fi
 }
@@ -95,22 +95,32 @@ sys.exit(1 if broken else 0)
 PY
 then fail=1; fi
 
-echo "== 3b. @-references avoid template-internal paths (adopter check) =="
-# Refs into `templates/` are correct in this source repo but break in adopter
-# repos after vendoring (the adopter typically relocates or strips `templates/`).
+echo "== 3b. @templates/ references resolve (adopter check) =="
+# `@templates/...` refs in vendored commands/skills are fine as long as the
+# target file exists. They break only when the adopter relocated or stripped
+# `templates/` without repointing — so fail on *unresolvable* refs, not on the
+# bare substring. A verbatim-vendored `templates/` resolves and passes, matching
+# the conditional guidance in docs/ADOPTING.md § First-time adoption.
 # Source-repo detection: docs/ADOPTING.md is template-internal — adopters read it
 # from the template clone and never vendor it (absent from the file map) — so its
-# presence means this is the template source tree. Adopter repos get
-# loud-by-default detection, both locally and in their vendored CI.
+# presence means this is the template source tree, where refs always resolve.
 if [ -f docs/ADOPTING.md ]; then
   ok "skipped — template source repo (docs/ADOPTING.md present)"
 else
-  hits=$(grep -rn --include='*.md' '@templates/' .claude/commands .claude/skills 2>/dev/null || true)
-  if [ -n "$hits" ]; then
-    err "@-references to template-internal paths (repoint per docs/ADOPTING.md § First-time adoption):"
-    printf '%s\n' "$hits" | sed 's/^/       /'
+  broken=$(
+    grep -rhoE --include='*.md' '@templates/[A-Za-z0-9._/-]+' .claude/commands .claude/skills 2>/dev/null \
+      | sort -u \
+      | while IFS= read -r ref; do
+          while [ "${ref%.}" != "$ref" ]; do ref=${ref%.}; done  # drop trailing sentence period(s); cf. § 3's rstrip('.')
+          [ -f "${ref#@}" ] || printf '%s\n' "$ref"
+        done
+  )
+  if [ -n "$broken" ]; then
+    err "@templates/ references with no target file (relocated/stripped templates/ without repointing — see docs/ADOPTING.md § First-time adoption):"
+    printf '%s\n' "$broken" | sed 's/^/       /'
+    echo "       locate them: grep -rn '@templates/' .claude/commands .claude/skills"
   else
-    ok "no @templates/ references in .claude/commands or .claude/skills"
+    ok "@templates/ references resolve (or none present)"
   fi
 fi
 
@@ -129,7 +139,7 @@ if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   # -e marks the pattern explicitly; without it git grep reads the leading
   # "-----BEGIN…" as an option and aborts (the scan would silently never run).
   # cut redacts to file:line so a matched secret never lands in logs/CI output.
-  hits=$(git grep -nIE -e "$secret_re" -- ':!old/' ':!*.example' ':!scripts/check-template.sh' 2>/dev/null | cut -d: -f1,2 || true)
+  hits=$(git grep -nIE -e "$secret_re" -- ':!*.example' ':!scripts/check-template.sh' 2>/dev/null | cut -d: -f1,2 || true)
   if [ -n "$hits" ]; then
     err "possible secret material in tracked files:"; printf '       %s\n' "$hits"
   else

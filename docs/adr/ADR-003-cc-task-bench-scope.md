@@ -12,7 +12,7 @@ External prior art exists. The [`affaan-m/ECC`](https://github.com/affaan-m/ECC)
 
 Two adjacent benchmarks are deliberately scope-separated:
 
-- **`nulog`** measures domain accuracy (macro/nutrition extraction via the Claude API). Out of scope here.
+- **A domain-accuracy benchmark** measures whether a feature's *output* is correct (e.g. extraction accuracy of a Claude-API feature). Out of scope here.
 - **`cc-task-bench`** (this ADR) measures **Claude Code task performance** — general coding work driven through the CLI.
 
 ### Why now

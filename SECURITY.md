@@ -4,8 +4,7 @@
 
 Please report security issues **privately** — do not open a public issue.
 
-- Contact: `<fill in: security email or private channel>`
-- Or use GitHub's private vulnerability reporting (Security tab → "Report a vulnerability").
+- Use GitHub's private vulnerability reporting (Security tab → "Report a vulnerability").
 
 Include steps to reproduce and the impact you observed. We'll acknowledge receipt and
 keep you updated on the fix.
