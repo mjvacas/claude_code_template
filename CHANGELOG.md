@@ -19,7 +19,9 @@ Pre-0.1.0 history is kept below in the original date-stamped sections.
   size — so a 1M-context model warns where a raw fill % would not trip 80% until
   800k. Adds the **weekly (`seven_day`) rate-limit window** (`7d`) beside the
   existing 5-hour one (`rate_limits.seven_day.used_percentage`, subscription
-  plans; each window may be independently absent). Falls back to a context **%**
+  plans; each window may be independently absent), each shown with its **reset
+  clock** (`5h 24% (16:30)` / `7d 41% (Tue 16:30)`, from
+  `rate_limits.*.resets_at`). Falls back to a context **%**
   when `context_window_size` is absent, preserving prior behavior on older
   Claude Code versions. `docs/token-awareness.md` gains a **Session context vs.
   budget** section: context is resettable (`/clear` · `/handoff`), budget is
