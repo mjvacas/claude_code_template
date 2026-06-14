@@ -69,17 +69,51 @@ numbers live.
 > [`skill-security.md`](skill-security.md) applies to setting keys.
 
 For an always-on view, the bundled `.claude/statusline.sh` renders the live
-context % in the status line, plus the signal that reflects your *actual*
-constraint: an estimated session cost (`~$`, computed at API list prices) on
-pay-as-you-go plans, or 5-hour rate-limit usage on subscription plans — where
-the dollar figure is notional (a flat subscription, not per-token billing), so
-it's hidden to avoid reading as a charge. It's a `free-local` signal — the
-status line never enters the model's context, so this costs zero tokens.
+session context as absolute tokens against the window (`ctx 152k/1M`, with a `⚠`
+nudge at ~200k regardless of window size), plus the signal that reflects your
+*actual* constraint: an estimated session cost (`~$`, computed at API list
+prices) on pay-as-you-go plans, or 5-hour and weekly rate-limit usage
+(`5h` / `7d`) on subscription plans — where the dollar figure is notional (a
+flat subscription, not per-token billing), so it's hidden to avoid reading as a
+charge (the rate-limit windows carry the real signal there). Context and budget
+are two different meters — see [Session context vs. budget](#session-context-vs-budget)
+below. It's a `free-local` signal — the status line never enters the model's
+context, so this costs zero tokens.
 
 The single largest fixed item is usually a full `AI_CONTEXT.md`; its budget is
 owned by [ADR-004](adr/ADR-004-ai-context-archive-threshold-bump.md) — don't copy
 the figure here, it would drift. Run `/context` for your actual total rather than
 trusting any number in prose.
+
+## Session context vs. budget
+
+The status line shows two meters that are easy to conflate but behave
+oppositely:
+
+- **Session context** — `ctx 152k/1M`: how full the current window is. It is
+  **resettable** — `/clear` or `/handoff` starts a fresh window and the count
+  drops back toward zero.
+- **Rate-limit budget** — `5h 24%` / `7d 41%`: how much of your 5-hour and
+  weekly (`seven_day`) allowance you have burned. It is **cumulative** — it
+  keeps climbing across sessions, and a context reset does **not** refund it.
+
+Two consequences worth holding onto:
+
+- **The `~200k` nudge is about quality, not billing.** Long-context attention
+  degrades well before a 1M window is "full", so the line flags ~200k regardless
+  of window size — a raw fill % would not trip 80% until 800k on a 1M model.
+  Read the nudge as "this conversation is getting long," independent of budget.
+- **Clearing context cuts *future* burn, not *past* spend.** Every turn re-sends
+  the whole window, so a bloated context quietly inflates weekly (`7d`) burn for
+  the rest of the session. Ending at a natural boundary with `/handoff` (it
+  records state, then you start clean) shrinks the window and slows that bleed —
+  but the `5h`/`7d` meters keep whatever they already showed. You are buying a
+  cheaper *future*, not a refund.
+
+So: watch `ctx` to decide when to **hand off and clear** (long conversation at a
+natural stopping point); watch `5h`/`7d` to decide when to **slow down or route
+cheaper** (next section). They are different signals — a depleted budget is not
+fixed by clearing context, and a fresh context does not restore budget.
 
 ## Which model for which task
 

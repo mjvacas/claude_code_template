@@ -12,6 +12,19 @@ Pre-0.1.0 history is kept below in the original date-stamped sections.
 
 ## [Unreleased]
 
+### Changed
+- **Statusline: session context vs. budget** — `.claude/statusline.sh` now
+  renders session context as **absolute tokens against the window** (`ctx
+  152k/1M`) with a `⚠` nudge at the fixed **~200k** mark, independent of window
+  size — so a 1M-context model warns where a raw fill % would not trip 80% until
+  800k. Adds the **weekly (`seven_day`) rate-limit window** (`7d`) beside the
+  existing 5-hour one (`rate_limits.seven_day.used_percentage`, subscription
+  plans; each window may be independently absent). Falls back to a context **%**
+  when `context_window_size` is absent, preserving prior behavior on older
+  Claude Code versions. `docs/token-awareness.md` gains a **Session context vs.
+  budget** section: context is resettable (`/clear` · `/handoff`), budget is
+  cumulative — clearing context cuts *future* burn, not *past* spend.
+
 ## [0.1.0] - 2026-06-13
 
 _First versioned release — **beta** (`v0.1.0`). SemVer per
