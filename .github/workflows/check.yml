@@ -21,9 +21,9 @@ jobs:
         with:
           fetch-depth: 0   # full history so the secret scan sees all commits
       - name: Template self-check
-        # The adopter-side @templates/ ref check (script § 3b) self-skips only in
-        # the template source tree (detected via docs/ADOPTING.md presence); in
-        # adopter repos it runs and catches unrepointed refs.
+        # § 3 (@-reference resolution) runs unconditionally and fails on any
+        # @-ref whose target file is missing — in adopter repos this catches
+        # unrepointed @templates/ refs after a relocate/strip.
         run: bash scripts/check-template.sh
       - name: Secret scan (gitleaks)
         # Pinned, checksum-verified MIT CLI binary — NOT the gitleaks-action (which is

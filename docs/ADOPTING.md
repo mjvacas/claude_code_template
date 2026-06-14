@@ -256,10 +256,11 @@ The session will:
    `scripts/check-template.sh` doesn't catch them, but they break the same way.
    Adopters with their own `docs/adr/` series should sub-namespace template
    ADRs (see the callout above).
-   `scripts/check-template.sh` § 3b (step 11 below) fails on `@templates/` refs
-   whose target file is missing — so a verbatim-vendored `templates/` passes
-   without repointing. It can't verify a *resolved* ref points at the intended
-   file, so double-check after relocating.
+   `scripts/check-template.sh` § 3 (the `@`-reference resolution check, step 11
+   below) fails on any `@`-ref whose target file is missing — so a verbatim-
+   vendored `templates/` passes, and a relocated/stripped one fails until you
+   repoint. It can't verify a *resolved* ref points at the intended file, so
+   double-check after relocating.
 8. **Install baseline plugins** per [Plugins](#plugins). First check
    `claude plugin list`; for any baseline already installed at user
    scope, confirm it's enabled and skip — no re-install or re-prompt.
@@ -335,10 +336,11 @@ The session will:
    `scripts/check-template.sh` doesn't catch them, but they break the same way.
    Adopters with their own `docs/adr/` series should sub-namespace template
    ADRs (see the callout above).
-   `scripts/check-template.sh` § 3b (step 10 below) fails on `@templates/` refs
-   whose target file is missing — so a verbatim-vendored `templates/` passes
-   without repointing. It can't verify a *resolved* ref points at the intended
-   file, so double-check after relocating.
+   `scripts/check-template.sh` § 3 (the `@`-reference resolution check, step 10
+   below) fails on any `@`-ref whose target file is missing — so a verbatim-
+   vendored `templates/` passes, and a relocated/stripped one fails until you
+   repoint. It can't verify a *resolved* ref points at the intended file, so
+   double-check after relocating.
 7. **Detect already-installed plugins** via `claude plugin list`. For any
    baseline plugin not yet installed, prompt the user to opt in (default
    install). Don't double-suggest what's already there.
@@ -445,7 +447,19 @@ Last sync: v0.1.0 @ 80768f7
 | `security-guidance` | `claude-plugins-official` | user | 2026-06-01 | baseline |
 | `pr-review-toolkit` | `claude-plugins-official` | user | 2026-06-01 | baseline |
 | `commit-commands` | `claude-plugins-official` | user | 2026-06-01 | discovered |
+
+## Deliberately not vendored
+
+| Path | Why skipped |
+|------|-------------|
+| `.claude/skills/cc-task-bench/`, `bench/` | Reference-only / template-internal benchmark. |
+| `docs/adr/ADR-003/005/006-*` | Template-internal R&D ADRs. |
+| `docs/token-awareness.md`, `CONTRIBUTING.md` | Reference-only — read, don't copy. |
 ```
+
+The optional **`## Deliberately not vendored`** section records reference-only /
+skip files you intentionally left out, so a re-sync's add-check (§ Re-syncing,
+step 4) doesn't keep re-proposing them as "missed."
 
 **Why a sidecar (not per-file headers).** Four of the vendor-as-is files
 are strict JSON with `$schema` validation (`.claude/settings.json`,
@@ -485,7 +499,7 @@ convenience.
 | `.claude/hooks/precompact-snapshot.sh` | Pre-compaction breadcrumb snapshots. |
 | `.claude/hooks/clock.sh` | Opt-in per-prompt time heartbeat (ships unwired; a few tokens/prompt when enabled — see `docs/claude-code-setup.md`). |
 | `.claude/commands/commit.md` | `/commit` slash command. |
-| `.claude/commands/adr.md` | `/adr` slash command. |
+| `.claude/commands/adr.md` | `/adr` slash command. Carries an `@templates/ADR-template.md` ref — repoint it if you relocate/strip `templates/` (§ First-time adoption step 7). |
 | `.claude/skills/verify-refactor/` | Golden-output byte-identical diffing. |
 | `.claude/skills/tune-parameters/` | Threshold-tuning skill. |
 | `.claude/skills/llm-eval/` | Ground-truth accuracy harness. |
@@ -530,6 +544,9 @@ convenience.
 | `docs/skill-security.md` | Trust model + vetting procedures. Link rather than copy. |
 | `docs/token-awareness.md` | Cost classes, the per-session context tax, and model-routing heuristic. Read; link rather than copy. |
 | `.claude/skills/cc-task-bench/` | Model-routing benchmark *methodology* (V1 = design + fixture layout; runner is V2, per ADR-003). Read if you want to benchmark which model to route a task type to; not needed to adopt the template. |
+| `docs/adr/ADR-003-cc-task-bench-scope.md` | Scopes the cc-task-bench benchmark — template-internal R&D. Don't vendor. |
+| `docs/adr/ADR-005-token-awareness-legibility.md` | Records the template's own token-awareness decision (the statusline itself ships via `.claude/statusline.sh`). Template-internal. Don't vendor. |
+| `docs/adr/ADR-006-versioning-and-release-management.md` | How the *template* is versioned/released. Template-internal. Don't vendor. |
 | `CHANGELOG.md` | This template's change log. Read to re-sync. |
 | `CONTRIBUTING.md` | Sending fixes back to this repo + its maintainer-side working agreements. Don't copy — write your own if your project needs one. |
 
@@ -565,7 +582,13 @@ The session will:
    [File map](#file-map) against the paths in your `VENDORED.md`; propose
    **adding** any vendor-as-is file you never picked up — most importantly
    `.github/workflows/check.yml`, without which the security self-check isn't
-   enforced on your PRs.
+   enforced on your PRs. Skip anything recorded under your
+   `## Deliberately not vendored` section — don't re-propose deliberate skips.
+   Also add any file a *changed* command/skill now references (e.g. an updated
+   `handoff.md` that references `docs/adr/ADR-004-…` co-requires vendoring
+   ADR-004). If an incoming ADR's number already exists in your own `docs/adr/`
+   series, **sub-namespace or renumber it** — don't assume the template's
+   `ADR-NNN` slot is free.
 5. **Check baseline plugins** (`claude plugin list`) — install any
    baseline newly recommended by the template (per upstream
    [Plugins](#plugins)) and not yet installed; prompt opt-in per plugin.
@@ -576,7 +599,10 @@ The session will:
    Prompt for `/reload-plugins` again if any plugins were installed.
 7. Propose changes **batched by action** (update / add / delete / merge) —
    not one approval per file:
-   - **Update** — for changed vendor-as-is files, propose the latest copy.
+   - **Update** — for changed vendor-as-is files, propose the latest copy —
+     **unless `VENDORED.md` records a path-adaptation for that file** (e.g.
+     `adr.md`'s `@templates/`→your-layout repoint): re-apply the adaptation
+     instead of blind-copying, or the update reintroduces refs that dangle.
    - **Add** — the newly-vendored files from step 4.
    - **Delete** — for files removed upstream, propose removing the local copy
      **and its `VENDORED.md` row**; if the `CHANGELOG` notes a replacement
@@ -584,7 +610,13 @@ The session will:
    - **Merge** — for adapted/skeleton files you customized, don't blind-copy.
      If `CLAUDE.md` changed upstream, re-apply only the bucket-1 (keep-verbatim)
      changes per [§ Merging the template's `CLAUDE.md`](#merging-the-templates-claudemd);
-     leave your project-specific content alone.
+     leave your project-specific content alone. Same for any `.claude/commands/*`
+     whose `@templates/` refs you repointed: take the upstream body, then
+     re-apply your repoint.
+
+   After Update/Merge, run `grep -rn '@templates/' .claude/commands .claude/skills`
+   — a surviving `@templates/` ref dangles (and fails § 3 at step 9) unless
+   `templates/` sits at that path; repoint or restore before committing.
 8. Apply approved changes; bump the tag/SHA(s) in `VENDORED.md`; update the
    "Installed plugins" section. **Backfill any `VENDORED.md` sections missing
    relative to the current schema above** (e.g. "Installed plugins" for a pin

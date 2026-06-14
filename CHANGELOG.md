@@ -173,6 +173,27 @@ commit is tagged `v0.1.0`. Entries below were previously under `[Unreleased]`._
   `scripts/check-template.sh` doesn't catch them).
 
 ### Changed
+- **Re-sync now treats `VENDORED.md` as the adopter's deviation ledger**
+  (`docs/ADOPTING.md`), from a read-only sweep of five downstream adopters.
+  Each had relocated/repointed/skipped differently, and the procedure
+  blind-copied over those choices. Now: the schema gains a
+  **`## Deliberately not vendored`** section and the add-check skips anything
+  recorded there (so reference-only/template-internal files aren't re-proposed
+  every sync); **Update/Merge re-applies a file's recorded `@templates/` repoint**
+  instead of blind-copying (e.g. `adr.md`), with a `grep '@templates/'` gate
+  before commit; the add-check treats a file a *changed* command now references
+  (e.g. `handoff.md` → ADR-004) as a **co-required add**, and **sub-namespaces
+  an incoming ADR whose number collides** with the adopter's own series. The
+  file map classifies the template-internal **ADR-003/005/006** (Reference only)
+  and flags that `adr.md` carries an `@templates/` ref.
+- **`scripts/check-template.sh` § 3b removed — redundant with § 3.** § 3 already
+  resolves *every* `@`-ref in tracked `.md` files (source and adopter alike), so
+  it catches a dangling `@templates/` ref (relocated/stripped without repointing)
+  on its own. § 3b only re-implemented a subset and carried a footgun — its
+  source-repo skip keyed on `docs/ADOPTING.md` presence, so an adopter who
+  vendored that file would silently disable the check. Removing § 3b deletes the
+  redundancy and the footgun; § 3b references in `docs/ADOPTING.md` and the CI
+  workflow comment repoint to § 3.
 - **Re-sync procedure hardened for large multi-PR jumps** (`docs/ADOPTING.md`
   § Re-syncing), from a downstream dogfooding pilot. The steady-state procedure
   only *updated* already-vendored files; it now also **adds** newly-vendored
