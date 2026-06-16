@@ -1,12 +1,18 @@
 # Claude Code Project Template
 
-A starter scaffold for new projects that work well with **Claude Code** (May 2026).
+A starter scaffold for new projects that work well with **Claude Code**.
 It pairs Claude Code's native features (`.claude/` config, commands, subagents,
 skills, hooks) with a small set of engineering-discipline practices.
 
+**Status:** v0.1.0 (beta) — versioned with SemVer against the adoption contract;
+adopters pin `VENDORED.md` to a release tag, so each re-sync can answer "am I
+behind / by how much / is it breaking?" See
+[ADR-006](docs/adr/ADR-006-versioning-and-release-management.md) and the
+[CHANGELOG](CHANGELOG.md).
+
 ## Quick start
 
-Adoption is driven by a Claude Code session reading [`docs/ADOPTING.md`](docs/ADOPTING.md) — **not** by manual `cp -r`. The session installs baseline plugins (`security-guidance`, `pr-review-toolkit`), runs project-specific plugin and MCP-server discovery against your stack, pins the upstream SHA in `VENDORED.md` so future re-syncs are diffable, and merges `CLAUDE.md` per the three-bucket scheme rather than overwriting your existing config.
+Adoption is driven by a Claude Code session reading [`docs/ADOPTING.md`](docs/ADOPTING.md) — **not** by manual `cp -r`. The session installs baseline plugins (`security-guidance`, `pr-review-toolkit`), runs project-specific plugin and MCP-server discovery against your stack, pins the upstream release tag in `VENDORED.md` so future re-syncs are diffable, and merges `CLAUDE.md` per the three-bucket scheme rather than overwriting your existing config.
 
 1. From inside your target repo, clone this template as a sibling:
    ```bash
@@ -21,7 +27,7 @@ Adoption is driven by a Claude Code session reading [`docs/ADOPTING.md`](docs/AD
    **Existing repo (Claude Code already in use):**
    > Read `../claude_code_template/docs/ADOPTING.md` and adopt this template into the current repo. **Existing project** — already has its own Claude Code config / `CLAUDE.md` / etc. Follow the existing-repo procedure.
 
-The session handles the rest: SHA pin, file-map traversal, plugin install + `/reload-plugins` prompt, MCP discovery, conflict resolution, `bash scripts/check-template.sh` validation, and one atomic adoption commit. Full procedure (file map, discovery rubric, re-sync flow) lives in [`docs/ADOPTING.md`](docs/ADOPTING.md).
+The session handles the rest: release-tag pin, file-map traversal, plugin install + `/reload-plugins` prompt, MCP discovery, conflict resolution, `bash scripts/check-template.sh` validation, and one atomic adoption commit. Full procedure (file map, discovery rubric, re-sync flow) lives in [`docs/ADOPTING.md`](docs/ADOPTING.md).
 
 ## Layout
 
@@ -39,7 +45,7 @@ CONTRIBUTING.md               # Sending fixes back + this repo's working agreeme
 ├── settings.json             # Permissions, statusline, SessionStart + PreToolUse + PreCompact hooks
 ├── settings.local.json.example
 ├── settings.lockdown.json.example  # Opt-in egress denies for vetting untrusted skills
-├── statusline.sh             # Status line: model · dir · branch · live cost/context/rate-limit
+├── statusline.sh             # Status line: model · dir · branch · cost · context (tokens vs window) · 5h/7d limits + resets
 ├── hooks/session-context.sh  # Prints session-start time + recent git activity at session start
 ├── hooks/block-dangerous.sh  # PreToolUse guard: hard-blocks catastrophic shell commands
 ├── hooks/precompact-snapshot.sh  # PreCompact: snapshots context to .claude/snapshots/ before compaction
@@ -50,6 +56,7 @@ scripts/
 ├── check-template.sh         # Integrity + secrets smoke-test (run manually + in CI)
 └── audit-config.sh           # Reports what .claude/ artifacts do — vet skills before trusting
 docs/
+├── ADOPTING.md               # Adoption + re-sync procedure (the session reads this to adopt)
 ├── claude-code-setup.md      # How the native config is wired; what to customize
 ├── skill-security.md         # Trust model, vetting checklist (incl. MCP), SAST options
 ├── token-awareness.md        # Cost classes, per-session context tax, model-routing heuristic
@@ -90,11 +97,12 @@ from outside this repo, vet it — see `docs/skill-security.md`. Quick tools:
 ## What's distinctive here
 
 Beyond standard scaffolding, this template encodes a few hard-won engineering
-practices as runnable skills and reviewer rules:
+practices — as runnable skills, a cost-legibility layer, and reviewer rules:
 
 - **`/verify-refactor`** — prove a refactor preserved behavior by diffing deterministic output (byte-identical), not just "tests pass."
 - **`/tune-parameters`** — pick a threshold by reading the *shape* of the metric surface, rejecting overfit spikes.
 - **`/llm-eval`** — gate AI features on accuracy against a ground-truth set.
+- **Token-cost legibility** — a cost-class model (`docs/token-awareness.md`) plus a status line that surfaces live session cost, context-against-window, and 5h/7d rate-limit budgets with reset times — so the cost of the context system is visible, not guessed.
 
 For code review, the template recommends installing
 `pr-review-toolkit@claude-plugins-official` as a baseline plugin during
