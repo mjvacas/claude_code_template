@@ -626,6 +626,52 @@ The session will:
 10. Stage one atomic commit:
     `chore: re-sync claude_code_template <old-ref>..<new-ref>`.
 
+## Uninstalling / backing out
+
+Changed your mind? The whole footprint is reversible — adoption lands as **one
+atomic commit** and `VENDORED.md` is the bill of materials. Pick the path that
+matches how you adopted; a Claude Code session can drive this, or do it by hand.
+
+First, find the adoption commit (and any later re-syncs):
+
+> `git log --oneline --grep "claude_code_template"`
+
+**Existing repo (adopted on top of prior history) — the clean path:**
+
+1. `git revert <adoption_sha>`. The vendored files **and** the `CLAUDE.md`
+   three-bucket / `.gitignore` / `.claude/settings.json` deny-list merges all shipped
+   in that single commit, so one revert restores your pre-adoption state in one move —
+   no manual un-merging.
+2. *Caveat:* if you edited vendored files or **re-synced** after adopting, a plain
+   revert will conflict. Fall back to the manual path below, using `VENDORED.md` →
+   `## Files` as the delete list and restoring your own pre-adoption `CLAUDE.md` /
+   settings by hand.
+
+**New repo (the template was the initial scaffold):** there is no pre-adoption state to
+revert to. Delete the paths listed in `VENDORED.md` → `## Files` (`.claude/`, `docs/`,
+`scripts/`, `templates/`, `.github/workflows/check.yml`, `VENDORED.md`, …) and strip the
+template buckets from `CLAUDE.md`.
+
+**Both paths — clean up what lives outside the repo.** `git revert` only touches tracked
+files, so these survive a revert:
+
+- **Plugins** — `claude plugin uninstall <name>@<marketplace>` for each row in
+  `VENDORED.md` → `## Installed plugins` (they install at user scope under `~/.claude/`,
+  not in your repo).
+- **MCP servers** — remove any entries you added to `.mcp.json`.
+
+Three traps to avoid:
+
+- **Don't blind-`rm` the merged files** (`CLAUDE.md`, `.claude/settings.json`,
+  `.gitignore`) — they hold *your* content alongside the template's. Revert or un-merge
+  surgically; deleting them outright nukes your own config.
+- **Plugins and MCP servers live outside the repo** — reverting the commit won't remove
+  them; `VENDORED.md` → `## Installed plugins` is your checklist.
+- **Remove as a consistent set** — a half-removed template (kept CI, deleted `scripts/`;
+  kept a command, deleted the `@templates/` target it references) breaks in exactly the
+  ways `scripts/check-template.sh` § 3 is built to catch. Run it after removal to confirm
+  nothing template-specific dangles.
+
 ## Verification
 
 After adoption or re-sync, `check-template.sh` exits non-zero on

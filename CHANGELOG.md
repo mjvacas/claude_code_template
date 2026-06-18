@@ -12,6 +12,15 @@ Pre-0.1.0 history is kept below in the original date-stamped sections.
 
 ## [Unreleased]
 
+### Added
+- **Uninstall / back-out procedure** — `docs/ADOPTING.md` gains an
+  **Uninstalling / backing out** section: `git revert` the atomic adoption
+  commit (undoes vendored files **and** the `CLAUDE.md` / `.gitignore` /
+  `settings.json` merges in one move), then clean up the out-of-repo pieces
+  (`claude plugin uninstall` per `VENDORED.md` → `## Installed plugins`, plus
+  `.mcp.json` entries), with the three half-removal traps called out. Closes the
+  adopt / re-sync / **undo** completeness gap.
+
 ### Changed
 - **Statusline: session context vs. budget** — `.claude/statusline.sh` now
   renders session context as **absolute tokens against the window** (`ctx
