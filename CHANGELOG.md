@@ -36,6 +36,12 @@ Pre-0.1.0 history is kept below in the original date-stamped sections.
   budget** section: context is resettable (`/clear` · `/handoff`), budget is
   cumulative — clearing context cuts *future* burn, not *past* spend.
 
+### Security
+- **CI: pin `actions/checkout` to a commit SHA** — `.github/workflows/check.yml`
+  now pins `actions/checkout` to `34e1148…` (`v4.3.1`) instead of the mutable
+  `@v4` tag, matching the SHA-pinning posture `docs/skill-security.md` teaches
+  adopters. Closes the gap where the template violated its own supply-chain rule.
+
 ## [0.1.0] - 2026-06-13
 
 _First versioned release — **beta** (`v0.1.0`). SemVer per

@@ -15,9 +15,10 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      # Pin third-party actions to a commit SHA in practice (see docs/skill-security.md);
-      # tags are shown here for readability.
-      - uses: actions/checkout@v4
+      # Third-party actions are pinned to a commit SHA (a tag is mutable; a SHA is not) —
+      # the posture docs/skill-security.md teaches. Bump deliberately; the trailing comment
+      # records the human-readable tag the SHA maps to.
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
         with:
           fetch-depth: 0   # full history so the secret scan sees all commits
       - name: Template self-check
