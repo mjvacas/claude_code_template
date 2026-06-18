@@ -12,6 +12,8 @@ Pre-0.1.0 history is kept below in the original date-stamped sections.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-06-17
+
 ### Added
 - **Uninstall / back-out procedure** — `docs/ADOPTING.md` gains an
   **Uninstalling / backing out** section: `git revert` the atomic adoption
@@ -35,6 +37,11 @@ Pre-0.1.0 history is kept below in the original date-stamped sections.
   Claude Code versions. `docs/token-awareness.md` gains a **Session context vs.
   budget** section: context is resettable (`/clear` · `/handoff`), budget is
   cumulative — clearing context cuts *future* burn, not *past* spend.
+- **Re-sync procedure hardening** — `docs/ADOPTING.md` consolidates the re-sync
+  guidance from the 5-adopter sweep: a `VENDORED.md` deviation ledger,
+  re-applying path-repoints on each re-sync (don't blind-copy over adaptations),
+  ADR-number-collision handling, and co-required-add detection — making large
+  multi-PR re-syncs safer.
 
 ### Security
 - **CI: pin `actions/checkout` to a commit SHA** — `.github/workflows/check.yml`
