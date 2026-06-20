@@ -4,7 +4,7 @@ A starter scaffold for new projects that work well with **Claude Code**.
 It pairs Claude Code's native features (`.claude/` config, commands, subagents,
 skills, hooks) with a small set of engineering-discipline practices.
 
-**Status:** v0.1.0 (beta) — versioned with SemVer against the adoption contract;
+**Status:** v0.2.0 (beta) — versioned with SemVer against the adoption contract;
 adopters pin `VENDORED.md` to a release tag, so each re-sync can answer "am I
 behind / by how much / is it breaking?" See
 [ADR-006](docs/adr/ADR-006-versioning-and-release-management.md) and the
