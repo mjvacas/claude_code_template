@@ -416,7 +416,7 @@ add up to ~30 lines together; the rest is the project's responsibility.
 on first adoption and updates it on each re-sync. Single source of truth
 for what's been vendored and from which upstream commit.
 
-Pin to a **release tag** (e.g. `v0.1.0`) once releases are cut — SemVer makes
+Pin to a **release tag** (e.g. `v0.2.0`) once releases are cut — SemVer makes
 the upgrade legible (am I behind? is it breaking?), per
 [ADR-006](adr/ADR-006-versioning-and-release-management.md). Until the first
 tag exists (or for anything vendored between releases) pin by **commit SHA** —
@@ -429,16 +429,16 @@ Format (proposed; adopters can customize):
 # Vendored from claude_code_template
 
 Upstream: https://github.com/mjvacas/claude_code_template
-Last sync: v0.1.0 @ 80768f7
+Last sync: v0.2.0 @ 3cb0167
 
 ## Files
 
 | Path | Upstream path | Pinned SHA | Notes |
 |------|---------------|------------|-------|
-| `.claude/hooks/block-dangerous.sh` | same | 80768f7 | vendor-as-is |
-| `.claude/settings.json` | same | 80768f7 | merged with project's deny additions |
-| `scripts/check-template.sh` | same | 80768f7 | vendor-as-is |
-| `CLAUDE.md` | same | 80768f7 | skeleton — adapted to tech stack |
+| `.claude/hooks/block-dangerous.sh` | same | 3cb0167 | vendor-as-is |
+| `.claude/settings.json` | same | 3cb0167 | merged with project's deny additions |
+| `scripts/check-template.sh` | same | 3cb0167 | vendor-as-is |
+| `CLAUDE.md` | same | 3cb0167 | skeleton — adapted to tech stack |
 
 ## Installed plugins
 
@@ -474,11 +474,11 @@ For files that support comments, adopters can *additionally* mark each
 vendored file with a one-line header for in-situ discoverability:
 
 ```bash
-# Vendored from claude_code_template @ 80768f7 — see VENDORED.md
+# Vendored from claude_code_template @ 3cb0167 — see VENDORED.md
 ```
 
 ```markdown
-<!-- Vendored from claude_code_template @ 80768f7 — see VENDORED.md -->
+<!-- Vendored from claude_code_template @ 3cb0167 — see VENDORED.md -->
 ```
 
 JSON files skip these. The sidecar remains authoritative; the header is
