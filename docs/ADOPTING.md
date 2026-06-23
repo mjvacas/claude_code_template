@@ -276,10 +276,14 @@ The session will:
    skipping means the adoption commit ships without plugin review.
 10. Create `VENDORED.md` at repo root (see [Source-pin manifest](#source-pin-manifest)),
     including the "Installed plugins" section listing baseline + discovered.
-11. Run `bash scripts/check-template.sh` and
-    `bash scripts/audit-config.sh .claude/`. Report.
-12. Stage one atomic commit: `chore: adopt claude_code_template @ <sha>`
-    with a body listing what was adopted (files + plugins).
+11. **Stage first** (`git add -A`), then run `bash scripts/check-template.sh`
+    and `bash scripts/audit-config.sh .claude/`. Report. (Staging first is what
+    makes `check-template.sh` §4 — the secret-content scan — actually cover the
+    just-vendored files; on an unstaged tree it silently scans nothing. See
+    [Verification](#verification).)
+12. Commit the staged changes as one atomic commit:
+    `chore: adopt claude_code_template @ <sha>` with a body listing what was
+    adopted (files + plugins).
 
 ### Existing repo (Claude Code already in use)
 
@@ -352,8 +356,9 @@ The session will:
 9. Create or update `VENDORED.md` (existing repos may already have one
    from a prior adoption; merge entries). Includes the "Installed plugins"
    section.
-10. Run both verification scripts. Distinguish failures originating from
-    template files vs. pre-existing project state.
+10. **Stage first** (`git add -A`), then run both verification scripts (see
+    [Verification](#verification) for why staging matters). Distinguish failures
+    originating from template files vs. pre-existing project state.
 11. Stage one atomic commit; body lists what was adopted, what was merged
     (with strategy), what was skipped, plugins installed, and the current
     pinned SHA.
@@ -374,6 +379,15 @@ When the existing-repo procedure step 3 reaches `CLAUDE.md`, propose a
 
 These are the sections the rest of the template assumes exist. Bring them
 into the adopter's `CLAUDE.md` unchanged.
+
+> **One edit even in the "keep verbatim" sections:** they carry prose pointers to
+> docs the file map classifies *reference-only* — `## Conventions` ends with "see
+> docs/skill-security.md", and `## Context System` mentions `docs/token-awareness.md`
+> and `docs/claude-code-setup.md`. If you didn't vendor those (the common case), the
+> pointers dangle. They're prose, not `@`-imports, so `check-template.sh` §3 won't
+> catch them — repoint each to the upstream URL
+> (`https://github.com/mjvacas/claude_code_template/blob/main/docs/<file>`) or drop
+> the clause. Everything else in these sections stays verbatim.
 
 | Section | Why it's template-shared |
 |---------|--------------------------|
@@ -512,6 +526,7 @@ convenience.
 | `docs/adr/ADR-001-vendor-with-source-pin.md` | Rationale for the `VENDORED.md` sidecar manifest. Sub-namespace if you maintain your own `docs/adr/` series (see § First-time adoption callout). |
 | `docs/adr/ADR-002-ai-context-archive-threshold.md` | Historical record — the original 500-line research-anchored derivation. Superseded by ADR-004 but kept in-repo (ADR-004 cites its evidence chain). Same sub-namespacing caveat. |
 | `docs/adr/ADR-004-ai-context-archive-threshold-bump.md` | Live rationale for the 750-line `AI_CONTEXT.md` archive threshold + `/handoff` state-sufficiency requirement (referenced from `templates/AI_SESSION_START.md` and CLAUDE.md's Context System). Same sub-namespacing caveat. |
+| `docs/summaries/.gitkeep` | Keeps the (initially empty) monthly-summary archive dir under version control. **Easy to miss** — it's the only file under `docs/summaries/`, and `check-template.sh` §5 fails (`missing directory: docs/summaries`) without it. Copying it is what makes a fresh adoption pass verification. |
 
 ### Adapt (copy, then customize)
 
@@ -519,7 +534,7 @@ convenience.
 |------|----------------|
 | `.claude/commands/session-start.md` | Customize section headers per project. |
 | `.claude/commands/handoff.md` | Minor tone customization. |
-| `.github/CODEOWNERS` | Replace `@<owner>` with team handles. |
+| `.github/CODEOWNERS` | Replace the owner handle with your own GitHub handle/team. It **ships as `@mjvacas`** (the template maintainer), not a `@<owner>` placeholder — `grep @mjvacas .github/CODEOWNERS` to find every line, or you silently leave the maintainer as code-owner of your security-critical files. |
 | `.gitignore` | Keep the security entries; append project patterns. |
 | `SECURITY.md` | Add a private contact if you want one; customize scope. |
 | `LICENSE` | Update copyright holder. |
@@ -669,16 +684,28 @@ Three traps to avoid:
   them; `VENDORED.md` → `## Installed plugins` is your checklist.
 - **Remove as a consistent set** — a half-removed template (kept CI, deleted `scripts/`;
   kept a command, deleted the `@templates/` target it references) breaks in exactly the
-  ways `scripts/check-template.sh` § 3 is built to catch. Run it after removal to confirm
-  nothing template-specific dangles.
+  ways `scripts/check-template.sh` § 3 is built to catch. Run it to confirm nothing
+  template-specific dangles — but a **full** removal deletes the script itself, so run it
+  *before* the final delete (or from a kept-aside copy); after a full removal there's
+  nothing template-specific left to dangle anyway.
+- **Sweep empty dirs and the `.gitkeep`** — a manifest-driven file delete leaves empty
+  parent dirs (`scripts/`, `.claude/hooks/`, `docs/adr/`) and, since `docs/summaries/.gitkeep`
+  is a vendored file, an orphaned `docs/summaries/` if you miss its `VENDORED.md` row.
+  `find . -type d -empty -delete` clears the empties (it won't touch dirs that still hold
+  your own files).
 
 ## Verification
 
 After adoption or re-sync, `check-template.sh` exits non-zero on
-regression — fix before committing. `audit-config.sh` is a vetting
-**aid**, not a gate; legitimate config trips checks (the hooks really do
-run shell commands). The AI session reads the report and decides; the
-user reviews. See `docs/skill-security.md` for the trust model.
+regression — fix before committing. **Stage your changes (`git add -A`) before
+running it.** The integrity checks (§1 JSON validity, §3 `@`-reference
+resolution) cover tracked *and* untracked-but-unignored files, so they're robust
+either way — but the §4 secret-content scan runs only over tracked/staged content
+(it uses `git grep`), so an unstaged adoption leaves that section scanning nothing
+while still printing "ok". Stage first and it covers the just-vendored files.
+`audit-config.sh` is a vetting **aid**, not a gate; legitimate config trips checks
+(the hooks really do run shell commands). The AI session reads the report and
+decides; the user reviews. See `docs/skill-security.md` for the trust model.
 
 ## Pointers
 

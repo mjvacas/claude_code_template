@@ -9,6 +9,10 @@
 # is the review-time layer; section 6 is the CI-time layer. Together they close the
 # silent-revert risk class (an unrebased branch whose PR diff looks like deletions of
 # deny-list / redaction lines).
+#
+# ADOPTERS: the @mjvacas below is the template maintainer, not a placeholder.
+# Replace every @mjvacas with your own GitHub handle/team, or you leave the
+# maintainer as code-owner of your security-critical files.
 
 .gitignore                @mjvacas
 SECURITY.md               @mjvacas

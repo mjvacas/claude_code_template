@@ -12,6 +12,31 @@ Pre-0.1.0 history is kept below in the original date-stamped sections.
 
 ## [Unreleased]
 
+### Fixed
+- **Fresh adoption now passes `check-template.sh`** — `docs/summaries/.gitkeep`
+  was missing from the `docs/ADOPTING.md` file map, so a by-the-book new-repo
+  adoption failed §5 (`missing directory: docs/summaries`) on the very
+  verification step the procedure says to run. Added it to the **Vendor as-is**
+  list. (Surfaced by an end-to-end clone→adopt→uninstall dry run.)
+- **`check-template.sh` no longer silently under-checks before staging** —
+  `list_files()` now unions tracked with untracked-but-unignored files, so the
+  integrity checks (§1 JSON validity, §3 `@`-reference resolution) cover
+  just-vendored files even before `git add`. Previously a fresh, unstaged
+  adoption made `git ls-files` return nothing and §1/§3 passed as no-ops. The
+  ADOPTING procedures + **Verification** section now say to **stage first** so
+  the §4 secret-content scan (tracked-only by design) also covers the adoption.
+- **CODEOWNERS adopter guidance** — the file ships with the maintainer handle
+  (`@mjvacas`), not a `@<owner>` placeholder; `docs/ADOPTING.md` and an in-file
+  comment now tell adopters to replace it, so they don't silently leave the
+  maintainer as code-owner of their own security-critical files.
+- **CLAUDE.md three-bucket merge** — the "keep verbatim" sections carry prose
+  pointers to reference-only docs (`docs/skill-security.md`,
+  `docs/token-awareness.md`, `docs/claude-code-setup.md`); the merge guidance now
+  says to repoint them upstream or drop them so they don't dangle.
+- **Uninstall back-out** — note that a full removal deletes `check-template.sh`
+  itself (run it *before* the final delete), and that a manifest-driven delete
+  leaves empty parent dirs + an orphaned `docs/summaries/` to sweep.
+
 ## [0.2.0] - 2026-06-17
 
 ### Added
@@ -477,5 +502,6 @@ commit is tagged `v0.1.0`. Entries below were previously under `[Unreleased]`._
 ### Changed
 - `SECURITY.md` `Scope` section: customize-me placeholder for adopters. (#4)
 
-[unreleased]: https://github.com/mjvacas/claude_code_template/compare/v0.1.0...HEAD
+[unreleased]: https://github.com/mjvacas/claude_code_template/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/mjvacas/claude_code_template/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/mjvacas/claude_code_template/releases/tag/v0.1.0
