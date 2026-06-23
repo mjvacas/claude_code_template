@@ -20,11 +20,16 @@ fail=0
 ok()  { printf '  ok   %s\n' "$*"; }
 err() { printf '  FAIL %s\n' "$*"; fail=1; }
 
-# Files matching given globs: tracked files in a git repo (skips node_modules/.venv
-# etc. for free), else a pruned find fallback for a non-git checkout.
+# Files matching given globs: in a git repo, tracked + untracked-but-unignored
+# files (skips node_modules/.venv etc. for free); else a pruned find fallback for
+# a non-git checkout.
 list_files() {
   if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    git ls-files -- "$@"
+    # Union tracked with untracked-but-unignored so the integrity checks (§1 JSON,
+    # §3 @references) stay meaningful during adoption — files are copied in but not
+    # yet `git add`ed, and a bare `git ls-files` would make those sections silently
+    # check nothing. Ignored files (.exclude-standard) remain out; -u dedupes.
+    { git ls-files -- "$@"; git ls-files --others --exclude-standard -- "$@"; } | sort -u
   else
     local args=() pat
     for pat in "$@"; do args+=(-o -name "$pat"); done
