@@ -4,7 +4,7 @@ A starter scaffold for new projects that work well with **Claude Code**.
 It pairs Claude Code's native features (`.claude/` config, commands, subagents,
 skills, hooks) with a small set of engineering-discipline practices.
 
-**Status:** v0.2.0 (beta) — versioned with SemVer against the adoption contract;
+**Status:** v0.2.1 (beta) — versioned with SemVer against the adoption contract;
 adopters pin `VENDORED.md` to a release tag, so each re-sync can answer "am I
 behind / by how much / is it breaking?" See
 [ADR-006](docs/adr/ADR-006-versioning-and-release-management.md) and the
@@ -14,9 +14,10 @@ behind / by how much / is it breaking?" See
 
 Adoption is driven by a Claude Code session reading [`docs/ADOPTING.md`](docs/ADOPTING.md) — **not** by manual `cp -r`. The session installs baseline plugins (`security-guidance`, `pr-review-toolkit`), runs project-specific plugin and MCP-server discovery against your stack, pins the upstream release tag in `VENDORED.md` so future re-syncs are diffable, and merges `CLAUDE.md` per the three-bucket scheme rather than overwriting your existing config.
 
-1. From inside your target repo, clone this template as a sibling:
+1. From inside your target repo, clone this template as a sibling, pinned to the
+   latest release tag (newest at [tags](https://github.com/mjvacas/claude_code_template/tags)):
    ```bash
-   git clone https://github.com/mjvacas/claude_code_template.git ../claude_code_template
+   git clone --branch v0.2.1 https://github.com/mjvacas/claude_code_template.git ../claude_code_template
    ```
 2. Open Claude Code in your target repo. Recommended: [plan mode](https://code.claude.com/docs/en/permission-modes#analyze-before-you-edit-with-plan-mode) — the procedure has a natural read-and-decide phase before any writes.
 3. Paste one of these prompts:
