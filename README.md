@@ -12,7 +12,7 @@ behind / by how much / is it breaking?" See
 
 ## Quick start
 
-Adoption is driven by a Claude Code session reading [`docs/ADOPTING.md`](docs/ADOPTING.md) — **not** by manual `cp -r`. The session installs baseline plugins (`security-guidance`, `pr-review-toolkit`), runs project-specific plugin and MCP-server discovery against your stack, pins the upstream release tag in `VENDORED.md` so future re-syncs are diffable, and merges `CLAUDE.md` per the three-bucket scheme rather than overwriting your existing config.
+Adoption is driven by a Claude Code session reading [`docs/ADOPTING.md`](docs/ADOPTING.md) — **not** by manual `cp -r`. The session installs baseline plugins (`security-guidance`, `pr-review-toolkit`), runs project-specific plugin and MCP-server discovery against your stack, pins the upstream release tag in `VENDORED.md` so future re-syncs are diffable, and merges `CLAUDE.md` per the [three-bucket scheme](docs/ADOPTING.md#merging-the-templates-claudemd) rather than overwriting your existing config.
 
 1. From inside your target repo, clone this template as a sibling, pinned to the
    latest release tag (newest at [tags](https://github.com/mjvacas/claude_code_template/tags)):
@@ -95,10 +95,10 @@ from outside this repo, vet it — see `docs/skill-security.md`. Quick tools:
 - Before enabling an MCP server, vet it and copy `.mcp.json.example` → `.mcp.json`
   (gitignored). See the MCP checklist in `docs/skill-security.md`.
 
-## What's distinctive here
+## Highlights
 
-Beyond standard scaffolding, this template encodes a few hard-won engineering
-practices — as runnable skills, a cost-legibility layer, and reviewer rules:
+A few engineering practices, encoded as runnable skills, a cost-legibility
+layer, and reviewer rules:
 
 - **`/verify-refactor`** — prove a refactor preserved behavior by diffing deterministic output (byte-identical), not just "tests pass."
 - **`/tune-parameters`** — pick a threshold by reading the *shape* of the metric surface, rejecting overfit spikes.
@@ -147,13 +147,6 @@ standards.
 - **[Architecture Decision Records](https://adr.github.io/)** — Michael
   Nygard's ADR concept; `templates/ADR-template.md` follows the standard
   Status / Context / Decision / Consequences / Alternatives shape.
-
-Real-world feedback:
-
-- **Personal projects dogfooding the template** — adoption reviews
-  surfaced the issues that drove the security-hardening series
-  (PRs #3–#6) and the adoption infrastructure (`docs/ADOPTING.md` +
-  `VENDORED.md`).
 
 ## Related templates
 
