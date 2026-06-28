@@ -18,8 +18,8 @@ Pre-0.1.0 history is kept below in the original date-stamped sections.
 - **README** — Quick-start clone now pins the release tag; plain-language pass on
   the intro; linked the three-bucket `CLAUDE.md` merge scheme. (#40, #41)
 - **`docs/ADOPTING.md`** — genericized the version examples. (#40)
-- **README** — added an author / [ventureforward.ai](https://ventureforward.ai)
-  attribution line.
+- **README** — added a footer linking the project page on
+  [ventureforward.ai](https://ventureforward.ai/projects/claude-code-template/).
 
 ## [0.2.1] - 2026-06-23
 
