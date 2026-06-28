@@ -12,6 +12,15 @@ Pre-0.1.0 history is kept below in the original date-stamped sections.
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-06-27
+
+### Changed
+- **README** — Quick-start clone now pins the release tag; plain-language pass on
+  the intro; linked the three-bucket `CLAUDE.md` merge scheme. (#40, #41)
+- **`docs/ADOPTING.md`** — genericized the version examples. (#40)
+- **README** — added an author / [ventureforward.ai](https://ventureforward.ai)
+  attribution line.
+
 ## [0.2.1] - 2026-06-23
 
 ### Fixed
@@ -504,7 +513,8 @@ commit is tagged `v0.1.0`. Entries below were previously under `[Unreleased]`._
 ### Changed
 - `SECURITY.md` `Scope` section: customize-me placeholder for adopters. (#4)
 
-[unreleased]: https://github.com/mjvacas/claude_code_template/compare/v0.2.1...HEAD
+[unreleased]: https://github.com/mjvacas/claude_code_template/compare/v0.2.2...HEAD
+[0.2.2]: https://github.com/mjvacas/claude_code_template/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/mjvacas/claude_code_template/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/mjvacas/claude_code_template/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/mjvacas/claude_code_template/releases/tag/v0.1.0
