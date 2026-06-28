@@ -4,8 +4,6 @@ A starter scaffold for new projects that work well with **Claude Code**.
 It pairs Claude Code's native features (`.claude/` config, commands, subagents,
 skills, hooks) with a small set of engineering-discipline practices.
 
-By **Mauricio Vacas** · [ventureforward.ai](https://ventureforward.ai)
-
 **Status:** v0.2.2 (beta) — versioned with SemVer against the adoption contract;
 adopters pin `VENDORED.md` to a release tag, so each re-sync can answer "am I
 behind / by how much / is it breaking?" See
@@ -163,3 +161,7 @@ will be credited under Acknowledgements at that time.
 - **[davila7/claude-code-templates](https://github.com/davila7/claude-code-templates)**
   — NPM CLI installer + web dashboard for component discovery; selective
   adoption via `--agent`, `--command`, `--mcp` flags.
+
+---
+
+More about this template: [ventureforward.ai/projects/claude-code-template](https://ventureforward.ai/projects/claude-code-template/) · built by Mauricio Vacas
