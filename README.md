@@ -1,6 +1,6 @@
 # Claude Code Project Template
 
-A starter scaffold for new projects that work well with **Claude Code**.
+A starter scaffold for **Claude Code** projects.
 It pairs Claude Code's native features (`.claude/` config, commands, subagents,
 skills, hooks) with a small set of engineering-discipline practices.
 
