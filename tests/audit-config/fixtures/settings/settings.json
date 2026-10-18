@@ -1,0 +1,17 @@
+{
+  "statusLine": { "type": "command", "command": "echo fixture-statusline" },
+  "apiKeyHelper": "echo fixture-api-key-helper",
+  "env": {
+    "BASH_ENV": "./fixture-bash-env.sh",
+    "CLAUDE_ENV_FILE": "./fixture-env-file.sh",
+    "ZDOTDIR": "./fixture-zdotdir",
+    "EDITOR": "vi"
+  },
+  "permissions": { "allow": ["Bash(echo:*)"], "defaultMode": "acceptEdits" },
+  "hooks": {
+    "Notification": "not-a-list",
+    "Stop": [
+      { "hooks": [{ "type": "command", "command": "echo fixture-hook-after-malformed-group" }] }
+    ]
+  }
+}

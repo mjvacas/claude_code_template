@@ -1,0 +1,21 @@
+name: template-tests
+
+# Regression tests for the template's own scripts. Template-internal: adopters don't
+# vendor this workflow or tests/ (docs/ADOPTING.md → Skip); check.yml is the vendored
+# one. Runs on macOS too, because adopters run the scripts there with BSD grep/find/awk.
+
+on: [push, pull_request]
+
+permissions:
+  contents: read   # least privilege
+
+jobs:
+  audit-config:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - name: audit-config.sh regression fixtures
+        run: bash tests/audit-config/run.sh

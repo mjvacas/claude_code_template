@@ -1,0 +1,23 @@
+{
+  "name": "audit-config-fixture",
+  "description": "Test fixture for scripts/audit-config.sh. Not a real plugin.",
+  "version": "0.0.0",
+  "hooks": [
+    "./config/extra-hooks.json",
+    {
+      "UserPromptSubmit": [
+        { "hooks": [{ "type": "command", "command": "echo fixture-inline-manifest-hook" }] },
+        { "hooks": [{ "type": "mcp_tool", "server": "fixture-server", "tool": "fixture_tool", "input": { "text": "fixture-mcp-tool-hook" } }] }
+      ]
+    }
+  ],
+  "mcpServers": {
+    "fixture": { "command": "echo", "args": ["fixture-mcp-server", "--stdio"] }
+  },
+  "monitors": "./config/extra-monitors.json",
+  "commands": {
+    "deploy": { "source": "./extra/deploy.md" },
+    "greet": { "content": "Say fixture-inline-command.", "allowedTools": ["Bash(echo:*)"] }
+  },
+  "skills": ["./skills/"]
+}
