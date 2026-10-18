@@ -12,6 +12,63 @@ Pre-0.1.0 history is kept below in the original date-stamped sections.
 
 ## [Unreleased]
 
+### Fixed
+- **`audit-config.sh` §5 missed plugin hooks** — it read only `settings*.json`, so a
+  plugin's `hooks/hooks.json` and the `hooks` in `.claude-plugin/plugin.json` (inline
+  or by path) went unreported. §5 now lists the commands declared in settings, plugin,
+  MCP, LSP and monitor JSON: hooks (including `mcp_tool` hooks), `statusLine` and
+  helper keys (`apiKeyHelper` etc.), `env` vars that load code (`BASH_ENV`,
+  `CLAUDE_ENV_FILE`, `ZDOTDIR`, `NODE_OPTIONS`, `LD_PRELOAD`, …), MCP/LSP servers and
+  monitors, plus the grants that skip prompts (`permissions.allow`, `defaultMode`,
+  `allowedTools`, MCP auto-approval). Frontmatter hooks are listed in §4. It also
+  flags each `.claude-plugin/` directory and the paths or inline content `plugin.json`
+  gives for commands, agents and skills. Commands are found by key rather than by
+  schema, so a malformed hook entry can no longer crash the parser and hide the hooks
+  after it, and a file it can't parse or fully read (deep nesting, a huge number, a
+  lone surrogate) is reported as an ERROR, counted as HIGH, instead of ending the
+  section.
+- **`audit-config.sh` §4 decided by path** — every `.md` under `skills/` counted as a
+  skill (reference files were flagged), and a `SKILL.md` copied anywhere else was
+  missed. It now matches files named `SKILL.md` plus `commands/*.md` and
+  `agents/*.md`, and lists every one, tagged model-invocable or opted out, so a
+  frontmatter trick can mislabel a file but not hide it. The opt-out counts only in
+  frontmatter as Claude Code reads it (ended by the next `---`, none if unclosed),
+  exactly once and set to `true`; a quote left open at the end of a frontmatter line
+  marks it unverified. Agents show their `tools:` (none listed = all tools), and
+  frontmatter `hooks:`, `mcpServers:` and `permissionMode:` are printed (the whole
+  frontmatter, when its layout can't be read key by key).
+- **`audit-config.sh` §6 misses and false hits** — package runners (`npx`, `bunx`,
+  `bun x`, `pnpx`, `uvx`, `pipx run`, `npm exec`/`npm x`, `pnpm dlx`, `yarn dlx`,
+  `uv tool run`), `nc` and `*_API_KEY` reads are now flagged, and tool names must
+  stand alone as words, so `ncat` no longer matches "truncate" or "concatenated".
+  (Surfaced by vetting a third-party plugin in a personal project dogfooding the
+  template.)
+- **`audit-config.sh` could report "none" for what it never read** — a grep error
+  (an unreadable file) printed "none" and dropped the HIGH flag; a symlinked target
+  (`~/.claude/skills/x -> ~/src/x`) reviewed zero files on macOS; a file with a NUL
+  past its first 8KB was skipped by the greps but not marked binary. Errors now print
+  ERROR and count as HIGH, symlinks are listed (LINK, HIGH) and a symlinked target is
+  followed, and any NUL marks a file BINARY. Control characters are stripped from the
+  report, so a crafted file can't overwrite its lines.
+
+### Added
+- **Regression fixtures for `audit-config.sh`** — `tests/audit-config/run.sh` plus
+  inert fixtures, run on Linux and macOS by `.github/workflows/template-tests.yml`.
+  Template-internal (file map → Skip).
+- **`docs/skill-security.md`** — partial vendoring (take the skill, leave the
+  plugin), same-source checksums aren't provenance, egress in compiled code and
+  ambient `*_API_KEY` use, dormant hooks, `disable-model-invocation` for broad or
+  persona-setting skills, deny rules for commands vetted docs tell Claude to run, and
+  dev-server/CSP changes as security changes.
+- **`VENDORED.md` format** — optional `## Third-party skills` section recording the
+  pin, license and local patches to re-apply on every bump.
+
+### Changed
+- **`check.yml` pins the gitleaks hash in-repo** — it verified the tarball against a
+  `checksums.txt` downloaded from the same release, which catches corruption but not
+  a replaced release. The expected sha256 now lives in the workflow and changes only
+  by PR, and `sha256sum --strict` fails on a malformed hash too.
+
 ## [0.2.2] - 2026-06-27
 
 ### Changed

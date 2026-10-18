@@ -462,6 +462,12 @@ Last sync: <tag-or-sha>   (e.g. v0.2.1 @ 10f58a0)
 | `pr-review-toolkit` | `claude-plugins-official` | user | 2026-06-01 | baseline |
 | `commit-commands` | `claude-plugins-official` | user | 2026-06-01 | discovered |
 
+## Third-party skills
+
+| Path | Upstream | Pinned | License | Local patches (re-apply on every bump) |
+|------|----------|--------|---------|----------------------------------------|
+| `.claude/skills/<name>/` | `<vendor>/<repo>` `<dir>/` | `<tag>` = `<sha>` | Apache-2.0 | 1. `disable-model-invocation: true` · 2. fallback note atop `SKILL.md` |
+
 ## Deliberately not vendored
 
 | Path | Why skipped |
@@ -474,6 +480,10 @@ Last sync: <tag-or-sha>   (e.g. v0.2.1 @ 10f58a0)
 The optional **`## Deliberately not vendored`** section records reference-only /
 skip files you intentionally left out, so a re-sync's add-check (§ Re-syncing,
 step 4) doesn't keep re-proposing them as "missed."
+
+The optional **`## Third-party skills`** section records skills vendored from
+outside this template, and the local patches to re-apply when you bump them (see
+`docs/skill-security.md` → Partial vendoring).
 
 **Why a sidecar (not per-file headers).** Four of the vendor-as-is files
 are strict JSON with `$schema` validation (`.claude/settings.json`,
@@ -570,6 +580,7 @@ convenience.
 | Path | Why |
 |------|-----|
 | `bench/` | The template's own benchmark corpus, schema, and `pricing.json` (per ADR-003). Template-internal; read the schema via the `cc-task-bench` skill above if designing your own fixtures. |
+| `tests/`, `.github/workflows/template-tests.yml` | Regression fixtures for the template's own scripts (`tests/audit-config/`), and the CI workflow that runs them. Template-internal; the vendored `check.yml` doesn't reference them. |
 
 ## Re-syncing template updates
 
