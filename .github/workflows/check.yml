@@ -27,20 +27,23 @@ jobs:
         # unrepointed @templates/ refs after a relocate/strip.
         run: bash scripts/check-template.sh
       - name: Secret scan (gitleaks)
-        # Pinned, checksum-verified MIT CLI binary — NOT the gitleaks-action (which is
-        # proprietary, needs a license key for org repos, and phones home to keygen.sh).
-        # The binary makes no network/API calls, so it sidesteps token/permission issues.
-        # Bump GITLEAKS_VERSION to update; the matching checksums file ships with each
-        # release. See docs/skill-security.md.
+        # Pinned MIT CLI binary, verified against a hash recorded HERE — NOT the
+        # gitleaks-action (which is proprietary, needs a license key for org repos, and
+        # phones home to keygen.sh). The binary makes no network/API calls, so it
+        # sidesteps token/permission issues. A checksum fetched from the same release
+        # would only catch a corrupted download, not a replaced release, so the hash lives
+        # in this file and changes only by PR. To bump: set both values, taking the hash
+        # from the release's checksums.txt and checking it against the asset's `digest`
+        # (`gh api repos/gitleaks/gitleaks/releases/tags/v<ver>`). See docs/skill-security.md.
         env:
           GITLEAKS_VERSION: "8.30.1"
+          GITLEAKS_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"  # linux_x64 tarball
         run: |
           set -euo pipefail
           base="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
           asset="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"   # x64 matches ubuntu-latest; change for arm/self-hosted
           curl -sSfL "$base/$asset" -o "$asset"
-          curl -sSfL "$base/gitleaks_${GITLEAKS_VERSION}_checksums.txt" -o checksums.txt
-          grep "$asset" checksums.txt | sha256sum -c -   # fail closed if asset/hash missing
+          echo "${GITLEAKS_SHA256}  ${asset}" | sha256sum --strict -c -   # fail closed on any mismatch or malformed hash
           tar -xzf "$asset" gitleaks
           chmod +x gitleaks
           # Scan full git history (fetch-depth: 0 above); exits non-zero if a secret is found.
