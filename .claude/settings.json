@@ -9,7 +9,10 @@
       "Edit(CLAUDE.md)",
       "Edit(.github/**)",
       "Edit(scripts/check-template.sh)",
-      "Edit(scripts/audit-config.sh)"
+      "Edit(scripts/audit-config.sh)",
+      "Edit(.claude/settings*.json)",
+      "Edit(.claude/hooks/**)",
+      "Edit(.claude/statusline.sh)"
     ],
     "deny": [
       "Read(.env)",

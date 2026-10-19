@@ -70,8 +70,10 @@ without a prompt whatever the allow list says, so the template's allow list is e
 everything else prompts unless allowed. Allow only what you'd approve every time: a broad
 `Bash(git diff:*)` would also approve `git diff --output=<file>`, which writes a file. The
 template also asks before edits to `CLAUDE.md`, anything under `.github/`, and
-`scripts/check-template.sh` / `scripts/audit-config.sh`, which check the other protections
-(Claude Code already asks before edits to `.claude/`, `.git/` and `.mcp.json`). That covers the file tools and `sed -i`, not a shell copy or redirect (`cp`,
+`scripts/check-template.sh` / `scripts/audit-config.sh`, which check the other protections.
+Claude Code already asks before edits to `.claude/`, `.git/` and `.mcp.json`; the
+template still lists its own settings, hooks and status line, so that gate doesn't depend
+on a default that could change. That covers the file tools and `sed -i`, not a shell copy or redirect (`cp`,
 `>>`), so treat it as a speed bump. With no one to ask (`claude -p`, `dontAsk` mode) an ask
 becomes a deny. `/adr` edits `CLAUDE.md`, so it prompts once per ADR.
 

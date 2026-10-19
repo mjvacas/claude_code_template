@@ -157,7 +157,8 @@ Pre-0.1.0 history is kept below in the original date-stamped sections.
   project. It asks before edits to `CLAUDE.md` and `.github/**`, which `acceptEdits`
   otherwise applies silently (Claude Code already asks for `.claude/`, `.git/` and
   `.mcp.json`), and before edits to `scripts/check-template.sh` and
-  `scripts/audit-config.sh`, which check the other protections. The allow list is now
+  `scripts/audit-config.sh`, which check the other protections, and lists its own settings,
+  hooks and status line too rather than relying on that default. The allow list is now
   empty: `git status`, `diff`, `log`, `show`, `branch` and `ls` run without a rule on
   current Claude Code, while the old rules also approved `git branch -D` and
   `git diff --output=<file>`. The PreCompact hook no longer filters by trigger, so it
