@@ -92,7 +92,7 @@ from outside this repo, vet it — see `docs/skill-security.md`. Quick tools:
 - The default `settings.json` denies reads of secret files in the project and of credential
   stores in your home directory (`~/.ssh`, `~/.aws`, `~/.config/gh`, …); on current Claude
   Code that covers shell reads too, so `cat .env` is refused. It asks before edits to
-  `CLAUDE.md` and `.github/` and keeps the allow-list minimal;
+  `CLAUDE.md`, `.github/` and the two check scripts, and ships an empty allow list;
   `settings.lockdown.json.example` adds network-egress denies for quarantining untrusted skills.
 - A `PreToolUse` hook (`.claude/hooks/block-dangerous.sh`) hard-blocks catastrophic shell
   commands (`rm -rf /`, `git reset --hard`, `git push --force`, pipe-to-shell, `dd`/`mkfs`).
