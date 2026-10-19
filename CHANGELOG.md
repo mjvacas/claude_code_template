@@ -48,8 +48,9 @@ Pre-0.1.0 history is kept below in the original date-stamped sections.
   (`~/.claude/skills/x -> ~/src/x`) reviewed zero files on macOS; a file with a NUL
   past its first 8KB was skipped by the greps but not marked binary. Errors now print
   ERROR and count as HIGH, symlinks are listed (LINK, HIGH) and a symlinked target is
-  followed, and any NUL marks a file BINARY. Control characters are stripped from the
-  report, so a crafted file can't overwrite its lines.
+  followed, and any NUL marks a file BINARY. Control and invisible formatting characters
+  (C0 and C1 controls, bidi overrides, zero-width marks) are stripped from the report, so
+  a crafted file can't overwrite or disguise its lines.
 - **`block-dangerous.sh` failed open without `python3`, and missed common forms** —
   with `python3` missing or broken (a Mac without the Xcode tools has a stub that
   fails), every command passed. A dangerous command followed by more than ~64KB of

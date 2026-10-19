@@ -16,11 +16,32 @@
 #   scripts/audit-config.sh --strict [PATH]   # exit 1 if any HIGH-signal finding
 set -uo pipefail
 
-# Untrusted files can hold terminal escapes and carriage returns that would overwrite
-# lines of this report. Run the report through a filter that deletes control characters
-# (tabs and newlines are kept), with errors merged in so none go unseen.
+# Untrusted files can hold terminal escapes, carriage returns and invisible formatting
+# (bidi overrides, zero-width marks) that would overwrite or disguise lines of this
+# report. Run the report through a filter that deletes control and format characters
+# (tabs and newlines are kept), with errors merged in so none go unseen. Without python3
+# it falls back to deleting the ASCII controls only.
+sanitize() {
+  if python3 -I -c '' 2>/dev/null; then
+    python3 -I -c '
+import sys, unicodedata
+def keep(c):
+    o = ord(c)
+    if c in "\t\n":
+        return True
+    if 0xDC80 <= o <= 0xDCFF:   # a byte that is not valid UTF-8: drop the C1 range only
+        return o > 0xDC9F
+    return unicodedata.category(c) not in ("Cc", "Cf", "Co", "Cs")
+for line in sys.stdin.buffer:
+    text = line.decode("utf-8", "surrogateescape")
+    sys.stdout.buffer.write("".join(c for c in text if keep(c)).encode("utf-8", "surrogateescape"))
+    sys.stdout.flush()'
+  else
+    LC_ALL=C tr -d '\000-\010\013-\037\177'
+  fi
+}
 if [ -z "${AUDIT_CONFIG_FILTERED:-}" ]; then
-  AUDIT_CONFIG_FILTERED=1 bash "$0" "$@" 2>&1 | LC_ALL=C tr -d '\000-\010\013-\037\177'
+  AUDIT_CONFIG_FILTERED=1 bash "$0" "$@" 2>&1 | sanitize
   exit "${PIPESTATUS[0]}"
 fi
 
