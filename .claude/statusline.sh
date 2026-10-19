@@ -20,7 +20,7 @@ input=$(cat 2>/dev/null || echo '{}')
 # (any of which may be empty). Three guarded reads keep `set -e` happy if python is
 # absent or prints fewer lines.
 { read -r model || true; read -r dir || true; read -r metrics || true; } <<EOF
-$(printf '%s' "$input" | python3 -c '
+$(printf '%s' "$input" | python3 -I -c '
 import json, sys, os, time
 
 try:

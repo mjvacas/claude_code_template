@@ -79,6 +79,10 @@ Pre-0.1.0 history is kept below in the original date-stamped sections.
 - **`check-template.sh` §4 misread file modes on Linux** — it tried BSD `stat -f` first,
   which GNU `stat` reads as "show filesystem info", so a local `.env` at mode 600 failed
   the check on Linux. It now tries the GNU form first.
+- **Template python ran with the project folder on its import path** — `python3 -c`
+  and `python3 -` import from the working directory first, so a `json.py` in a project
+  would have run on every Bash call (the guard), every status-line redraw and every
+  compaction. Every python call in the hooks and scripts now uses `-I`.
 
 ### Added
 - **Regression tests for the template's scripts and hooks** — `tests/<suite>/run.sh`

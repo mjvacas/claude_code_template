@@ -50,7 +50,7 @@ while IFS= read -r f; do
     .vscode/*.json|*/.vscode/*.json) ok "$f (skipped: JSONC by convention)"; continue ;;
     tsconfig.json|tsconfig.*.json|*/tsconfig.json|*/tsconfig.*.json) ok "$f (skipped: JSONC by convention)"; continue ;;
   esac
-  if python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$f" 2>/dev/null; then
+  if python3 -I -c "import json,sys; json.load(open(sys.argv[1]))" "$f" 2>/dev/null; then
     ok "$f"
   else
     err "invalid JSON: $f"
@@ -69,7 +69,7 @@ else
 fi
 
 echo "== 3. @references resolve =="
-if ! python3 - <(list_files '*.md') <<'PY'
+if ! python3 -I - <(list_files '*.md') <<'PY'
 import os, re, sys
 ref_re = re.compile(r'(?:^|[\s(])@([A-Za-z0-9._\-/~]+)')
 with open(sys.argv[1], encoding='utf-8') as lf:
@@ -131,7 +131,7 @@ grep -qE '(^|/)\.env' .gitignore 2>/dev/null \
   && ok ".gitignore ignores .env files" \
   || err ".gitignore does not ignore .env files"
 
-if python3 -c "import json; d=json.load(open('.claude/settings.json')); deny=d.get('permissions',{}).get('deny',[]); raise SystemExit(0 if any('.env' in r for r in deny) else 1)" 2>/dev/null; then
+if python3 -I -c "import json; d=json.load(open('.claude/settings.json')); deny=d.get('permissions',{}).get('deny',[]); raise SystemExit(0 if any('.env' in r for r in deny) else 1)" 2>/dev/null; then
   ok "settings.json deny list covers .env reads"
 else
   err "settings.json deny list does not cover .env reads"
@@ -228,7 +228,7 @@ echo "== 6. Posture invariants (silent-regression defense) =="
 # past (e.g. a docs-titled branch forked off pre-hardening main, never rebased,
 # whose diff against main looked like deletions of deny-list / redaction lines).
 # These checks ensure those exact protections stay present.
-if ! python3 - <<'PY'
+if ! python3 -I - <<'PY'
 import json, re, sys
 posture_fail = 0
 def ok(m): print(f"  ok   {m}")

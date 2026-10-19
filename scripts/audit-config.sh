@@ -31,7 +31,7 @@ target="${1:-.claude}"
 [ -e "$target" ] || { echo "audit-config: no such path: $target" >&2; exit 2; }
 # Review a symlinked target (e.g. ~/.claude/skills/x -> ~/src/x) as what it points to:
 # find and BSD grep don't descend into a link.
-[ -L "$target" ] && target=$(python3 -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' "$target")
+[ -L "$target" ] && target=$(python3 -I -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' "$target")
 
 high=0
 hdr() { printf '\n=== %s ===\n' "$*"; }
@@ -55,7 +55,7 @@ scan() {
 # The whole file is checked because grep -I skips a file with a NUL, so §2 and §6 would
 # never read it. Exit 2 = couldn't read the file.
 is_binary() {
-  python3 - "$1" <<'PY' 2>/dev/null
+  python3 -I - "$1" <<'PY' 2>/dev/null
 import sys
 try:
     with open(sys.argv[1], "rb") as fh:
@@ -181,7 +181,7 @@ done < <(find "$target" -type f \( -iname 'SKILL.md' -o -path '*/commands/*.md' 
 # Found by key, not by schema, so an odd shape can't hide a command. A `.claude-plugin/`
 # dir is flagged: enabling it activates them all. (Frontmatter hooks are listed in §4.)
 hdr "5. Auto-run commands and grants (hooks, permissions, plugin manifests, MCP/LSP servers, monitors)"
-python3 - "$target" <<'PY' || { echo "  ERROR: section 5 is INCOMPLETE (see above)"; high=1; }
+python3 -I - "$target" <<'PY' || { echo "  ERROR: section 5 is INCOMPLETE (see above)"; high=1; }
 import json, os, re, sys
 
 sys.stdout.reconfigure(errors="backslashreplace")   # a lone "\ud800" in a value can't crash print

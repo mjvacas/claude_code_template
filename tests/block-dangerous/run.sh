@@ -83,6 +83,12 @@ for m in python nopy badpy; do
   if python3 -I -c 'import json, sys; d = json.load(open(sys.argv[1])); assert d["hookSpecificOutput"]["permissionDecision"] == "deny"' "$tmp/out" 2>/dev/null; then
     ok "deny JSON parses ($m)"; else err "deny JSON doesn't parse ($m)"; fi
 done
+# A json.py in the working directory must not be imported (python3 runs with -I).
+mkdir -p "$tmp/plant"
+printf 'import os\nopen(os.environ["HIJACK_MARK"], "w").close()\n' > "$tmp/plant/json.py"
+(cd "$tmp/plant" && HIJACK_MARK="$tmp/hijacked" bash "$OLDPWD/$hook" <<<"$(event Bash 'ls')" >/dev/null 2>&1)
+[ ! -e "$tmp/hijacked" ] && ok "doesn't import a json.py from the working directory" ||
+  err "imported json.py from the working directory"
 # Other tools and malformed input pass untouched.
 bad=$(verdict ALLOW "$(event Write "$first_block")")
 [ -z "$bad" ] && ok "ALLOW the same text from the Write tool" || err "ALLOW the same text from the Write tool$bad"
