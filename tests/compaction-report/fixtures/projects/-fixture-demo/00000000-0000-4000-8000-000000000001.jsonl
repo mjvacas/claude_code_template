@@ -1,0 +1,14 @@
+{"type":"user","timestamp":"2026-01-01T10:00:00.000Z","cwd":"/fixture/demo-project","version":"2.1.289","message":{"role":"user","content":"FIXTURE-MESSAGE-TEXT must never be printed"}}
+{"type":"assistant","timestamp":"2026-01-01T10:00:30.000Z","cwd":"/fixture/demo-project","version":"2.1.289"}
+{"type":"user","timestamp":"2026-01-01T10:30:00.000Z","isSidechain":true,"cwd":"/fixture/demo-project"}
+{"type":"user","timestamp":"2026-01-01T10:40:00.000Z","isMeta":true,"cwd":"/fixture/demo-project"}
+{"type":"system","subtype":"compact_boundary","timestamp":"2026-01-01T10:56:30.000Z","cwd":"/fixture/demo-project","version":"2.1.289","compactMetadata":{"trigger":"manual","preTokens":251882,"durationMs":120000}}
+{"type":"user","timestamp":"2026-01-01T10:56:29.000Z","isCompactSummary":true,"cwd":"/fixture/demo-project"}
+{"type":"attachment","timestamp":"2026-01-01T10:56:30.100Z"}
+{"type":"system","subtype":"informational","timestamp":"2026-01-01T10:56:30.200Z","content":"Compacted while idle, before the prompt cache expired"}
+not json
+[]
+{"type":"user","timestamp":"2026-01-01T12:00:00.000Z","cwd":"/fixture/demo-project","version":"2.1.280"}
+{"type":"system","subtype":"compact_boundary","timestamp":"2026-01-01T12:55:30.000Z","cwd":"/fixture/demo-project","version":"2.1.280","compactMetadata":{"trigger":"manual","preTokens":300000}}
+{"type":"user","timestamp":"2026-01-01T13:00:00.000Z","cwd":"/fixture/demo-project","version":"2.1.302","message":{"role":"user","content":[{"type":"tool_result"}]}}
+{"type":"system","subtype":"compact_boundary","timestamp":"2026-01-01T13:01:30.000Z","cwd":"/fixture/demo-project","version":"2.1.302","compactMetadata":{"trigger":"auto","preTokens":960000,"durationMs":60000}}

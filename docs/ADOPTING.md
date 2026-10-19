@@ -571,7 +571,8 @@ convenience.
 |------|-----|
 | `docs/claude-code-setup.md` | How this template wires into Claude Code. Read for ideas. |
 | `docs/skill-security.md` | Trust model + vetting procedures. Link rather than copy. |
-| `docs/token-awareness.md` | Cost classes, the per-session context tax, and model-routing heuristic. Read; link rather than copy. |
+| `docs/token-awareness.md` | Cost classes, the per-session context tax, compaction, and model-routing heuristic. Read; link rather than copy. |
+| `scripts/compaction-report.sh` | Lists your recent Claude Code compactions and which were idle. It reads your transcripts in `~/.claude`, not project files, so run it from your template clone; nothing in your repo depends on it. |
 | `.claude/skills/cc-task-bench/` | Model-routing benchmark *methodology* (V1 = design + fixture layout; runner is V2, per ADR-003). Read if you want to benchmark which model to route a task type to; not needed to adopt the template. |
 | `docs/adr/ADR-003-cc-task-bench-scope.md` | Scopes the cc-task-bench benchmark — template-internal R&D. Don't vendor. |
 | `docs/adr/ADR-005-token-awareness-legibility.md` | Records the template's own token-awareness decision (the statusline itself ships via `.claude/statusline.sh`). Template-internal. Don't vendor. |

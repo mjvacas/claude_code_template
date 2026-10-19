@@ -85,6 +85,13 @@ Pre-0.1.0 history is kept below in the original date-stamped sections.
   compaction. Every python call in the hooks and scripts now uses `-I`.
 
 ### Added
+- **Idle compaction, documented, with a way to measure it** — Claude Code now compacts a
+  long conversation (200K+ tokens) left idle for about 54 minutes, just before its prompt
+  cache expires, and turned this on server-side. `docs/token-awareness.md` gains a
+  Compaction section: the three kinds, the trade-off, how to opt out in user settings
+  (`"idleCompaction": false`, Claude Code 2.1.290+) or raise the threshold, and why the
+  template leaves it on. New `scripts/compaction-report.sh` lists your recent compactions
+  with their size and idle time, from your local transcripts (metadata only).
 - **Regression tests for the template's scripts and hooks** — `tests/<suite>/run.sh`
   for the auditor, the self-check and two hooks, run on Linux and macOS by
   `.github/workflows/template-tests.yml`. Template-internal (file map → Skip).

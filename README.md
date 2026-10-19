@@ -56,7 +56,8 @@ CONTRIBUTING.md               # Sending fixes back + this repo's working agreeme
 └── skills/                   # verify-refactor, tune-parameters, llm-eval
 scripts/
 ├── check-template.sh         # Integrity + secrets smoke-test (run manually + in CI)
-└── audit-config.sh           # Reports what .claude/ artifacts and plugins do — vet before trusting
+├── audit-config.sh           # Reports what .claude/ artifacts and plugins do — vet before trusting
+└── compaction-report.sh      # Lists your recent compactions and which were idle (reads ~/.claude)
 tests/                        # Regression tests for the scripts and hooks (template-internal)
 docs/
 ├── ADOPTING.md               # Adoption + re-sync procedure (the session reads this to adopt)

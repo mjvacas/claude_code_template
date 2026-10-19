@@ -117,6 +117,37 @@ natural stopping point); watch `5h`/`7d` to decide when to **slow down or route
 cheaper** (next section). They are different signals — a depleted budget is not
 fixed by clearing context, and a fresh context does not restore budget.
 
+## Compaction
+
+Compaction replaces the conversation so far with a summary written by the model.
+It saves tokens on every later turn, but the session then works from the summary:
+exact instructions and the reasons behind decisions can drop out. It happens three
+ways:
+
+- **Manual** — you run `/compact` (optionally with instructions for the summary).
+- **Automatic** — near the context limit, so the session can continue.
+- **Idle** — a long conversation left alone for about 54 minutes is compacted just
+  before its one-hour prompt cache expires, so your next message doesn't re-read the
+  whole context uncached. By default it applies from 200K tokens, which on a 1M window
+  is only a fifth full. It needs an interactive terminal session on the one-hour cache,
+  and Anthropic turns it on server-side; nothing in your config changes when it does.
+
+Idle compaction trades context for cost. If you keep long sessions open and the context
+is the valuable part, turn it off with `"idleCompaction": false` in your **user**
+settings (`~/.claude/settings.json`, or `/config` → Idle compaction), or raise its
+threshold with the `CLAUDE_CODE_IDLE_COMPACT_MIN_TOKENS` environment variable (minimum
+100000). The setting needs Claude Code 2.1.290 or later; a session started on an older
+version ignores it until restarted, and there only `"autoCompactEnabled": false` stops
+it, which turns off automatic compaction too. The template doesn't set it: the trade-off
+is personal, and a project setting would override every collaborator's choice.
+
+Every kind fires the `PreCompact` hook, so `precompact-snapshot.sh` saves the recent
+turns before any compaction (owner-only, newest 20 kept). To see which of your sessions
+were compacted and why, run `scripts/compaction-report.sh` from your template clone: it
+lists each compaction with its size and how long the session had been idle, and never
+prints message text. Before 2.1.290, idle compactions were recorded with trigger
+"manual", so check the idle column, not the trigger.
+
 ## Which model for which task
 
 A routing default, not a measured result. Route by **correctness-risk and
