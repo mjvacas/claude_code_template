@@ -1,8 +1,9 @@
 name: template-tests
 
-# Regression tests for the template's own scripts. Template-internal: adopters don't
-# vendor this workflow or tests/ (docs/ADOPTING.md → Skip); check.yml is the vendored
-# one. Runs on macOS too, because adopters run the scripts there with BSD grep/find/awk.
+# Regression tests for the template's own scripts and hooks: one job per tests/<suite>/run.sh.
+# Template-internal: adopters don't vendor this workflow or tests/ (docs/ADOPTING.md → Skip);
+# check.yml is the vendored one. Runs on macOS too, because adopters run the scripts there
+# with BSD grep/find/awk and bash 3.2.
 
 on: [push, pull_request]
 
@@ -10,14 +11,18 @@ permissions:
   contents: read   # least privilege
 
 jobs:
-  audit-config:
+  tests:
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
+        suite: [audit-config, block-dangerous]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
         with:
           persist-credentials: false   # nothing here pushes, so no token stays on disk
-      - name: audit-config.sh regression fixtures
-        run: bash tests/audit-config/run.sh
+      - name: ${{ matrix.suite }} regression tests
+        env:
+          SUITE: ${{ matrix.suite }}   # via env, not inline in run:
+        run: bash "tests/$SUITE/run.sh"

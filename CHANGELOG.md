@@ -50,11 +50,21 @@ Pre-0.1.0 history is kept below in the original date-stamped sections.
   ERROR and count as HIGH, symlinks are listed (LINK, HIGH) and a symlinked target is
   followed, and any NUL marks a file BINARY. Control characters are stripped from the
   report, so a crafted file can't overwrite its lines.
+- **`block-dangerous.sh` failed open without `python3`, and missed common forms** —
+  with `python3` missing or broken (a Mac without the Xcode tools has a stub that
+  fails), every command passed. A dangerous command followed by more than ~64KB of
+  text also passed (`grep -q` under `pipefail`), as did force pushes written as
+  `+ref`, `--mirror`, `--prune`, `-uf` or `git -C dir push`, deleting `main`/`master`
+  on the remote, and quoted `rm` targets (`"$HOME"`, `'/'`). It also blocked harmless
+  `git push … && rm -f tmp.txt`. The hook now falls back to reading the raw event
+  when `python3` can't, and `tests/block-dangerous/` covers each case with and
+  without `python3` and under bash 3.2. Deleting other remote branches still only
+  prompts (`ask: git push`).
 
 ### Added
-- **Regression fixtures for `audit-config.sh`** — `tests/audit-config/run.sh` plus
-  inert fixtures, run on Linux and macOS by `.github/workflows/template-tests.yml`.
-  Template-internal (file map → Skip).
+- **Regression tests for the template's scripts** — `tests/audit-config/` and
+  `tests/block-dangerous/`, run on Linux and macOS by
+  `.github/workflows/template-tests.yml`. Template-internal (file map → Skip).
 - **`docs/skill-security.md`** — partial vendoring (take the skill, leave the
   plugin), same-source checksums aren't provenance, egress in compiled code and
   ambient `*_API_KEY` use, dormant hooks, `disable-model-invocation` for broad or

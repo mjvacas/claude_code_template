@@ -30,9 +30,10 @@ CI (`.github/workflows/check.yml`) runs `check-template.sh` plus a gitleaks
 history scan. It deliberately runs **no project build/test and holds no
 secrets**, so fork PRs can't execute untrusted code against anything valuable.
 Keep it that way — don't add secret-bearing steps to it.
-`.github/workflows/template-tests.yml` runs the `audit-config.sh` regression
-fixtures (`bash tests/audit-config/run.sh`) under the same constraints. When you
-change the auditor, add a fixture that fails before the change and passes after.
+`.github/workflows/template-tests.yml` runs each regression suite
+(`bash tests/<suite>/run.sh`: the auditor, the dangerous-command guard) under the
+same constraints. When you change a tested script or hook, add a case that fails
+before the change and passes after.
 
 ## Repo-specific working agreements
 

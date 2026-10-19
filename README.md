@@ -42,7 +42,7 @@ CONTRIBUTING.md               # Sending fixes back + this repo's working agreeme
 .gitignore                    # Ignores Claude-local files, secrets/env, .mcp.json, scan output
 .mcp.json.example             # Vetted-server template; copy to .mcp.json (gitignored) after review
 .github/workflows/check.yml   # CI: runs check-template.sh + gitleaks (no project build/test)
-.github/workflows/template-tests.yml  # CI: audit-config.sh regression fixtures (template-internal)
+.github/workflows/template-tests.yml  # CI: regression tests for the template's scripts and hooks (template-internal)
 .claude/
 ├── settings.json             # Permissions, statusline, SessionStart + PreToolUse + PreCompact hooks
 ├── settings.local.json.example
@@ -57,7 +57,7 @@ CONTRIBUTING.md               # Sending fixes back + this repo's working agreeme
 scripts/
 ├── check-template.sh         # Integrity + secrets smoke-test (run manually + in CI)
 └── audit-config.sh           # Reports what .claude/ artifacts and plugins do — vet before trusting
-tests/audit-config/           # Fixtures + runner for audit-config.sh (template-internal)
+tests/                        # Regression tests: audit-config.sh, the guard hook (template-internal)
 docs/
 ├── ADOPTING.md               # Adoption + re-sync procedure (the session reads this to adopt)
 ├── claude-code-setup.md      # How the native config is wired; what to customize

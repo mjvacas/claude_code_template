@@ -580,7 +580,7 @@ convenience.
 | Path | Why |
 |------|-----|
 | `bench/` | The template's own benchmark corpus, schema, and `pricing.json` (per ADR-003). Template-internal; read the schema via the `cc-task-bench` skill above if designing your own fixtures. |
-| `tests/`, `.github/workflows/template-tests.yml` | Regression fixtures for the template's own scripts (`tests/audit-config/`), and the CI workflow that runs them. Template-internal; the vendored `check.yml` doesn't reference them. |
+| `tests/`, `.github/workflows/template-tests.yml` | Regression tests for the template's own scripts and hooks (`tests/<suite>/`), and the CI workflow that runs them. Template-internal; the vendored `check.yml` doesn't reference them. |
 
 ## Re-syncing template updates
 

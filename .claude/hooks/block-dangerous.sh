@@ -13,36 +13,62 @@
 #
 # Block contract: we print a deny JSON to stdout AND `exit 2` with a stderr reason, so
 # the block holds on both older (exit-code) and newer (JSON permissionDecision) Claude
-# Code versions. Neither path lets a matched command through.
+# Code versions. Neither path lets a matched command through. Regression cases live in
+# tests/block-dangerous/cases.txt.
 set -euo pipefail
 
 input=$(cat)
-tool=$(printf '%s' "$input" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("tool_name",""))' 2>/dev/null || echo "")
-[ "$tool" = "Bash" ] || exit 0
-cmd=$(printf '%s' "$input" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("tool_input",{}).get("command",""))' 2>/dev/null || echo "")
+# Decode the command with python3. If python3 is missing or broken (a Mac without the
+# Xcode tools has a stub that just fails), pull "command" out of the raw JSON with sed
+# instead, so the guard degrades rather than silently allowing everything. Newlines
+# become `;`, which every pattern below already treats as a command boundary.
+if ! cmd=$(printf '%s' "$input" | python3 -I -c '
+import json, sys
+d = json.load(sys.stdin)
+print(d.get("tool_input", {}).get("command", "") if d.get("tool_name") == "Bash" else "")' 2>/dev/null); then
+  printf '%s' "$input" | grep -E '"tool_name"[[:space:]]*:[[:space:]]*"Bash"' >/dev/null || exit 0
+  cmd=$(printf '%s' "$input" \
+    | sed -nE 's/.*"command"[[:space:]]*:[[:space:]]*"(([^"\\]|\\.)*)".*/\1/p' \
+    | sed -e 's/\\"/"/g' -e 's#\\/#/#g' -e 's/\\\\/\\/g' -e 's/\\n/;/g' -e 's/\\[rt]/ /g')
+fi
 [ -n "$cmd" ] || exit 0
 
 deny() {
-  local reason="blocked by block-dangerous.sh: $1"
-  printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":%s}}\n' \
-    "$(printf '%s' "$reason" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')"
+  local reason
+  reason=$(printf '%s' "blocked by block-dangerous.sh: $1" | sed 's/[\\"]/\\&/g')
+  printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"%s"}}\n' "$reason"
   printf 'BLOCKED: %s\n' "$1" >&2
   exit 2
 }
 
-# Block only when matched; the `if ... grep -q` form is safe under `set -e`/pipefail.
-block_if() { if printf '%s' "$cmd" | grep -Eq "$1"; then deny "$2"; fi; }
+# Block only when matched; the `if ... grep` form is safe under `set -e`/pipefail. No
+# `grep -q`: it exits at the first match, printf then dies of SIGPIPE on a long command,
+# and under pipefail the pipeline reads as "no match".
+block_if() { if printf '%s' "$cmd" | grep -E "$1" >/dev/null; then deny "$2"; fi; }
 
 # rm of root / home / parent — NOT ./build, dist, node_modules, "$TMPDIR/x" (those pass;
 # the existing `ask: rm` rule still prompts on them). Target is anchored to the rm command.
-block_if '(^|[^[:alnum:]_-])rm([[:space:]]+-{1,2}[A-Za-z-]+)*[[:space:]]+((/|~|\$HOME)(/?\*?)?|\.\.)([[:space:]]|;|&|\||$)' \
-  'rm targeting / ~ \$HOME /* or .. — refusing catastrophic recursive delete'
+block_if '(^|[^[:alnum:]_-])rm([[:space:]]+-{1,2}[A-Za-z-]+)*[[:space:]]+((/|~|\$HOME|\$\{HOME\})(/?\*?)?|\.\./?)([[:space:]]|;|&|\||$)' \
+  'rm targeting / ~ $HOME /* or .. — refusing catastrophic recursive delete'
+# The same targets in quotes. Both quotes are required, so `echo "rm -rf /"` still passes;
+# a quoted "~" names a literal directory called ~, so it passes too.
+q="[\"']"
+block_if '(^|[^[:alnum:]_-])rm([[:space:]]+-{1,2}[A-Za-z-]+)*[[:space:]]+("\$(HOME|\{HOME\})/?"|'"$q"'(/|\.\.)/?'"$q"')(/?\*?)?([[:space:]]|;|&|\||$)' \
+  'rm targeting a quoted $HOME, / or .. — refusing catastrophic recursive delete'
 
 # git: history- and worktree-destroying operations
 block_if '(^|[^[:alnum:]_-])git[[:space:]]+reset[[:space:]].*--hard' \
   'git reset --hard (discards working changes irreversibly)'
-block_if '(^|[^[:alnum:]_-])git[[:space:]]+push[[:space:]]+([^[:space:]]+[[:space:]]+)*(--force[a-z-]*|-f)([[:space:]]|=|$)' \
-  'git push --force / --force-with-lease / -f (rewrites remote history)'
+# `git [-C dir | -c k=v | --opt] push`, then arguments that stop at ; & |
+gp='(^|[^[:alnum:]_-])git([[:space:]]+(-[Cc][[:space:]]+[^[:space:];&|]+|--[a-z-]+(=[^[:space:];&|]+)?))*[[:space:]]+push'
+arg='[[:space:]]+[^[:space:];&|]+'
+end='([[:space:]]|=|;|&|\||$)'
+block_if "$gp($arg)*[[:space:]]+(--force[a-z-]*|-[[:alnum:]]*f[[:alnum:]]*|\+[^[:space:];&|]+|--mirror|--prune)$end" \
+  'git push --force / -f / +ref / --mirror / --prune (rewrites or deletes remote history)'
+# Deleting main/master on the remote. Other branch deletions stay prompt-only (`ask: git push`).
+br='(refs/heads/)?(main|master)'
+block_if "$gp(($arg)*[[:space:]]+(-d|--delete)($arg)*[[:space:]]+$br|($arg)*[[:space:]]+$br($arg)*[[:space:]]+(-d|--delete)|($arg)*[[:space:]]+:$br)$end" \
+  'git push deleting main/master on the remote'
 block_if '(^|[^[:alnum:]_-])git[[:space:]]+clean[[:space:]].*(-[A-Za-z]*f[A-Za-z]*d|-[A-Za-z]*d[A-Za-z]*f|-d[[:space:]].*-f|-f[[:space:]].*-d|--force.*-d|-d.*--force)' \
   'git clean -fd (permanently deletes untracked files)'
 
