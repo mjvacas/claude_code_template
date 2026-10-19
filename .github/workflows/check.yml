@@ -21,6 +21,7 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
         with:
           fetch-depth: 0   # full history so the secret scan sees all commits
+          persist-credentials: false   # nothing here pushes, so no token stays on disk
       - name: Template self-check
         # § 3 (@-reference resolution) runs unconditionally and fails on any
         # @-ref whose target file is missing — in adopter repos this catches
