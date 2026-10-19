@@ -57,7 +57,7 @@ CONTRIBUTING.md               # Sending fixes back + this repo's working agreeme
 scripts/
 ├── check-template.sh         # Integrity + secrets smoke-test (run manually + in CI)
 └── audit-config.sh           # Reports what .claude/ artifacts and plugins do — vet before trusting
-tests/                        # Regression tests: audit-config.sh, check-template.sh, the guard hook (template-internal)
+tests/                        # Regression tests for the scripts and hooks (template-internal)
 docs/
 ├── ADOPTING.md               # Adoption + re-sync procedure (the session reads this to adopt)
 ├── claude-code-setup.md      # How the native config is wired; what to customize
@@ -138,8 +138,8 @@ standards.
     section 4):
     [CIS Distribution Independent Linux Benchmark §5.3.2 (SSH Private Host
     Key File Permissions)](https://www.tenable.com/audits/items/CIS_Amazon_Linux_2_v2.0.0_L1.audit:078b3bdba9f168f66df57226c9ac50df).
-    Extends CIS's `0600` mandate for SSH keys to all 13 local
-    secret-bearing patterns (`.env`, `*.pem`, `*.key`, `id_rsa`, etc.).
+    Extends CIS's `0600` mandate for SSH keys to local secret-bearing
+    files (`.env`, `*.pem`, `*.key`, `id_rsa`, etc.) and the context snapshots.
   - **Cryptographic key handling:**
     [NIST SP 800-57 Part 1 Rev. 5 (Key Management)](https://csrc.nist.gov/pubs/sp/800/57/pt1/r5/final).
     Protection-of-keys principle informing both the Read-deny on key

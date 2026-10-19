@@ -69,10 +69,20 @@ Pre-0.1.0 history is kept below in the original date-stamped sections.
   their own source, where the markers also appear, so they always passed; they now read
   only the code before §6. `tests/check-template/` breaks each protection in a copy of
   the repo and requires the check to fail.
+- **Context snapshots were world-readable and never pruned** — `precompact-snapshot.sh`
+  wrote raw conversation (possibly secrets) at mode 644 in a 755 directory and kept
+  every snapshot; idle compaction makes them pile up faster. They are now owner-only
+  (directory 700, files 600), only the newest 20 are kept, and `check-template.sh` §4
+  checks their mode. A transcript line that wasn't a JSON object made the hook write
+  nothing; it now skips such lines. **Migration:**
+  `chmod 700 .claude/snapshots && chmod 600 .claude/snapshots/*`.
+- **`check-template.sh` §4 misread file modes on Linux** — it tried BSD `stat -f` first,
+  which GNU `stat` reads as "show filesystem info", so a local `.env` at mode 600 failed
+  the check on Linux. It now tries the GNU form first.
 
 ### Added
-- **Regression tests for the template's scripts** — `tests/audit-config/`,
-  `tests/block-dangerous/` and `tests/check-template/`, run on Linux and macOS by
+- **Regression tests for the template's scripts and hooks** — `tests/<suite>/run.sh`
+  for the auditor, the self-check and two hooks, run on Linux and macOS by
   `.github/workflows/template-tests.yml`. Template-internal (file map → Skip).
 - **`docs/skill-security.md`** — partial vendoring (take the skill, leave the
   plugin), same-source checksums aren't provenance, egress in compiled code and

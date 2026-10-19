@@ -137,10 +137,10 @@ else
   err "settings.json deny list does not cover .env reads"
 fi
 
-# Local secret-bearing files (when present at the repo root) should be owner-only
-# (mode 600). Mirrors the .gitignore / settings.json deny patterns at the
-# filesystem-ACL layer. Silent when no matching files exist — template repos and
-# most CI checkouts have none. Root-level only; adopters with deeper layouts
+# Local secret-bearing files (when present at the repo root) and the context snapshots
+# (raw conversation) should be owner-only (mode 600). Mirrors the .gitignore /
+# settings.json deny patterns at the filesystem-ACL layer. Silent when no matching files
+# exist — template repos and most CI checkouts have none. Adopters with deeper layouts
 # (e.g. `secrets/`) can extend the patterns list.
 # Save and restore nullglob so we don't disturb a caller that had it on (the script
 # is meant to be executed, not sourced, but `shopt -p` is the bash-idiomatic safe form).
@@ -148,11 +148,12 @@ shopt_saved=$(shopt -p nullglob)
 shopt -s nullglob
 for pattern in '.env' '.env.*' '.mcp.json' '.claude/settings.local.json' \
                '*.pem' '*.key' '*.p12' '*.pfx' '*.keystore' \
-               '*_key' '*_secret' 'id_rsa' 'id_ed25519'; do
+               '*_key' '*_secret' 'id_rsa' 'id_ed25519' '.claude/snapshots/*.md'; do
   for path in $pattern; do
     [ -f "$path" ] || continue
     case "$path" in *.example) continue ;; esac
-    mode=$(stat -f '%Lp' "$path" 2>/dev/null || stat -c '%a' "$path" 2>/dev/null || echo "?")
+    # GNU form first: GNU stat reads -f as --file-system and prints filesystem info.
+    mode=$(stat -c '%a' "$path" 2>/dev/null || stat -f '%Lp' "$path" 2>/dev/null || echo "?")
     if [ "$mode" = "600" ]; then
       ok "$path mode is 600"
     else

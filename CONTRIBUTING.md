@@ -31,8 +31,8 @@ history scan. It deliberately runs **no project build/test and holds no
 secrets**, so fork PRs can't execute untrusted code against anything valuable.
 Keep it that way — don't add secret-bearing steps to it.
 `.github/workflows/template-tests.yml` runs each regression suite
-(`bash tests/<suite>/run.sh`: the auditor, the self-check, the dangerous-command
-guard) under the same constraints. When you change a tested script or hook, add a case that fails
+(`bash tests/<suite>/run.sh`, one per tested script or hook) under the same
+constraints. When you change a tested script or hook, add a case that fails
 before the change and passes after.
 
 ## Repo-specific working agreements

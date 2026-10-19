@@ -1,23 +1,27 @@
 #!/usr/bin/env bash
-# PreCompact hook — fires just before Claude Code compacts the conversation (auto, at
-# ~95% of the context window, or on manual /compact). Compaction replaces the in-context
+# PreCompact hook — fires just before Claude Code compacts the conversation: automatically
+# near the context limit or after a long conversation sits idle (see docs/token-awareness.md
+# → Compaction), or on manual /compact. Compaction replaces the in-context
 # history with a summary; this writes a durable breadcrumb to disk first so the session's
 # recent state survives: a pointer to the append-only transcript (the de-facto write-ahead
 # log Claude Code already keeps) plus a tail of the most recent turns.
 #
 # This is a SAFETY NET for compaction/crash recovery — NOT a substitute for /handoff.
-# Promote anything worth keeping into AI_CONTEXT.md. A PreCompact hook's stdout is not
-# re-injected into the model, so the value is purely the file it writes. Snapshots land in
-# .claude/snapshots/ (gitignored — they hold raw conversation, possibly secrets). The hook
-# ALWAYS exits 0: a snapshot failure must never block compaction.
+# Promote anything worth keeping into AI_CONTEXT.md. A PreCompact hook's stdout is added to
+# the summarizer's instructions, so this prints only to stderr; the value is the file it
+# writes. Snapshots land in .claude/snapshots/ (gitignored — they hold raw conversation,
+# possibly secrets), owner-only, newest 20 kept. The hook ALWAYS exits 0: a snapshot failure
+# must never block compaction.
 set -uo pipefail
 
 input=$(cat 2>/dev/null || echo '{}')
 dir="${CLAUDE_PROJECT_DIR:-.}/.claude/snapshots"
+umask 077   # raw conversation: owner-only (dir 700, files 600)
 mkdir -p "$dir" 2>/dev/null || exit 0
+chmod 700 "$dir" 2>/dev/null || true   # a directory made before this fix
 
-out=$(EVENT_JSON="$input" python3 - "$dir" <<'PY' 2>/dev/null
-import json, os, sys, datetime
+out=$(EVENT_JSON="$input" python3 -I - "$dir" <<'PY' 2>/dev/null
+import json, os, re, sys, datetime
 
 try:
     event = json.loads(os.environ.get("EVENT_JSON", "") or "{}")
@@ -41,6 +45,8 @@ if tpath and os.path.exists(tpath):
             try:
                 obj = json.loads(line)
             except Exception:
+                continue
+            if not isinstance(obj, dict):
                 continue
             msg = obj.get("message") if isinstance(obj.get("message"), dict) else obj
             role = msg.get("role") or obj.get("type")
@@ -77,6 +83,19 @@ with open(path, "w", encoding="utf-8") as o:
             text = text[:800].rstrip() + " …[truncated]"
         o.write(f"**{role}:** {text}\n\n")
 print(path)
+
+# Keep the newest KEEP snapshots (the fixed-width stamp sorts by time), touching only files
+# named the way this hook names them. Kept ones written before the umask fix heal to 600.
+KEEP = 20
+try:
+    mine = sorted(f for f in os.listdir(outdir)
+                  if re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d-\d\d-\d\d-[^/]+\.md", f))
+    for f in mine[:-KEEP]:
+        os.remove(os.path.join(outdir, f))
+    for f in mine[-KEEP:]:
+        os.chmod(os.path.join(outdir, f), 0o600)
+except OSError:
+    pass
 PY
 ) || true
 
