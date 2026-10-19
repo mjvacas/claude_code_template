@@ -38,6 +38,9 @@ mutant() {
 unwire_guard() {
   python3 -I -c 'import json; p = ".claude/settings.json"; d = json.load(open(p)); del d["hooks"]["PreToolUse"]; json.dump(d, open(p, "w"), indent=2)'
 }
+drop_ssh_deny() {
+  python3 -I -c 'import json; p = ".claude/settings.json"; d = json.load(open(p)); d["permissions"]["deny"].remove("Read(~/.ssh/**)"); json.dump(d, open(p, "w"), indent=2)'
+}
 drop_dash_e() {   # only the scan itself, not the marker §6 looks for
   sed -i.bak '/^  hits=/s/git grep -nIE -e /git grep -nIE /' scripts/check-template.sh &&
     grep -q '^  hits=$(git grep -nIE "' scripts/check-template.sh
@@ -48,6 +51,7 @@ mutant "deleted guard script" "block-dangerous.sh is missing" rm .claude/hooks/b
 mutant "unwired guard" "does not wire .claude/hooks/block-dangerous.sh" unwire_guard
 mutant "non-executable status line" "statusline.sh is not executable" chmod -x .claude/statusline.sh
 mutant "secret scan without -e" "secret-content scan uses -e" drop_dash_e
+mutant "no ~/.ssh deny" "missing home credential stores: Read(~/.ssh/**)" drop_ssh_deny
 
 echo
 if [ "$fail" -ne 0 ]; then echo "RESULT: FAIL"; exit 1; fi

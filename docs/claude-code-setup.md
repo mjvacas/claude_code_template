@@ -7,7 +7,7 @@ after you copy it into a new project.
 
 | Path | What it does | Cost | Customize? |
 |------|--------------|------|-----------|
-| `settings.json` | Permissions (Read-tool denies for secret files; a minimal shell allow-list — only `ls` + read-only `git`; `defaultMode: acceptEdits` **auto-applies file edits without prompting**), statusline, and SessionStart/PreToolUse/PreCompact hooks. Committed, team-shared. | `free-local` | Yes — add your build/test/lint to the allow list. |
+| `settings.json` | Permissions (denies for secret files in the project and credential stores in `~`; asks before edits to `CLAUDE.md` and `.github/`; a minimal shell allow-list; `defaultMode: acceptEdits` **auto-applies other file edits without prompting**), statusline, and SessionStart/PreToolUse/PreCompact hooks. Committed, team-shared. | `free-local` | Yes — add your build/test/lint to the allow list. |
 | `settings.local.json` | Your personal overrides. **Gitignored.** Copy `settings.local.json.example` to start. | `free-local` | Personal. |
 | `hooks/session-context.sh` | `SessionStart` hook: prints the session-start time, recent commits + working-tree status into context. Outside git only the clock line prints. | `session` | Optional — delete the hook entry in `settings.json` to disable. |
 | `hooks/clock.sh` | `UserPromptSubmit` heartbeat (**opt-in, not wired by default**): injects the current time into context on every prompt, so the session can notice elapsed time and date rollovers. | `per-prompt` | Opt-in — see [§ Optional: session clock heartbeat](#optional-session-clock-heartbeat). |
@@ -56,13 +56,25 @@ promote anything that matters into `AI_CONTEXT.md` with `/handoff`.
 
 ## Permissions
 
-`settings.json` denies the **Read tool** from reading common secret files (`.env*`,
-`secrets/**`, keys) — these deny rules win over any allow. Note this governs the Read tool,
-not the shell: a `Read(.env)` deny does **not** stop `cat .env`. That's why the allow list
-is intentionally minimal — only `ls` and read-only `git` — so shell readers (`cat`, `grep`,
-`rg`, `find`) prompt instead of running unattended. (Bash-pattern denies for file reads are
-leaky; for a hard guarantee against untrusted code, use the sandbox.) Add your build/test/
-lint commands to the allow list (project-shared) or to `settings.local.json` (just you), e.g.:
+`settings.json` denies reading common secret files (`.env*`, `secrets/**`, keys) and the
+credential stores in your home directory (`~/.ssh`, `~/.aws`, `~/.config/gh`, `~/.kube`,
+`~/.npmrc`, …). Deny rules win over any allow. On current Claude Code they also cover the
+shell commands it recognizes as reads (`cat`, `head`, `tail`, `sed`, `grep` on a denied
+path, `<` redirects), so `cat .env` is refused. They don't cover code that opens files
+itself (a Python one-liner, a bundled script); for untrusted code the real boundary is the
+sandbox. `Read(~/.aws/**)` also hides `~/.aws/config`, so use the CLI for tool settings
+(`aws configure list`, `ssh -G <host>`, `gh auth status`).
+
+Read-only commands (`ls`, `cat`, `grep`, `git status`, `git log`, …) run without a prompt
+whatever the allow list says; everything else prompts unless allowed, so allow only what
+you'd approve every time. The template also asks before edits to `CLAUDE.md` and anything
+under `.github/` (Claude Code already asks before edits to `.claude/`, `.git/` and
+`.mcp.json`). That covers the file tools and `sed -i`, not a shell copy or redirect (`cp`,
+`>>`), so treat it as a speed bump. With no one to ask (`claude -p`, `dontAsk` mode) an ask
+becomes a deny. `/adr` edits `CLAUDE.md`, so it prompts once per ADR.
+
+Add your build/test/lint commands to the allow list (project-shared) or to
+`settings.local.json` (just you), e.g.:
 
 ```json
 {
@@ -79,10 +91,10 @@ Three layers, on by default — keep them in place (the self-check below enforce
 1. **`.gitignore`** ignores `.env*`, `*.pem`, `*.key`, `*.p12`, `id_rsa`/`id_ed25519`,
    `.aws/credentials`, and `secrets/` so they can't be committed. Commit only
    `*.example` variants (e.g. `.env.example`).
-2. **`settings.json` deny rules** block the *Read tool* (and the dedicated file tools) from
-   reading those files, and the shell allow-list omits `cat`/`grep`/`rg`/`find` so they
-   can't read a secret unattended either. (Bash-pattern denies aren't airtight — for untrusted
-   code the real boundary is the sandbox.)
+2. **`settings.json` deny rules** block reading those files and the credential stores in
+   `~`, through the file tools and the shell commands Claude Code recognizes as reads
+   (`cat .env` is refused). Code that opens files itself isn't covered; for untrusted code
+   the real boundary is the sandbox.
 3. **`scripts/check-template.sh`** (run locally and in CI) fails if a secret-like file
    gets tracked, if obvious secret material (private keys, AWS keys, GitHub/Slack/Google
    tokens) appears in tracked content, or if either protection above is removed.

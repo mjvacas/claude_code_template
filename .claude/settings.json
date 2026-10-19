@@ -7,12 +7,13 @@
       "Bash(git diff:*)",
       "Bash(git log:*)",
       "Bash(git show:*)",
-      "Bash(git branch:*)",
       "Bash(ls:*)"
     ],
     "ask": [
       "Bash(git push:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Edit(CLAUDE.md)",
+      "Edit(.github/**)"
     ],
     "deny": [
       "Read(.env)",
@@ -32,6 +33,19 @@
       "Read(**/*_key)",
       "Read(**/*_secret)",
       "Read(**/.aws/credentials)",
+      "Read(~/.ssh/**)",
+      "Read(~/.aws/**)",
+      "Read(~/.azure/**)",
+      "Read(~/.config/gcloud/**)",
+      "Read(~/.config/gh/**)",
+      "Read(~/.gnupg/**)",
+      "Read(~/.kube/**)",
+      "Read(~/.docker/config.json)",
+      "Read(~/.git-credentials)",
+      "Read(~/.netrc)",
+      "Read(~/.npmrc)",
+      "Read(~/.pypirc)",
+      "Read(~/.claude/.credentials.json)",
       "Bash(nc:*)",
       "Bash(ncat:*)",
       "Bash(telnet:*)"

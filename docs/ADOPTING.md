@@ -200,6 +200,10 @@ adopting into), with this template available at a path like
 > Especially valuable for the existing-repo procedure, which has more
 > merge decisions and more pre-existing state to reconcile.
 
+Once the vendored `.claude/settings.json` is in place, Claude Code asks
+before each edit to `CLAUDE.md` or `.github/`. That's expected during
+adoption; approve them.
+
 > **If your repo already maintains a `docs/adr/` series**, vendor template
 > ADRs into a sub-namespace — `docs/claude-code-template/` or
 > `docs/adr/_upstream/` are both common — to avoid numbering collisions.

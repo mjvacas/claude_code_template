@@ -83,6 +83,19 @@ Pre-0.1.0 history is kept below in the original date-stamped sections.
   pin, license and local patches to re-apply on every bump.
 
 ### Changed
+- **Permissions: home credential stores denied; `CLAUDE.md` and `.github/` edits ask
+  first** — `settings.json` now denies reads of `~/.ssh`, `~/.aws`, `~/.azure`,
+  `~/.config/gcloud`, `~/.config/gh`, `~/.gnupg`, `~/.kube`, `~/.docker/config.json`,
+  `~/.git-credentials`, `~/.netrc`, `~/.npmrc`, `~/.pypirc` and
+  `~/.claude/.credentials.json`; the existing rules only covered files inside the
+  project. It asks before edits to `CLAUDE.md` and `.github/**`, which `acceptEdits`
+  otherwise applies silently (Claude Code already asks for `.claude/`, `.git/` and
+  `.mcp.json`). `Bash(git branch:*)` left the allow list: listing branches is a built-in
+  read-only command, and the rule also approved `git branch -D`. `check-template.sh` §6
+  asserts the home denies. The docs no longer say `cat .env` prompts: on current Claude
+  Code a Read deny refuses it. (Checked live on Claude Code 2.1.303 with dummy files.)
+  **Migration:** headless runs (`claude -p`) that edit `CLAUDE.md` or `.github/` are now
+  denied, and `/adr` prompts for its `CLAUDE.md` edit.
 - **`check.yml` pins the gitleaks hash in-repo** — it verified the tarball against a
   `checksums.txt` downloaded from the same release, which catches corruption but not
   a replaced release. The expected sha256 now lives in the workflow and changes only

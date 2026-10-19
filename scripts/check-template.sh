@@ -240,6 +240,16 @@ deny = set(json.load(open('.claude/settings.json'))['permissions']['deny'])
 for pat in ('**/*_key', '**/*_secret', '**/*.pfx', '**/*.keystore'):
     glob = f'Read({pat})'
     (ok if glob in deny else err)(f"settings.json deny includes {glob}")
+# Credential stores in the home directory. Removing one is a posture change: edit this
+# list in the same PR. (Moving them to user settings fails here; CI can't see those.)
+home = ('~/.ssh/**', '~/.aws/**', '~/.azure/**', '~/.config/gcloud/**', '~/.config/gh/**',
+        '~/.gnupg/**', '~/.kube/**', '~/.docker/config.json', '~/.git-credentials', '~/.netrc',
+        '~/.npmrc', '~/.pypirc', '~/.claude/.credentials.json')
+missing = [f'Read({p})' for p in home if f'Read({p})' not in deny]
+if missing:
+    err(f"settings.json deny is missing home credential stores: {', '.join(missing)}")
+else:
+    ok(f"settings.json deny covers {len(home)} home credential stores (~/.ssh, ~/.aws, ...)")
 
 gi = open('.gitignore').read()
 for pat in ('*_key', '*_secret'):
