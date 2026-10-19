@@ -253,7 +253,9 @@ The session will:
    | `.claude/commands/handoff.md` | `@templates/ADR-template.md`, `@templates/AI_SESSION_START.md` |
    | `.claude/commands/adr.md` | `@templates/ADR-template.md` |
 
-   Quick scan to confirm: `grep -rn '@templates/' .claude/commands .claude/skills`.
+   `handoff.md` also carries two `@docs/adr/ADR-004-…` refs; repoint them too if you
+   moved the template's ADRs into a sub-folder. Quick scan to confirm:
+   `grep -rnE '@(templates|docs/adr)/' .claude/commands .claude/skills`.
    Also scan vendored skeleton templates (especially `templates/AI_SESSION_START.md`)
    for inline `docs/skill-security.md` / `docs/adr/ADR-NNN-*.md` references —
    they're prose-level path mentions rather than `@`-imports so
@@ -337,7 +339,9 @@ The session will:
    | `.claude/commands/handoff.md` | `@templates/ADR-template.md`, `@templates/AI_SESSION_START.md` |
    | `.claude/commands/adr.md` | `@templates/ADR-template.md` |
 
-   Quick scan to confirm: `grep -rn '@templates/' .claude/commands .claude/skills`.
+   `handoff.md` also carries two `@docs/adr/ADR-004-…` refs; repoint them too if you
+   moved the template's ADRs into a sub-folder. Quick scan to confirm:
+   `grep -rnE '@(templates|docs/adr)/' .claude/commands .claude/skills`.
    Also scan vendored skeleton templates (especially `templates/AI_SESSION_START.md`)
    for inline `docs/skill-security.md` / `docs/adr/ADR-NNN-*.md` references —
    they're prose-level path mentions rather than `@`-imports so
@@ -386,9 +390,10 @@ into the adopter's `CLAUDE.md` unchanged.
 
 > **One edit even in the "keep verbatim" sections:** they carry prose pointers to
 > docs the file map classifies *reference-only* — `## Conventions` ends with "see
-> docs/skill-security.md", and `## Context System` mentions `docs/token-awareness.md`
-> and `docs/claude-code-setup.md`. If you didn't vendor those (the common case), the
-> pointers dangle. They're prose, not `@`-imports, so `check-template.sh` §3 won't
+> docs/skill-security.md", and `## Context System` mentions `docs/token-awareness.md`,
+> `docs/claude-code-setup.md` and `docs/ADOPTING.md`, and lists the `cc-task-bench`
+> skill. If you didn't vendor those (the common case), the pointers dangle; drop
+> `cc-task-bench` from the skills list unless you vendored it. They're prose, not `@`-imports, so `check-template.sh` §3 won't
 > catch them — repoint each to the upstream URL
 > (`https://github.com/mjvacas/claude_code_template/blob/main/docs/<file>`) or drop
 > the clause. Everything else in these sections stays verbatim.
@@ -569,6 +574,7 @@ convenience.
 
 | Path | Why |
 |------|-----|
+| `docs/ADOPTING.md` | This procedure. The adopting session reads it from your template clone; don't copy it. |
 | `docs/claude-code-setup.md` | How this template wires into Claude Code. Read for ideas. |
 | `docs/skill-security.md` | Trust model + vetting procedures. Link rather than copy. |
 | `docs/token-awareness.md` | Cost classes, the per-session context tax, compaction, and model-routing heuristic. Read; link rather than copy. |
@@ -642,12 +648,12 @@ The session will:
      If `CLAUDE.md` changed upstream, re-apply only the bucket-1 (keep-verbatim)
      changes per [§ Merging the template's `CLAUDE.md`](#merging-the-templates-claudemd);
      leave your project-specific content alone. Same for any `.claude/commands/*`
-     whose `@templates/` refs you repointed: take the upstream body, then
-     re-apply your repoint.
+     whose `@templates/` or `@docs/adr/` refs you repointed: take the upstream
+     body, then re-apply your repoint.
 
-   After Update/Merge, run `grep -rn '@templates/' .claude/commands .claude/skills`
-   — a surviving `@templates/` ref dangles (and fails § 3 at step 9) unless
-   `templates/` sits at that path; repoint or restore before committing.
+   After Update/Merge, run `grep -rnE '@(templates|docs/adr)/' .claude/commands .claude/skills`
+   — a surviving ref dangles (and fails § 3 at step 9) unless its target sits at
+   that path; repoint or restore before committing.
 8. Apply approved changes; bump the tag/SHA(s) in `VENDORED.md`; update the
    "Installed plugins" section. **Backfill any `VENDORED.md` sections missing
    relative to the current schema above** (e.g. "Installed plugins" for a pin
@@ -691,7 +697,7 @@ files, so these survive a revert:
   not in your repo).
 - **MCP servers** — remove any entries you added to `.mcp.json`.
 
-Three traps to avoid:
+Traps to avoid:
 
 - **Don't blind-`rm` the merged files** (`CLAUDE.md`, `.claude/settings.json`,
   `.gitignore`) — they hold *your* content alongside the template's. Revert or un-merge

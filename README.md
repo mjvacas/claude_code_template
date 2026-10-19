@@ -122,7 +122,20 @@ This template builds on patterns and ideas from a number of projects and
 standards.
 
 - **Anthropic Claude Code** — the platform this template extends; settings,
-  hooks, commands, agents, and skills follow its conventions.
+  hooks, commands, agents, and skills follow its conventions. Its
+  [documentation](https://code.claude.com/docs) on permissions, protected paths
+  and compaction shaped the v0.3.0 defaults and the idle-compaction notes.
+- **[Agent Baseline](https://agentbaseline.org)** — the v0.3.0 security review
+  checked the template against its control catalogue and *The Secure Software
+  Factory* reference architecture (v1.0-draft, October 2026). The guard failing
+  closed, the denies on home-directory credentials, and asking before edits to
+  agent and CI config came from that pass. Ideas only; its prose is CC BY 4.0
+  and its controls Apache-2.0.
+- **[trailofbits/claude-code-config](https://github.com/trailofbits/claude-code-config)**
+  — the list of home-directory credential stores to deny. Ideas only: the repo
+  has no license, and nothing is copied.
+- **[zizmor](https://github.com/zizmorcore/zizmor)** — its "artipacked" audit is
+  why CI checkouts don't keep credentials on disk.
 - **[multica-ai/andrej-karpathy-skills](https://github.com/multica-ai/andrej-karpathy-skills)**
   — Andrej Karpathy's engineering-discipline practices; the behavioral
   guidelines in `CLAUDE.md` (think-before-coding, simplicity-first,

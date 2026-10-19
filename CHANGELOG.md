@@ -84,6 +84,12 @@ Pre-0.1.0 history is kept below in the original date-stamped sections.
   would have run on every Bash call (the guard), every status-line redraw and every
   compaction. Every python call in the hooks and scripts now uses `-I`.
 
+- **`docs/ADOPTING.md` gaps an adopter could trip on** — the repoint steps and the
+  re-sync scan missed `handoff.md`'s two `@docs/adr/ADR-004-…` refs (they dangle once
+  the template's ADRs move into a sub-folder); the scan is now
+  `grep -rnE '@(templates|docs/adr)/'`. The Bucket-1 callout now names every
+  reference-only pointer in `CLAUDE.md`, including `docs/ADOPTING.md` and the
+  `cc-task-bench` skill. `docs/ADOPTING.md` itself is in the file map.
 ### Added
 - **Idle compaction, documented, with a way to measure it** — Claude Code now compacts a
   long conversation (200K+ tokens) left idle for about 54 minutes, just before its prompt
@@ -104,6 +110,9 @@ Pre-0.1.0 history is kept below in the original date-stamped sections.
   pin, license and local patches to re-apply on every bump.
 
 ### Changed
+- **Acknowledgements** — README credits Agent Baseline, Trail of Bits'
+  `claude-code-config` and zizmor for ideas used in this release (ideas only; nothing
+  copied), and the Claude Code docs the new defaults follow.
 - **CODEOWNERS covers everything Claude Code loads or runs** — all of `.claude/` (it
   covered only `settings.json` and `hooks/`, leaving out commands, skills and the status
   line), `CLAUDE.md`, `.mcp.json.example` and `.github/`, matching what
@@ -126,6 +135,8 @@ Pre-0.1.0 history is kept below in the original date-stamped sections.
   `checksums.txt` downloaded from the same release, which catches corruption but not
   a replaced release. The expected sha256 now lives in the workflow and changes only
   by PR, and `sha256sum --strict` fails on a malformed hash too.
+- **CI checkouts don't keep credentials on disk** — `persist-credentials: false` on every
+  checkout in `check.yml` and `template-tests.yml`; neither workflow pushes.
 
 ## [0.2.2] - 2026-06-27
 
