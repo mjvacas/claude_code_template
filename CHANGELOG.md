@@ -104,6 +104,11 @@ Pre-0.1.0 history is kept below in the original date-stamped sections.
   pin, license and local patches to re-apply on every bump.
 
 ### Changed
+- **CODEOWNERS covers everything Claude Code loads or runs** — all of `.claude/` (it
+  covered only `settings.json` and `hooks/`, leaving out commands, skills and the status
+  line), `CLAUDE.md`, `.mcp.json.example` and `.github/`, matching what
+  `docs/skill-security.md` recommends. It enforces only with "Require review from Code
+  Owners", which a solo maintainer can't satisfy, so for solo repos it's documentary.
 - **Permissions: home credential stores denied; `CLAUDE.md` and `.github/` edits ask
   first** — `settings.json` now denies reads of `~/.ssh`, `~/.aws`, `~/.azure`,
   `~/.config/gcloud`, `~/.config/gh`, `~/.gnupg`, `~/.kube`, `~/.docker/config.json`,
