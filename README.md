@@ -86,29 +86,35 @@ If a human decided it, it goes in `AI_CONTEXT.md`. If Claude noticed it, let aut
 Skills, commands, hooks, and MCP servers are code you install. Before adding anything
 from outside this repo, vet it — see `docs/skill-security.md`. Quick tools:
 
-- `bash scripts/audit-config.sh <path>` — report what a skill/config actually does
-  (dynamic execution, tool grants, egress/secret tokens) before you trust it.
+- `bash scripts/audit-config.sh <path>` — report what a skill, plugin or config actually
+  does before you trust it: every command that runs without a prompt (hooks, MCP/LSP
+  servers, monitors, code-loading env vars), permission grants, which skills and agents
+  Claude can start on its own, and egress/secret tokens.
 - `bash scripts/check-template.sh` — validate config integrity + secrets hygiene.
 - The default `settings.json` denies reads of secret files in the project and of credential
   stores in your home directory (`~/.ssh`, `~/.aws`, `~/.config/gh`, …); on current Claude
   Code that covers shell reads too, so `cat .env` is refused. It asks before edits to
-  `CLAUDE.md`, `.github/` and the two check scripts, and ships an empty allow list;
+  `CLAUDE.md`, `.github/`, the two check scripts and its own settings and hooks, and
+  ships an empty allow list;
   `settings.lockdown.json.example` adds network-egress denies for quarantining untrusted skills.
 - A `PreToolUse` hook (`.claude/hooks/block-dangerous.sh`) hard-blocks catastrophic shell
   commands (`rm -rf /`, `git reset --hard`, `git push --force`, pipe-to-shell, `dd`/`mkfs`).
-  It's a safety net, **not** a sandbox — pair it with the lockdown overlay / OS sandbox.
+  It keeps working without `python3` and has a regression suite. It's a safety net,
+  **not** a sandbox — pair it with the lockdown overlay / OS sandbox.
 - Before enabling an MCP server, vet it and copy `.mcp.json.example` → `.mcp.json`
   (gitignored). See the MCP checklist in `docs/skill-security.md`.
 
 ## Highlights
 
-A few engineering practices, encoded as runnable skills, a cost-legibility
-layer, and reviewer rules:
+A few engineering practices, encoded as runnable skills and scripts, a
+cost-legibility layer, and reviewer rules:
 
+- **Vet before you install** — `scripts/audit-config.sh` reports everything a skill or plugin would run or grant, and `docs/skill-security.md` shows how to take just the skill out of a plugin and deny what its docs tell Claude to run.
 - **`/verify-refactor`** — prove a refactor preserved behavior by diffing deterministic output (byte-identical), not just "tests pass."
 - **`/tune-parameters`** — pick a threshold by reading the *shape* of the metric surface, rejecting overfit spikes.
 - **`/llm-eval`** — gate AI features on accuracy against a ground-truth set.
 - **Token-cost legibility** — a cost-class model (`docs/token-awareness.md`) plus a status line that surfaces live session cost, context-against-window, and 5h/7d rate-limit budgets with reset times — so the cost of the context system is visible, not guessed.
+- **Compaction you can see** — `scripts/compaction-report.sh` lists which of your sessions were compacted, how large they were and how long they'd sat idle, and `docs/token-awareness.md` explains idle compaction and how to opt out.
 
 For code review, the template recommends installing
 `pr-review-toolkit@claude-plugins-official` as a baseline plugin during

@@ -12,169 +12,156 @@ Pre-0.1.0 history is kept below in the original date-stamped sections.
 
 ## [Unreleased]
 
-### Fixed
-- **`audit-config.sh` §5 missed plugin hooks** — it read only `settings*.json`, so a
-  plugin's `hooks/hooks.json` and the `hooks` in `.claude-plugin/plugin.json` (inline
-  or by path) went unreported. §5 now lists the commands declared in settings, plugin,
-  MCP, LSP and monitor JSON: hooks (including `mcp_tool` hooks), `statusLine` and
-  helper keys (`apiKeyHelper` etc.), `env` vars that load code (`BASH_ENV`,
-  `CLAUDE_ENV_FILE`, `ZDOTDIR`, `NODE_OPTIONS`, `LD_PRELOAD`, …), MCP/LSP servers and
-  monitors, plus the grants that skip prompts (`permissions.allow`, `defaultMode`,
-  `allowedTools`, MCP auto-approval). Frontmatter hooks are listed in §4. It also
-  flags each `.claude-plugin/` directory and the paths or inline content `plugin.json`
-  gives for commands, agents and skills. Commands are found by key rather than by
-  schema, so a malformed hook entry can no longer crash the parser and hide the hooks
-  after it, and a file it can't parse or fully read (deep nesting, a huge number, a
-  lone surrogate) is reported as an ERROR, counted as HIGH, instead of ending the
-  section.
-- **`audit-config.sh` §4 decided by path** — every `.md` under `skills/` counted as a
-  skill (reference files were flagged), and a `SKILL.md` copied anywhere else was
-  missed. It now matches files named `SKILL.md` plus `commands/*.md` and
-  `agents/*.md`, and lists every one, tagged model-invocable or opted out, so a
-  frontmatter trick can mislabel a file but not hide it. The opt-out counts only in
-  frontmatter as Claude Code reads it (ended by the next `---`, none if unclosed),
-  exactly once and set to `true`; a quote left open at the end of a frontmatter line
-  marks it unverified. Agents show their `tools:` (none listed = all tools), and
-  frontmatter `hooks:`, `mcpServers:` and `permissionMode:` are printed (the whole
-  frontmatter, when its layout can't be read key by key).
-- **`audit-config.sh` §6 misses and false hits** — package runners (`npx`, `bunx`,
-  `bun x`, `pnpx`, `uvx`, `pipx run`, `npm exec`/`npm x`, `pnpm dlx`, `yarn dlx`,
-  `uv tool run`), `nc` and `*_API_KEY` reads are now flagged, and tool names must
-  stand alone as words, so `ncat` no longer matches "truncate" or "concatenated".
-  (Surfaced by vetting a third-party plugin in a personal project dogfooding the
-  template.)
-- **`audit-config.sh` could report "none" for what it never read** — a grep error
-  (an unreadable file) printed "none" and dropped the HIGH flag; a symlinked target
-  (`~/.claude/skills/x -> ~/src/x`) reviewed zero files on macOS; a file with a NUL
-  past its first 8KB was skipped by the greps but not marked binary. Errors now print
-  ERROR and count as HIGH, symlinks are listed (LINK, HIGH) and a symlinked target is
-  followed, and any NUL marks a file BINARY. Control and invisible formatting characters
-  (C0 and C1 controls, bidi overrides, zero-width marks) are stripped from the report, so
-  a crafted file can't overwrite or disguise its lines.
-- **`block-dangerous.sh` failed open without `python3`, and missed common forms** —
-  with `python3` missing or broken (a Mac without the Xcode tools has a stub that
-  fails), every command passed. A dangerous command followed by more than ~64KB of
-  text also passed (`grep -q` under `pipefail`), as did force pushes written as
-  `+ref`, `--mirror`, `--prune`, `-uf` or `git -C dir push`, deleting `main`/`master`
-  on the remote, and quoted `rm` targets (`"$HOME"`, `'/'`). It also blocked harmless
-  `git push … && rm -f tmp.txt`, and missed commands split with a trailing backslash,
-  which bash joins but the guard read line by line, commands closed by `)` in a
-  subshell, and an `rm` target after another path (a stray space). The hook now falls back to reading the raw event
-  when `python3` can't, and `tests/block-dangerous/` covers each case with and
-  without `python3` and under bash 3.2. Deleting other remote branches still only
-  prompts (`ask: git push`).
-- **`check-template.sh` couldn't catch a deleted guard, and two checks couldn't fail** —
-  §5 only looked for the guard's name in `settings.json`, so deleting
-  `block-dangerous.sh` passed (and Claude Code treats a hook that can't start as a
-  non-blocking error, so the guard silently turns off). §5 now checks that every script
-  `settings.json` wires (hooks and `statusLine`) exists and is executable, and that the
-  guard is wired on Bash. §6's checks for the secret-scan regex and its `-e` flag read
-  their own source, where the markers also appear, so they always passed; they now read
-  only the code before §6. `tests/check-template/` breaks each protection in a copy of
-  the repo and requires the check to fail. It also catches the guard wired as
-  `"$CLAUDE_PROJECT_DIR"/…` and then deleted, `disableAllHooks`, a moved §6 header, a
-  missing `.gitignore` (which crashed §6) and snapshots that aren't gitignored. An
-  `@`-import of a gitignored, local-only file no longer fails §3 on every clone.
-- **Context snapshots were world-readable and never pruned** — `precompact-snapshot.sh`
-  wrote raw conversation (possibly secrets) at mode 644 in a 755 directory and kept
-  every snapshot; idle compaction makes them pile up faster. They are now owner-only
-  (directory 700, files 600), only the newest 20 are kept, and `check-template.sh` §4
-  checks their mode. A transcript line that wasn't a JSON object made the hook write
-  nothing; it now skips such lines. It never prunes the snapshot it just wrote (names
-  use local time, so a timezone change could push it out) and reports pruning errors.
-  **Migration:**
-  `[ -d .claude/snapshots ] && { chmod 700 .claude/snapshots; find .claude/snapshots -type f -exec chmod 600 {} +; }`
-  (the hook also fixes them the next time it runs).
-- **`check-template.sh` §4 misread file modes on Linux** — it tried BSD `stat -f` first,
-  which GNU `stat` reads as "show filesystem info", so a local `.env` at mode 600 failed
-  the check on Linux. It now tries the GNU form first.
-- **Template python ran with the project folder on its import path** — `python3 -c` and
-  `python3 -` import from the working directory first, so a `json.py` in a project would
-  have run on every Bash call (the guard), every status-line redraw and every
-  compaction. Every python call in the hooks and scripts now uses `-I`. **Migration:**
-  add `-I` to the `python3 -c` and `python3 -` calls in your own hooks and scripts.
-- **`docs/ADOPTING.md` gaps found by dry-run adoptions** — a fresh adoption and re-syncs
-  of two adopter repos (on throwaway clones) turned up:
-  - **Re-sync could silently drop an adopter's own hooks.** It blind-copied a changed
-    vendor-as-is file even when the local copy had unrecorded changes, so a
-    `settings.json` with added guard hooks lost them and `check-template.sh` still
-    passed. Re-sync now checks every row for drift against the pinned upstream, routes
-    Update vs. Merge by the `VENDORED.md` Notes, and gives a `settings.json` merge
-    recipe that never drops a local hook.
-  - **No step applied `**Migration:**` notes**, so the snapshot `chmod` in this release
-    would fail verification after a re-sync. Re-sync has a Migrate step.
-  - Re-sync now fetches tags and checks out the target, uses `<pin>..<target>` with the
-    **Upstream path** column (local paths of relocated files matched nothing), stages
-    before verifying, reconciles every installed plugin, and runs the code-reviewer.
-  - New-repo adoption captures the tag, asks all its questions in one batch, copies
-    with `cp -p`, applies the `CLAUDE.md` bucket rules (dropping the template-internal
-    ADR highlights), describes a clean audit result, and runs the code-reviewer.
-  - The file map lists which files only work together (session context, decisions,
-    safety), marks `AI_CONTEXT.md` and `AI_SESSION_START.md` as required by
-    `/session-start` and `/handoff`, adds `docs/adr/.gitkeep`, and moves
-    `.claude/settings.json` to Adapt.
-  - The repoint steps and re-sync scan cover `handoff.md`'s `@docs/adr/ADR-004-…` refs
-    (`grep -rnE '@(templates|docs/adr)/'`); the Bucket-1 callout names every
-    reference-only pointer in `CLAUDE.md` and links them at your pinned tag.
-  - Comments in vendored files no longer point at template-only paths as if local.
+A security release. Vetting a third-party plugin showed that `audit-config.sh` missed
+whole classes of config that runs without a prompt. A review against
+[Agent Baseline](https://agentbaseline.org), and dry-run adoptions on throwaway clones of
+adopter repos, then found gaps in the default protections and in the re-sync procedure.
+MINOR under [ADR-006](docs/adr/ADR-006-versioning-and-release-management.md):
+`settings.json` becomes an Adapt file and new `ask` rules change what prompts, so read
+**Migration** before re-syncing.
+
+### Highlights
+- **Vet a whole plugin before you install it.** `audit-config.sh` reports everything
+  that runs without a prompt (hooks in settings, plugin manifests and skill or agent
+  frontmatter, MCP and LSP servers, monitors, code-loading `env` vars, permission
+  grants) and lists every skill, command and agent with whether Claude can start it on
+  its own. `docs/skill-security.md` adds partial vendoring and deny rules for what a
+  plugin's docs tell Claude to run.
+- **Safer defaults.** The dangerous-command guard keeps working without `python3` and
+  catches more forms. Reads of credential stores in your home directory (`~/.ssh`,
+  `~/.aws`, …) are denied. Claude asks before editing `CLAUDE.md`, CI config and the
+  template's own checks. Context snapshots are private and pruned.
+- **Compaction you can see.** Claude Code now compacts long sessions left idle.
+  `docs/token-awareness.md` explains when and how to opt out, and
+  `scripts/compaction-report.sh` shows which of your sessions were compacted and why.
+- **Re-sync that keeps your changes.** Re-sync detects local edits to vendored files and
+  merges them instead of overwriting, applies migration notes, and the file map says
+  which files only work together.
+- **Tested.** Regression suites for the auditor, the self-check, two hooks and the
+  compaction report run on Linux and macOS in CI.
+
+### Migration
+1. If `VENDORED.md` records `.claude/settings.json` as vendor-as-is but you've changed
+   it, update that row before re-syncing. It's an Adapt file now: re-sync merges it.
+2. Make existing context snapshots private (the hook also fixes them the next time it
+   runs): `[ -d .claude/snapshots ] && chmod -R go-rwx .claude/snapshots`
+3. Add `-I` to the `python3 -c` and `python3 -` calls in your own hooks and scripts.
+4. Headless runs (`claude -p`) that edit `CLAUDE.md`, `.github/`, the check scripts or
+   the template's settings, hooks or status line are now denied, because an `ask` rule
+   has no one to ask. `/adr` prompts for its `CLAUDE.md` edit.
 
 ### Added
-- **Idle compaction, documented, with a way to measure it** — Claude Code now compacts a
-  long conversation (200K+ tokens) left idle for about 54 minutes, just before its prompt
+- **Idle-compaction docs and `scripts/compaction-report.sh`** — Claude Code compacts a
+  conversation of 200K+ tokens left idle for about 54 minutes, just before its prompt
   cache expires, and turned this on server-side. `docs/token-awareness.md` gains a
-  Compaction section: the three kinds, the trade-off, how to opt out in user settings
-  (`"idleCompaction": false`, Claude Code 2.1.290+) or raise the threshold, and why the
-  template leaves it on. New `scripts/compaction-report.sh` lists your recent compactions
-  with their size and idle time, from your local transcripts (metadata only).
-- **Regression tests for the template's scripts and hooks** — `tests/<suite>/run.sh`
-  for the auditor, the self-check and two hooks, run on Linux and macOS by
-  `.github/workflows/template-tests.yml`. Template-internal (file map → Skip).
-- **`docs/skill-security.md`** — partial vendoring (take the skill, leave the
-  plugin), same-source checksums aren't provenance, egress in compiled code and
-  ambient `*_API_KEY` use, dormant hooks, `disable-model-invocation` for broad or
-  persona-setting skills, deny rules for commands vetted docs tell Claude to run, and
-  dev-server/CSP changes as security changes.
-- **`VENDORED.md` format** — optional `## Third-party skills` section recording the
-  pin, license and local patches to re-apply on every bump.
+  Compaction section: the three kinds, the trade-off, opting out in user settings
+  (`"idleCompaction": false`, Claude Code 2.1.290+) or raising the threshold, and why
+  the template leaves the default alone. The report lists recent compactions from your
+  local transcripts with size, idle time and an idle flag; it prints metadata only.
+- **Regression tests** — `tests/<suite>/run.sh` for `audit-config.sh`,
+  `check-template.sh`, `block-dangerous.sh`, `precompact-snapshot.sh` and the
+  compaction report, run on Linux and macOS by `.github/workflows/template-tests.yml`.
+  Template-internal (file map → Skip).
+- **`docs/skill-security.md`** — partial vendoring (take the skill, leave the plugin),
+  same-source checksums aren't provenance, egress in compiled code and ambient
+  `*_API_KEY` use, dormant hooks, frontmatter hooks, code-loading `env` vars, symlinks,
+  `disable-model-invocation` for broad or persona skills, deny rules for commands a
+  plugin's docs tell Claude to run (bare, versioned and auto-confirm forms, checked
+  live), and dev-server/CSP changes as security changes.
+- **`VENDORED.md` format** — optional `## Third-party skills` section recording the pin,
+  license and local patches to re-apply on every bump.
 
 ### Changed
-- **`.claude/settings.json` is an Adapt file, not vendor-as-is** — nearly every adopter adds
-  allow rules, denies or hooks to it, and re-sync now merges it instead of copying it.
-  **Migration:** if your `VENDORED.md` records it as vendor-as-is but you've changed it,
-  update that row before re-syncing.
-- **Acknowledgements** — README credits Agent Baseline, Trail of Bits'
-  `claude-code-config` and zizmor for ideas used in this release (ideas only; nothing
-  copied), and the Claude Code docs the new defaults follow.
-- **CODEOWNERS covers everything Claude Code loads or runs** — all of `.claude/` (it
-  covered only `settings.json` and `hooks/`, leaving out commands, skills and the status
-  line), `CLAUDE.md` and the `AI_CONTEXT.md` it imports, `.mcp.json.example` and `.github/`,
-  matching what
-  `docs/skill-security.md` recommends. It enforces only with "Require review from Code
-  Owners", which a solo maintainer can't satisfy, so for solo repos it's documentary.
-- **Permissions: home credential stores denied; `CLAUDE.md` and `.github/` edits ask
-  first** — `settings.json` now denies reads of `~/.ssh`, `~/.aws`, `~/.azure`,
+- **`.claude/settings.json` is an Adapt file** — nearly every adopter adds allow rules,
+  denies or hooks to it, so re-sync merges it instead of copying it (Migration 1).
+- **Adoption and re-sync procedure** — re-sync checks every vendored file for local
+  changes against the pin and routes it to Update or Merge by its `VENDORED.md` Notes;
+  merges `settings.json` without dropping local hooks; applies the Migration section;
+  fetches tags and logs `<pin>..<target>` over the Upstream path column; stages before
+  verifying; reconciles installed plugins; and runs the code-reviewer. New-repo adoption
+  captures the tag, asks its questions in one batch, copies with `cp -p`, applies the
+  `CLAUDE.md` bucket rules, and describes a clean audit. The file map lists which files
+  only work together and adds `docs/adr/.gitkeep`.
+- **The allow list is empty** — on current Claude Code `git status`, `diff`, `log`,
+  `show`, `branch` and `ls` run without a rule, and the old rules also approved
+  `git branch -D` and `git diff --output=<file>`.
+- **The PreCompact hook fires on every trigger** — it no longer filters on
+  `auto|manual`, which an idle-specific trigger value would miss.
+- **CODEOWNERS covers what Claude Code loads or runs** — all of `.claude/`, `CLAUDE.md`
+  and the `AI_CONTEXT.md` it imports, `.mcp.json.example` and `.github/`, matching
+  `docs/skill-security.md`. It enforces only with "Require review from Code Owners",
+  which a solo maintainer can't satisfy.
+- **Acknowledgements** — the README credits Agent Baseline, Trail of Bits'
+  `claude-code-config` and zizmor for ideas used here (nothing copied), and the Claude
+  Code docs the new defaults follow.
+
+### Fixed
+- **`audit-config.sh` missed whole classes of config** — §5 read only `settings*.json`,
+  so plugin hooks (`hooks/hooks.json`, `plugin.json`), MCP/LSP servers, monitors,
+  `statusLine` and helper keys, code-loading `env` vars and permission grants went
+  unreported; it now finds commands by key, not schema. §4 decided by path, flagging
+  reference files and missing a copied `SKILL.md`; it now lists every skill, command
+  and agent, tagged model-invocable or opted out as Claude Code reads the frontmatter,
+  with agents' `tools:` and any frontmatter hooks or MCP servers. §6 missed package
+  runners (`npx`, `bunx`, `uvx`, `pipx run`, `npm exec`, `pnpm dlx`, …), `nc` and
+  `*_API_KEY` reads, and matched tool names inside words ("truncate").
+- **`audit-config.sh` reported "none" for what it never read** — a grep error, a
+  symlinked target (zero files reviewed on macOS), a NUL past the first 8KB, or a file
+  Python couldn't parse could all read as clean. Each now prints ERROR, LINK, BINARY or
+  UNREAD and counts as HIGH.
+- **`check-template.sh` passed with protections broken** — §5 only looked for the
+  guard's name, so a deleted `block-dangerous.sh` passed (and a hook that can't start
+  silently turns off); it now checks that every wired script exists and is executable,
+  in both quoting styles, and fails on `disableAllHooks`. §6's checks of the secret scan
+  read their own text and always passed. A missing `.gitignore` crashed §6, and
+  unignored snapshots weren't caught. `tests/check-template/` breaks each protection in
+  a copy of the repo and requires the check to fail. `@`-imports of gitignored,
+  local-only files no longer fail §3 on every clone.
+- **`check-template.sh` §4 misread file modes on Linux** — it tried BSD `stat -f`
+  first, which GNU `stat` reads as filesystem info, so an owner-only `.env` failed.
+- **`docs/ADOPTING.md` gaps** — re-sync could silently drop an adopter's own hooks by
+  copying over a locally changed `settings.json`; no step applied migration notes; the
+  repoint scans missed `handoff.md`'s `@docs/adr/ADR-004-…` refs; the Bucket-1 callout
+  missed reference-only pointers; comments in vendored files pointed at template-only
+  paths as if local. See Changed for the new procedure.
+
+### Security
+- **`block-dangerous.sh` failed open, and missed common forms** — without a working
+  `python3` (a Mac without the Xcode tools has a stub that fails) every command passed,
+  as did a dangerous command followed by more than ~64KB of text (`grep -q` under
+  `pipefail`). It also missed force pushes written as `+ref`, `--mirror`, `--prune`,
+  `-uf` or `git -C dir push`, deleting `main`/`master` on the remote, quoted `rm`
+  targets, commands split with a trailing backslash or closed by `)`, and an `rm`
+  target after another path; and it blocked a harmless `git push … && rm -f tmp.txt`.
+  It now falls back to reading the raw event, and `tests/block-dangerous/` covers each
+  case with and without `python3` and under bash 3.2. Deleting other remote branches
+  still only prompts (`ask: git push`).
+- **Credential stores in the home directory are denied; agent and CI config ask
+  first** — `settings.json` denies reads of `~/.ssh`, `~/.aws`, `~/.azure`,
   `~/.config/gcloud`, `~/.config/gh`, `~/.gnupg`, `~/.kube`, `~/.docker/config.json`,
   `~/.git-credentials`, `~/.netrc`, `~/.npmrc`, `~/.pypirc` and
-  `~/.claude/.credentials.json`; the existing rules only covered files inside the
-  project. It asks before edits to `CLAUDE.md` and `.github/**`, which `acceptEdits`
-  otherwise applies silently (Claude Code already asks for `.claude/`, `.git/` and
-  `.mcp.json`), and before edits to `scripts/check-template.sh` and
-  `scripts/audit-config.sh`, which check the other protections, and lists its own settings,
-  hooks and status line too rather than relying on that default. The allow list is now
-  empty: `git status`, `diff`, `log`, `show`, `branch` and `ls` run without a rule on
-  current Claude Code, while the old rules also approved `git branch -D` and
-  `git diff --output=<file>`. The PreCompact hook no longer filters by trigger, so it
-  fires however compaction is labelled. `check-template.sh` §6
-  asserts the home denies. The docs no longer say `cat .env` prompts: on current Claude
-  Code a Read deny refuses it. (Checked live on Claude Code 2.1.303 with dummy files.)
-  **Migration:** headless runs (`claude -p`) that edit `CLAUDE.md` or `.github/` are now
-  denied, and `/adr` prompts for its `CLAUDE.md` edit.
-- **`check.yml` pins the gitleaks hash in-repo** — it verified the tarball against a
-  `checksums.txt` downloaded from the same release, which catches corruption but not
-  a replaced release. The expected sha256 now lives in the workflow and changes only
-  by PR, and `sha256sum --strict` fails on a malformed hash too.
+  `~/.claude/.credentials.json`; the old rules covered files inside the project only.
+  It asks before edits to `CLAUDE.md`, `.github/**`, the two check scripts and the
+  template's own settings, hooks and status line, which `acceptEdits` would otherwise
+  apply silently or leave to Claude Code's defaults. `check-template.sh` §6 asserts the
+  home denies. The docs no longer say `cat .env` prompts: a Read deny now refuses it.
+  (Checked live on Claude Code 2.1.303 with dummy files.)
+- **Context snapshots were world-readable and never pruned** — `precompact-snapshot.sh`
+  wrote raw conversation (possibly secrets) at mode 644 and kept every snapshot. They
+  are now owner-only, the newest 20 are kept (never the one just written), and
+  `check-template.sh` checks their mode and that they're gitignored (Migration 2).
+- **Template python ran with the project folder on its import path** — a `json.py` in
+  a project would have run on every Bash call, status-line redraw and compaction. Every
+  python call in the hooks and scripts now uses `-I` (Migration 3).
+- **`audit-config.sh`'s report could be rewritten by the files it audits** — carriage
+  returns, escape codes, C1 controls, bidi overrides and zero-width marks in an audited
+  file reached the terminal. The report is filtered now.
+- **`check.yml` pins the gitleaks hash in-repo** — the tarball was checked against a
+  `checksums.txt` from the same release, which catches corruption but not a replaced
+  release. The hash now changes only by PR, and `sha256sum --strict` rejects a
+  malformed one.
 - **CI checkouts don't keep credentials on disk** — `persist-credentials: false` on every
-  checkout in `check.yml` and `template-tests.yml`; neither workflow pushes.
+  checkout; neither workflow pushes.
 
 ## [0.2.2] - 2026-06-27
 

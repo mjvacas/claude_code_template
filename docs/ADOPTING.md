@@ -647,7 +647,7 @@ The session will:
    the target; a MAJOR (or, in 0.x beta, MINOR) bump flags a breaking
    adoption-contract change. Identify entries affecting vendored paths or baseline
    plugins — including **file deletions, additions, plugin swaps, and
-   `**Migration:**` notes**. A pin between two tags already has part of the next
+   Migration items**. A pin between two tags already has part of the next
    section; step 3's log is the ground truth for what's new. If your pin predates
    `v0.1.0`, also read the date-stamped pre-history sections after it: changes there
    won't show as a SemVer bump.
@@ -711,10 +711,10 @@ The session will:
      hook (`check-template.sh` can't tell that one is missing). "Your own" means what
      the step-3 drift diff adds against the pin; rules the pin shipped and the target
      dropped stay dropped.
-   - **Migrate** — apply every `**Migration:**` note in the `CHANGELOG` range
-     (a `chmod`, a changed default, a setting to add), including ones about your own
-     files rather than vendored ones, or verification can fail on state the new
-     files expect. A note whose target doesn't exist locally is a no-op.
+   - **Migrate** — apply every item in the **Migration** section of each release in
+     the `CHANGELOG` range (a `chmod`, a changed default, a setting to add), including
+     ones about your own files rather than vendored ones, or verification can fail on
+     state the new files expect. An item whose target doesn't exist locally is a no-op.
 
    After Update/Merge, run `grep -rnE '@(templates|docs/adr)/' .claude/commands .claude/skills`
    — a surviving ref dangles (and fails § 3 at step 9) unless its target sits at

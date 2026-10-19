@@ -11,8 +11,8 @@ after you copy it into a new project.
 | `settings.local.json` | Your personal overrides. **Gitignored.** Copy `settings.local.json.example` to start. | `free-local` | Personal. |
 | `hooks/session-context.sh` | `SessionStart` hook: prints the session-start time, recent commits + working-tree status into context. Outside git only the clock line prints. | `session` | Optional — delete the hook entry in `settings.json` to disable. |
 | `hooks/clock.sh` | `UserPromptSubmit` heartbeat (**opt-in, not wired by default**): injects the current time into context on every prompt, so the session can notice elapsed time and date rollovers. | `per-prompt` | Opt-in — see [§ Optional: session clock heartbeat](#optional-session-clock-heartbeat). |
-| `hooks/block-dangerous.sh` | `PreToolUse(Bash)` guard: hard-blocks catastrophic commands (`rm -rf /`, `git reset --hard`, `git push --force`, pipe-to-shell, `dd`/`mkfs`, fork bomb) via exit 2. A safety net, **not** a sandbox. | `free-local` | Tune the pattern list to your needs. |
-| `hooks/precompact-snapshot.sh` | `PreCompact` hook: before the context is compacted, writes a recovery breadcrumb (transcript pointer + recent turns) to `.claude/snapshots/` (gitignored). A safety net, not a replacement for `/handoff`. | `free-local` | Optional — delete the hook entry in `settings.json` to disable. |
+| `hooks/block-dangerous.sh` | `PreToolUse(Bash)` guard: hard-blocks catastrophic commands (`rm -rf /`, `git reset --hard`, `git push --force`, pipe-to-shell, `dd`/`mkfs`, fork bomb) via exit 2, and still blocks when `python3` is missing. A safety net, **not** a sandbox. | `free-local` | Tune the pattern list to your needs. |
+| `hooks/precompact-snapshot.sh` | `PreCompact` hook: before the context is compacted, writes a recovery breadcrumb (transcript pointer + recent turns) to `.claude/snapshots/` (gitignored, owner-only, newest 20 kept). Fires on every kind of compaction, including idle. A safety net, not a replacement for `/handoff`. | `free-local` | Optional — delete the hook entry in `settings.json` to disable. |
 | `statusline.sh` | Status line: model · dir · git branch, plus live session context as absolute tokens vs the window (`ctx 152k/1M`, `⚠` at ~200k), 5-hour + weekly rate-limit usage with reset clocks (`5h 24% (16:30)`/`7d 41% (Tue 16:30)`, subscription plans), and an estimated session cost `~$` (pay-as-you-go only — it's notional on a subscription, so the line hides it there and the rate-limit windows carry the real signal). | `free-local` | Optional — remove the `statusLine` key in `settings.json` to disable. |
 | `commands/session-start.md` | `/session-start` — restore context and orient before coding. | `on-use` | As needed. |
 | `commands/handoff.md` | `/handoff` — record decisions in `AI_CONTEXT.md` and commit code + context atomically. | `on-use` | As needed. |
@@ -113,8 +113,10 @@ never in tracked files. For deeper scanning across git history, add
 bash scripts/check-template.sh
 ```
 
-Validates JSON, hook scripts, every `@reference`, that the PreToolUse guard stays wired,
-the referenced doc directories exist, and the secrets protections above. Runs automatically
+Validates JSON, hook scripts, every `@reference`, that every script `settings.json` wires
+exists and the PreToolUse guard stays wired on Bash, that the referenced doc directories
+exist, and the secrets protections above (including the home-directory denies and private
+snapshots). Runs automatically
 on push/PR via `.github/workflows/check.yml` (which also runs a `gitleaks` secret scan and
 deliberately runs no project build/test, so fork PRs can't execute untrusted code).
 
@@ -182,7 +184,9 @@ write-ups so nothing is duplicated:
   its own inline rationale (golden-output diffing; surface-shape parameter tuning;
   ground-truth accuracy harness).
 - `docs/token-awareness.md` — the cost classes behind the **Cost** column above, the
-  per-session context tax, and model-routing guidance.
+  per-session context tax, compaction (including idle compaction and how to opt out),
+  and model-routing guidance. `scripts/compaction-report.sh` shows which of your
+  sessions were compacted.
 
 These are loaded on demand (when a command/skill references them), not on every session,
 which keeps the always-loaded context lean.
