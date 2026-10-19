@@ -44,6 +44,14 @@ bad=$(for f in "$snaps"/*.md; do [ "$(mode "$f")" = 600 ] || echo "$f"; done)
 if [ -n "$new" ] && grep -q 'Trigger: auto' "$snaps/$new" && grep -q 'FIXTURE-MESSAGE-TEXT' "$snaps/$new"; then
   ok "records the trigger and the recent turns"; else err "snapshot content is missing the trigger or turns"; fi
 
+echo "== newer-named snapshots (a timezone change) don't push out the new one"
+snaps2="$tmp/tz/.claude/snapshots"; mkdir -p "$snaps2"
+for i in $(seq -w 1 20); do printf 'later\n' > "$snaps2/2099-12-31T23-59-$i-later.md"; done
+(CLAUDE_PROJECT_DIR="$tmp/tz" bash "$hook" <<<"$event" 2>/dev/null)
+ls "$snaps2" | grep -q -- '-abcdef12\.md$' && ok "kept the snapshot it just wrote" || err "pruned the snapshot it just wrote"
+n=$(ls "$snaps2" | grep -c '\.md$')
+[ "$n" -eq 20 ] && ok "still keeps 20" || err "keeps $n, want 20"
+
 echo "== without python3"
 mkdir -p "$tmp/nopy"
 for t in cat mkdir chmod; do ln -s "$(command -v "$t")" "$tmp/nopy/$t"; done

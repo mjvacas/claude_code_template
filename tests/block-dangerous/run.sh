@@ -66,6 +66,7 @@ first_block=""
 while IFS= read -r line; do
   case $line in ''|'#'*) continue ;; esac
   want=${line%% *}; c=${line#* }
+  case $want in BLOCK|ALLOW) ;; *) err "unknown verdict in: $line"; continue ;; esac
   c=${c//<NL>/$'\n'}
   [ "$want" = BLOCK ] && [ -z "$first_block" ] && first_block=$c
   bad=$(verdict "$want" "$(event Bash "$c")")

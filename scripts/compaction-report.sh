@@ -46,8 +46,14 @@ def when(s):
     except ValueError:
         return None
 
+paths = glob.glob(os.path.join(glob.escape(root), "*", "*.jsonl"))
+if not paths:   # a wrong --root would otherwise read as "No compactions"
+    print(f"compaction-report: no */*.jsonl transcripts under {root}; --root should be "
+          "Claude Code's projects directory", file=sys.stderr)
+    sys.exit(2)
 rows = []   # [time, project, trigger, tokens, idle minutes, version, flag]
-for path in glob.glob(os.path.join(glob.escape(root), "*", "*.jsonl")):
+unread = 0  # compaction records whose timestamp couldn't be parsed
+for path in paths:
     if os.path.getmtime(path) < cutoff:
         continue
     last = row = None   # last real activity; the compaction a notice would belong to
@@ -61,7 +67,9 @@ for path in glob.glob(os.path.join(glob.escape(root), "*", "*.jsonl")):
                 continue
             t = when(d.get("timestamp"))
             kind = (d.get("type"), d.get("subtype"))
-            if kind == ("system", "compact_boundary") and t:
+            if kind == ("system", "compact_boundary") and not t:
+                unread += 1
+            elif kind == ("system", "compact_boundary"):
                 cm = d.get("compactMetadata") if isinstance(d.get("compactMetadata"), dict) else {}
                 dur = cm.get("durationMs")
                 # The record is written when compaction ends; measure idle time to its start.
@@ -79,6 +87,9 @@ for path in glob.glob(os.path.join(glob.escape(root), "*", "*.jsonl")):
                     d.get("isMeta") or d.get("isSidechain") or d.get("isCompactSummary")):
                 last, row = t, None
 
+if unread:
+    print(f"compaction-report: skipped {unread} compaction record(s) with an unreadable "
+          "timestamp; the transcript format may have changed", file=sys.stderr)
 if not rows:
     print(f"No compactions in the last {days} day(s) under {root}")
     sys.exit(0)

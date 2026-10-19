@@ -70,7 +70,7 @@ fi
 
 echo "== 3. @references resolve =="
 if ! python3 -I - <(list_files '*.md') <<'PY'
-import os, re, sys
+import os, re, subprocess, sys
 ref_re = re.compile(r'(?:^|[\s(])@([A-Za-z0-9._\-/~]+)')
 with open(sys.argv[1], encoding='utf-8') as lf:
     files = [ln.strip() for ln in lf if ln.strip()]
@@ -93,8 +93,20 @@ for src in files:
                 checked += 1
                 cands = [ref, os.path.join(os.path.dirname(src), ref)]
                 if not any(os.path.exists(c) for c in cands):
-                    broken.append((src, ref))
-for src, ref in broken:
+                    broken.append((src, ref, cands))
+# A missing target that git ignores is a local-only file (personal data, say), absent from
+# every clone and CI checkout by design: report it, don't fail on it.
+def ignored(paths):   # --quiet takes one path at a time
+    try:
+        return any(subprocess.run(['git', 'check-ignore', '-q', '--', p], capture_output=True)
+                   .returncode == 0 for p in set(paths))
+    except OSError:
+        return False
+local = [b for b in broken if ignored(b[2])]
+broken = [b for b in broken if b not in local]
+for src, ref, _ in local:
+    print(f"  ok   @{ref}  (gitignored, local-only; not checked; referenced in {src})")
+for src, ref, _ in broken:
     print(f"  FAIL @{ref}  (referenced in {src})")
 print(f"  checked {checked} reference(s); {len(broken)} broken")
 sys.exit(1 if broken else 0)
@@ -178,8 +190,11 @@ def err(m):
     print(f"  FAIL {m}")
 
 d = json.load(open('.claude/settings.json'))
-PROJ = re.compile(r'\$\{?CLAUDE_PROJECT_DIR\}?/([^"\'\s;|&]+)')
-LEAD = re.compile(r'^\s*"?\$\{?CLAUDE_PROJECT_DIR\}?/')
+# Both quoting styles: "$CLAUDE_PROJECT_DIR/x.sh" and "$CLAUDE_PROJECT_DIR"/x.sh
+PROJ = re.compile(r'\$\{?CLAUDE_PROJECT_DIR\}?"?/([^"\'\s;|&]+)')
+LEAD = re.compile(r'^\s*"?\$\{?CLAUDE_PROJECT_DIR\}?"?/')
+if d.get('disableAllHooks'):
+    err("settings.json sets disableAllHooks: every hook, including the guard, is off")
 wired = []   # (event, matcher, command line)
 hooks = d.get('hooks') if isinstance(d.get('hooks'), dict) else {}
 for event, groups in hooks.items():
@@ -211,10 +226,14 @@ def covers_bash(m):
         return m in ('', '*') or re.fullmatch(str(m), 'Bash') is not None
     except re.error:
         return False
-if any(e == 'PreToolUse' and 'block-dangerous' in c and covers_bash(m) for e, m, c in wired):
+# The guard must be wired on Bash to a script that exists (project-relative or absolute).
+def guard_script(c):
+    paths = PROJ.findall(c) + re.findall(r'(?:^|[\s"\'])(/[^\s"\';|&]*block-dangerous\.sh)', c)
+    return any(p.endswith('block-dangerous.sh') and os.path.isfile(p) for p in paths)
+if any(e == 'PreToolUse' and covers_bash(m) and guard_script(c) for e, m, c in wired):
     ok("settings.json wires the dangerous-command guard as a PreToolUse hook on Bash")
 else:
-    err("settings.json does not wire .claude/hooks/block-dangerous.sh as a PreToolUse hook on Bash")
+    err("settings.json does not wire an existing block-dangerous.sh as a PreToolUse hook on Bash")
 sys.exit(bad)
 PY
 then fail=1; fi
@@ -229,7 +248,7 @@ echo "== 6. Posture invariants (silent-regression defense) =="
 # whose diff against main looked like deletions of deny-list / redaction lines).
 # These checks ensure those exact protections stay present.
 if ! python3 -I - <<'PY'
-import json, re, sys
+import json, re, subprocess, sys
 posture_fail = 0
 def ok(m): print(f"  ok   {m}")
 def err(m):
@@ -252,16 +271,30 @@ if missing:
 else:
     ok(f"settings.json deny covers {len(home)} home credential stores (~/.ssh, ~/.aws, ...)")
 
-gi = open('.gitignore').read()
+try:
+    gi = open('.gitignore').read()
+except OSError:
+    gi = ''
+    err(".gitignore is missing")
 for pat in ('*_key', '*_secret'):
     if re.search(rf'^{re.escape(pat)}\s*$', gi, re.M):
         ok(f".gitignore contains {pat}")
     else:
         err(f".gitignore missing {pat}")
+# Snapshots hold raw conversation, so `git add -A` must never stage them. Ask git when it
+# can answer (any pattern style); outside a repo, look for the template's line.
+probe = subprocess.run(['git', 'check-ignore', '-q', '.claude/snapshots/probe.md'], capture_output=True)
+if probe.returncode in (0, 1):
+    snaps_ignored = probe.returncode == 0
+else:
+    snaps_ignored = bool(re.search(r'^/?\.claude/snapshots(/\*?)?\s*$', gi, re.M))
+(ok if snaps_ignored else err)(".gitignore ignores .claude/snapshots/ (raw conversation)")
 
 # Only the code before this section, without comments: these markers also appear in this
 # heredoc and in comments, which would make the checks pass even if the real lines regressed.
-src = open('scripts/check-template.sh').read().split('\necho "== 6.', 1)[0]
+src, header, _ = open('scripts/check-template.sh').read().partition('\necho "== 6.')
+if not header:
+    err('check-template.sh: the "== 6." header moved, so these checks would read their own text')
 src = '\n'.join(l for l in src.splitlines() if not l.lstrip().startswith('#'))
 re_markers = ['_key$', '_secret$', r'\.keystore$']
 missing = [m for m in re_markers if m not in src]

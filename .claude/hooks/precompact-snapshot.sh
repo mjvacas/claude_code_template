@@ -20,7 +20,7 @@ umask 077   # raw conversation: owner-only (dir 700, files 600)
 mkdir -p "$dir" 2>/dev/null || exit 0
 chmod 700 "$dir" 2>/dev/null || true   # a directory made before this fix
 
-out=$(EVENT_JSON="$input" python3 -I - "$dir" <<'PY' 2>/dev/null
+out=$(EVENT_JSON="$input" python3 -I - "$dir" <<'PY'
 import json, os, re, sys, datetime
 
 try:
@@ -84,18 +84,30 @@ with open(path, "w", encoding="utf-8") as o:
         o.write(f"**{role}:** {text}\n\n")
 print(path)
 
-# Keep the newest KEEP snapshots (the fixed-width stamp sorts by time), touching only files
-# named the way this hook names them. Kept ones written before the umask fix heal to 600.
+# Keep the one just written plus the newest KEEP-1 others, by modification time (names use
+# local time, which a timezone change reorders), touching only files named the way this
+# hook names them. Kept ones written before the umask fix heal to 600. Errors go to stderr,
+# one file at a time, so one bad file doesn't stop the rest.
 KEEP = 20
-try:
-    mine = sorted(f for f in os.listdir(outdir)
-                  if re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d-\d\d-\d\d-[^/]+\.md", f))
-    for f in mine[:-KEEP]:
+def mtime(f):
+    try:
+        return os.path.getmtime(os.path.join(outdir, f))
+    except OSError:
+        return 0
+others = sorted((f for f in os.listdir(outdir) if f != os.path.basename(path)
+                 and re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d-\d\d-\d\d-[^/]+\.md", f)),
+                key=lambda f: (mtime(f), f))
+cut = max(0, len(others) - (KEEP - 1))
+for f in others[:cut]:
+    try:
         os.remove(os.path.join(outdir, f))
-    for f in mine[-KEEP:]:
+    except OSError as e:
+        print(f"precompact-snapshot: can't prune {f}: {e}", file=sys.stderr)
+for f in others[cut:]:
+    try:
         os.chmod(os.path.join(outdir, f), 0o600)
-except OSError:
-    pass
+    except OSError as e:
+        print(f"precompact-snapshot: can't make {f} owner-only: {e}", file=sys.stderr)
 PY
 ) || true
 

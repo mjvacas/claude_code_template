@@ -1,5 +1,6 @@
 # Cases for .claude/hooks/block-dangerous.sh, one per line: BLOCK or ALLOW, a space, then
-# the command exactly as Claude would run it. `<NL>` stands for a newline. Data only:
+# the command exactly as Claude would run it. `<NL>` stands for a newline (after a `\` it
+# is a line continuation, which bash joins). Data only:
 # nothing here is executed, and these strings must stay out of Bash command lines (the
 # live hook would block them), so read or grep this file with the file tools.
 
@@ -25,6 +26,11 @@ BLOCK sudo rm -rf /
 BLOCK cd x && rm -rf ~
 BLOCK ls; rm -rf /
 BLOCK true<NL>rm -rf /
+BLOCK rm -rf \<NL>/
+BLOCK (rm -rf ~)
+BLOCK rm -rf ./build /
+BLOCK rm -rf "$OUT" ~
+BLOCK rm -rf \<NL>"$HOME"
 ALLOW rm -rf ./build
 ALLOW rm -rf build/
 ALLOW rm -rf node_modules
@@ -35,6 +41,8 @@ ALLOW rm -rf '~'
 ALLOW rm -rf "~"
 ALLOW rm -rf '$HOME'
 ALLOW rm -f tmp.txt
+ALLOW rm -f a.txt && cd ~
+ALLOW rm -rf $HOME/projects/old-build
 ALLOW echo "rm -rf /"
 ALLOW grep -rn "rm -rf" docs
 
@@ -55,6 +63,8 @@ BLOCK git -C ../repo push --force
 BLOCK git -c push.default=current push -f
 BLOCK git --no-pager push --force
 BLOCK cd repo && git push --force
+BLOCK (cd repo && git push --force)
+BLOCK git push origin main \<NL>  --force
 BLOCK git push -d origin main
 BLOCK git push --delete origin master
 BLOCK git push origin --delete main
@@ -73,12 +83,14 @@ ALLOW git push --no-verify origin main
 ALLOW git push origin feature-fix
 ALLOW git push origin mainline
 ALLOW git push origin main && rm -f tmp.txt
+ALLOW (cd repo && git push origin main)
 ALLOW git push origin main; ls -f
 ALLOW git push origin main<NL>ls -f
 
 # git reset --hard and git clean -fd
 BLOCK git reset --hard
 BLOCK git reset --hard HEAD~1
+BLOCK git reset \<NL>  --hard
 BLOCK git clean -fd
 BLOCK git clean -df
 BLOCK git clean -xfd

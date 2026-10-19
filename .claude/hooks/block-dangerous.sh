@@ -29,8 +29,10 @@ print(d.get("tool_input", {}).get("command", "") if d.get("tool_name") == "Bash"
   printf '%s' "$input" | grep -E '"tool_name"[[:space:]]*:[[:space:]]*"Bash"' >/dev/null || exit 0
   cmd=$(printf '%s' "$input" \
     | sed -nE 's/.*"command"[[:space:]]*:[[:space:]]*"(([^"\\]|\\.)*)".*/\1/p' \
-    | sed -e 's/\\"/"/g' -e 's#\\/#/#g' -e 's/\\\\/\\/g' -e 's/\\n/;/g' -e 's/\\[rt]/ /g')
+    | sed -e 's/\\\\\\n//g' -e 's/\\"/"/g' -e 's#\\/#/#g' -e 's/\\\\/\\/g' -e 's/\\n/;/g' -e 's/\\[rt]/ /g')
 fi
+# Bash joins a backslash-newline continuation into one line; grep reads line by line.
+cmd=${cmd//"\\"$'\n'/}
 [ -n "$cmd" ] || exit 0
 
 deny() {
@@ -47,13 +49,14 @@ deny() {
 block_if() { if printf '%s' "$cmd" | grep -E "$1" >/dev/null; then deny "$2"; fi; }
 
 # rm of root / home / parent — NOT ./build, dist, node_modules, "$TMPDIR/x" (those pass;
-# the existing `ask: rm` rule still prompts on them). Target is anchored to the rm command.
-block_if '(^|[^[:alnum:]_-])rm([[:space:]]+-{1,2}[A-Za-z-]+)*[[:space:]]+((/|~|\$HOME|\$\{HOME\})(/?\*?)?|\.\./?)([[:space:]]|;|&|\||$)' \
+# the existing `ask: rm` rule still prompts on them). Any argument of the rm command counts,
+# so `rm -rf ./build /` (a stray space) is caught too.
+block_if '(^|[^[:alnum:]_-])rm([[:space:]]+[^[:space:];&|]+)*[[:space:]]+((/|~|\$HOME|\$\{HOME\})(/?\*?)?|\.\./?)([[:space:]]|;|&|\||\)|$)' \
   'rm targeting / ~ $HOME /* or .. — refusing catastrophic recursive delete'
 # The same targets in quotes. Both quotes are required, so `echo "rm -rf /"` still passes;
 # a quoted "~" names a literal directory called ~, so it passes too.
 q="[\"']"
-block_if '(^|[^[:alnum:]_-])rm([[:space:]]+-{1,2}[A-Za-z-]+)*[[:space:]]+("\$(HOME|\{HOME\})/?"|'"$q"'(/|\.\.)/?'"$q"')(/?\*?)?([[:space:]]|;|&|\||$)' \
+block_if '(^|[^[:alnum:]_-])rm([[:space:]]+[^[:space:];&|]+)*[[:space:]]+("\$(HOME|\{HOME\})/?"|'"$q"'(/|\.\.)/?'"$q"')(/?\*?)?([[:space:]]|;|&|\||\)|$)' \
   'rm targeting a quoted $HOME, / or .. — refusing catastrophic recursive delete'
 
 # git: history- and worktree-destroying operations
@@ -62,7 +65,7 @@ block_if '(^|[^[:alnum:]_-])git[[:space:]]+reset[[:space:]].*--hard' \
 # `git [-C dir | -c k=v | --opt] push`, then arguments that stop at ; & |
 gp='(^|[^[:alnum:]_-])git([[:space:]]+(-[Cc][[:space:]]+[^[:space:];&|]+|--[a-z-]+(=[^[:space:];&|]+)?))*[[:space:]]+push'
 arg='[[:space:]]+[^[:space:];&|]+'
-end='([[:space:]]|=|;|&|\||$)'
+end='([[:space:]]|=|;|&|\||\)|$)'
 block_if "$gp($arg)*[[:space:]]+(--force[a-z-]*|-[[:alnum:]]*f[[:alnum:]]*|\+[^[:space:];&|]+|--mirror|--prune)$end" \
   'git push --force / -f / +ref / --mirror / --prune (rewrites or deletes remote history)'
 # Deleting main/master on the remote. Other branch deletions stay prompt-only (`ask: git push`).

@@ -56,7 +56,9 @@ Pre-0.1.0 history is kept below in the original date-stamped sections.
   text also passed (`grep -q` under `pipefail`), as did force pushes written as
   `+ref`, `--mirror`, `--prune`, `-uf` or `git -C dir push`, deleting `main`/`master`
   on the remote, and quoted `rm` targets (`"$HOME"`, `'/'`). It also blocked harmless
-  `git push … && rm -f tmp.txt`. The hook now falls back to reading the raw event
+  `git push … && rm -f tmp.txt`, and missed commands split with a trailing backslash,
+  which bash joins but the guard read line by line, commands closed by `)` in a
+  subshell, and an `rm` target after another path (a stray space). The hook now falls back to reading the raw event
   when `python3` can't, and `tests/block-dangerous/` covers each case with and
   without `python3` and under bash 3.2. Deleting other remote branches still only
   prompts (`ask: git push`).
@@ -68,13 +70,18 @@ Pre-0.1.0 history is kept below in the original date-stamped sections.
   guard is wired on Bash. §6's checks for the secret-scan regex and its `-e` flag read
   their own source, where the markers also appear, so they always passed; they now read
   only the code before §6. `tests/check-template/` breaks each protection in a copy of
-  the repo and requires the check to fail.
+  the repo and requires the check to fail. It also catches the guard wired as
+  `"$CLAUDE_PROJECT_DIR"/…` and then deleted, `disableAllHooks`, a moved §6 header, a
+  missing `.gitignore` (which crashed §6) and snapshots that aren't gitignored. An
+  `@`-import of a gitignored, local-only file no longer fails §3 on every clone.
 - **Context snapshots were world-readable and never pruned** — `precompact-snapshot.sh`
   wrote raw conversation (possibly secrets) at mode 644 in a 755 directory and kept
   every snapshot; idle compaction makes them pile up faster. They are now owner-only
   (directory 700, files 600), only the newest 20 are kept, and `check-template.sh` §4
   checks their mode. A transcript line that wasn't a JSON object made the hook write
-  nothing; it now skips such lines. **Migration:**
+  nothing; it now skips such lines. It never prunes the snapshot it just wrote (names
+  use local time, so a timezone change could push it out) and reports pruning errors.
+  **Migration:**
   `chmod 700 .claude/snapshots && chmod 600 .claude/snapshots/*`.
 - **`check-template.sh` §4 misread file modes on Linux** — it tried BSD `stat -f` first,
   which GNU `stat` reads as "show filesystem info", so a local `.env` at mode 600 failed

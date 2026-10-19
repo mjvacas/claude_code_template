@@ -36,6 +36,18 @@ bash "$report" --root "$root/missing" >/dev/null 2>&1; rc=$?
 [ "$rc" -eq 2 ] && ok "a missing --root exits 2" || err "a missing --root exited $rc"
 bash "$report" --days >/dev/null 2>&1; rc=$?
 [ "$rc" -eq 2 ] && ok "--days with no value exits 2" || err "--days with no value exited $rc"
+# One level too high or too low reads no transcripts: an error, not "No compactions".
+for r in tests/compaction-report/fixtures "$root/-fixture-demo"; do
+  out=$(bash "$report" --root "$r" --days 36500 2>&1); rc=$?
+  [ "$rc" -eq 2 ] && grep -q 'no \*/\*.jsonl transcripts' <<<"$out" && ok "--root $r exits 2" ||
+    err "--root $r exited $rc: $out"
+done
+tmp=$(mktemp -d) || exit 1
+trap 'rm -rf "$tmp"' EXIT
+mkdir -p "$tmp/p" && printf '{"type":"system","subtype":"compact_boundary","timestamp":"yesterday"}\n' > "$tmp/p/x.jsonl"
+out=$(bash "$report" --root "$tmp" --days 36500 2>&1)
+grep -q 'skipped 1 compaction record' <<<"$out" && ok "reports a record it couldn't read" ||
+  err "silent about an unreadable record: $out"
 
 echo
 if [ "$fail" -ne 0 ]; then echo "RESULT: FAIL"; exit 1; fi
