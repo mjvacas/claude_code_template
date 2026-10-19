@@ -82,15 +82,16 @@ Pre-0.1.0 history is kept below in the original date-stamped sections.
   nothing; it now skips such lines. It never prunes the snapshot it just wrote (names
   use local time, so a timezone change could push it out) and reports pruning errors.
   **Migration:**
-  `chmod 700 .claude/snapshots && chmod 600 .claude/snapshots/*`.
+  `[ -d .claude/snapshots ] && { chmod 700 .claude/snapshots; find .claude/snapshots -type f -exec chmod 600 {} +; }`
+  (the hook also fixes them the next time it runs).
 - **`check-template.sh` §4 misread file modes on Linux** — it tried BSD `stat -f` first,
   which GNU `stat` reads as "show filesystem info", so a local `.env` at mode 600 failed
   the check on Linux. It now tries the GNU form first.
-- **Template python ran with the project folder on its import path** — `python3 -c`
-  and `python3 -` import from the working directory first, so a `json.py` in a project
-  would have run on every Bash call (the guard), every status-line redraw and every
-  compaction. Every python call in the hooks and scripts now uses `-I`. **Adopters:** check
-  your own hooks for `python3 -c` or `python3 -` without `-I`.
+- **Template python ran with the project folder on its import path** — `python3 -c` and
+  `python3 -` import from the working directory first, so a `json.py` in a project would
+  have run on every Bash call (the guard), every status-line redraw and every
+  compaction. Every python call in the hooks and scripts now uses `-I`. **Migration:**
+  add `-I` to the `python3 -c` and `python3 -` calls in your own hooks and scripts.
 - **`docs/ADOPTING.md` gaps found by dry-run adoptions** — a fresh adoption and re-syncs
   of two adopter repos (on throwaway clones) turned up:
   - **Re-sync could silently drop an adopter's own hooks.** It blind-copied a changed

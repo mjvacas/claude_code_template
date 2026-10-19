@@ -648,7 +648,9 @@ The session will:
 3. Run, against the template repo:
    `git log --oneline <pin>..<target> -- <upstream-paths>`, taking the paths from
    `VENDORED.md`'s **Upstream path** column (a relocated file keeps its template path
-   there; your local path would silently match nothing). Add `--diff-filter=D` to spot
+   there; your local path would silently match nothing). Pass each path as its own
+   argument: zsh doesn't split an unquoted `$paths`, so the log comes back empty. An
+   empty log for an old pin means the command is wrong, not that nothing changed. Add `--diff-filter=D` to spot
    files **deleted upstream** (handled in step 7). Then check for **drift**: for each
    row, `git -C ../claude_code_template show <pin>:<upstream-path> | diff - <local-path>`.
    A row recorded as vendor-as-is whose copy differs has local changes nobody
@@ -700,10 +702,13 @@ The session will:
      body, then re-apply your repoint. For `.claude/settings.json`, start from the
      target copy, re-add your own allow, ask and deny rules, and put each of your
      hook entries back under the matching event and matcher — never drop a local
-     hook (`check-template.sh` can't tell that one is missing).
+     hook (`check-template.sh` can't tell that one is missing). "Your own" means what
+     the step-3 drift diff adds against the pin; rules the pin shipped and the target
+     dropped stay dropped.
    - **Migrate** — apply every `**Migration:**` note in the `CHANGELOG` range
-     (a `chmod`, a changed default, a setting to add), or verification can fail on
-     state the new files expect.
+     (a `chmod`, a changed default, a setting to add), including ones about your own
+     files rather than vendored ones, or verification can fail on state the new
+     files expect. A note whose target doesn't exist locally is a no-op.
 
    After Update/Merge, run `grep -rnE '@(templates|docs/adr)/' .claude/commands .claude/skills`
    — a surviving ref dangles (and fails § 3 at step 9) unless its target sits at
