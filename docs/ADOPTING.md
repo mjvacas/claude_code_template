@@ -233,10 +233,11 @@ The session will:
    `(cd ../claude_code_template && git rev-parse HEAD && git describe --tags --exact-match || echo untagged)`.
    Pin to the tag when there is one. Refuse to proceed on a dirty template tree.
 3. Ask, in one batch, everything the later steps need: tech stack, structure and
-   key commands (the `CLAUDE.md` placeholders), the GitHub handle or team for
-   CODEOWNERS, the LICENSE holder, a security contact, whether to fill in the
-   PROJECT_SPEC / ARCHITECTURE / BUILD_PLAN triad now, and any baseline plugin to
-   skip.
+   key commands (the `CLAUDE.md` placeholders, and which of those commands to add to
+   the `settings.json` allow list), the GitHub handle or team for CODEOWNERS, the
+   LICENSE holder, a security contact, whether to fill in the PROJECT_SPEC /
+   ARCHITECTURE / BUILD_PLAN triad now (either way the blanks go in `templates/`;
+   filled-in copies go to `docs/<NAME>.md`), and any baseline plugin to skip.
 4. Copy every **vendor-as-is** file from the file map with `cp -p`, which keeps
    the hooks and scripts executable.
 5. Copy each **adapt** file and make the project-specific edits
@@ -265,9 +266,10 @@ The session will:
    moved the template's ADRs into a sub-folder. Quick scan to confirm:
    `grep -rnE '@(templates|docs/adr)/' .claude/commands .claude/skills`.
    Also scan vendored skeleton templates (especially `templates/AI_SESSION_START.md`)
-   for inline `docs/skill-security.md` / `docs/adr/ADR-NNN-*.md` references —
-   they're prose-level path mentions rather than `@`-imports so
-   `scripts/check-template.sh` doesn't catch them, but they break the same way.
+   and `SECURITY.md` for inline `docs/skill-security.md` / `docs/adr/ADR-NNN-*.md`
+   references — they're prose-level path mentions rather than `@`-imports so
+   `scripts/check-template.sh` doesn't catch them, but they break the same way. Point
+   each at the upstream URL at your pinned tag, or vendor the file.
    Adopters with their own `docs/adr/` series should sub-namespace template
    ADRs (see the callout above).
    `scripts/check-template.sh` § 3 (the `@`-reference resolution check, step 11
@@ -355,9 +357,10 @@ The session will:
    moved the template's ADRs into a sub-folder. Quick scan to confirm:
    `grep -rnE '@(templates|docs/adr)/' .claude/commands .claude/skills`.
    Also scan vendored skeleton templates (especially `templates/AI_SESSION_START.md`)
-   for inline `docs/skill-security.md` / `docs/adr/ADR-NNN-*.md` references —
-   they're prose-level path mentions rather than `@`-imports so
-   `scripts/check-template.sh` doesn't catch them, but they break the same way.
+   and `SECURITY.md` for inline `docs/skill-security.md` / `docs/adr/ADR-NNN-*.md`
+   references — they're prose-level path mentions rather than `@`-imports so
+   `scripts/check-template.sh` doesn't catch them, but they break the same way. Point
+   each at the upstream URL at your pinned tag, or vendor the file.
    Adopters with their own `docs/adr/` series should sub-namespace template
    ADRs (see the callout above).
    `scripts/check-template.sh` § 3 (the `@`-reference resolution check, step 10
@@ -532,19 +535,22 @@ convenience.
 
 ## File map
 
-Some files only work together. Adopt or skip each of these sets whole:
+Some files only work together. Take each of these sets whole, never part of one:
 
 - **Session context:** `/session-start` and `/handoff`, `AI_CONTEXT.md` (and its
   `@AI_CONTEXT.md` line in `CLAUDE.md`'s Context System), `templates/AI_SESSION_START.md`,
   `docs/summaries/`, ADR-002 and ADR-004, and the `session-context.sh` and
   `precompact-snapshot.sh` hooks with their `settings.json` wiring and the
-  `.claude/snapshots/` line in `.gitignore`.
+  `.claude/snapshots/` line in `.gitignore`. `/handoff` also uses the Decisions set.
 - **Decisions:** `/adr`, `templates/ADR-template.md` and `docs/adr/`.
-- **Safety:** `settings.json`, `block-dangerous.sh`, `check-template.sh` and
-  `audit-config.sh`, and `check.yml`.
+- **Safety:** `settings.json`, `block-dangerous.sh`, `statusline.sh`, `check-template.sh`,
+  `audit-config.sh` and `check.yml`.
 
-`check-template.sh` catches some gaps (a missing `@`-import target, a wired hook whose
-script is gone) but not all: dropping `/session-start` alone, for example, passes.
+Today the template expects all three: `check-template.sh` requires `docs/adr/`,
+`docs/summaries/` and the snapshots line in `.gitignore`, and `/handoff` imports the ADR
+template, so skipping a set means editing the others. Within a set, the check catches some
+gaps (a missing `@`-import target, a wired hook whose script is gone) but not all:
+dropping `/session-start` alone, for example, passes.
 
 ### Vendor as-is (copy verbatim)
 
@@ -581,8 +587,8 @@ script is gone) but not all: dropping `/session-start` alone, for example, passe
 | `.claude/settings.json` | Permissions baseline and hook wiring. Add your own allow rules, denies and hooks. It wires four scripts (`block-dangerous.sh`, `session-context.sh`, `precompact-snapshot.sh`, `statusline.sh`); `check-template.sh` §5 fails if one is missing, so remove a script and its wiring together, and record that in `VENDORED.md`. |
 | `.claude/commands/session-start.md` | Customize section headers per project. |
 | `.claude/commands/handoff.md` | Minor tone customization. |
-| `.github/CODEOWNERS` | Replace the owner handle with your own GitHub handle/team. It **ships as `@mjvacas`** (the template maintainer), not a `@<owner>` placeholder — `grep @mjvacas .github/CODEOWNERS` to find every line, or you silently leave the maintainer as code-owner of your security-critical files. |
-| `.gitignore` | Keep the security entries; append project patterns. |
+| `.github/CODEOWNERS` | Replace the owner handle with your own GitHub handle/team. It **ships as `@mjvacas`** (the template maintainer), not a `@<owner>` placeholder — `grep @mjvacas .github/CODEOWNERS` to find every line, or you silently leave the maintainer as code-owner of your security-critical files. Then delete the `# ADOPTERS:` comment block, which a find-and-replace would turn into nonsense. |
+| `.gitignore` | Keep the security entries and the `.claude/snapshots/` line; append project patterns. Drop the `bench/results/` lines unless you vendored `cc-task-bench`. |
 | `SECURITY.md` | Add a private contact if you want one; customize scope. |
 | `LICENSE` | Update copyright holder. |
 
