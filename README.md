@@ -57,7 +57,7 @@ CONTRIBUTING.md               # Sending fixes back + this repo's working agreeme
 scripts/
 ├── check-template.sh         # Integrity + secrets smoke-test (run manually + in CI)
 └── audit-config.sh           # Reports what .claude/ artifacts and plugins do — vet before trusting
-tests/                        # Regression tests: audit-config.sh, the guard hook (template-internal)
+tests/                        # Regression tests: audit-config.sh, check-template.sh, the guard hook (template-internal)
 docs/
 ├── ADOPTING.md               # Adoption + re-sync procedure (the session reads this to adopt)
 ├── claude-code-setup.md      # How the native config is wired; what to customize

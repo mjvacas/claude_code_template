@@ -60,10 +60,19 @@ Pre-0.1.0 history is kept below in the original date-stamped sections.
   when `python3` can't, and `tests/block-dangerous/` covers each case with and
   without `python3` and under bash 3.2. Deleting other remote branches still only
   prompts (`ask: git push`).
+- **`check-template.sh` couldn't catch a deleted guard, and two checks couldn't fail** —
+  §5 only looked for the guard's name in `settings.json`, so deleting
+  `block-dangerous.sh` passed (and Claude Code treats a hook that can't start as a
+  non-blocking error, so the guard silently turns off). §5 now checks that every script
+  `settings.json` wires (hooks and `statusLine`) exists and is executable, and that the
+  guard is wired on Bash. §6's checks for the secret-scan regex and its `-e` flag read
+  their own source, where the markers also appear, so they always passed; they now read
+  only the code before §6. `tests/check-template/` breaks each protection in a copy of
+  the repo and requires the check to fail.
 
 ### Added
-- **Regression tests for the template's scripts** — `tests/audit-config/` and
-  `tests/block-dangerous/`, run on Linux and macOS by
+- **Regression tests for the template's scripts** — `tests/audit-config/`,
+  `tests/block-dangerous/` and `tests/check-template/`, run on Linux and macOS by
   `.github/workflows/template-tests.yml`. Template-internal (file map → Skip).
 - **`docs/skill-security.md`** — partial vendoring (take the skill, leave the
   plugin), same-source checksums aren't provenance, egress in compiled code and

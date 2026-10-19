@@ -9,8 +9,9 @@
 #   3. Every @reference in *.md resolves to a real file
 #   4. Secrets hygiene: no secret files tracked, no obvious secret material in
 #      tracked content, and the protections (.gitignore + settings deny) are present
-#   5. Safety guard + scaffolding: PreToolUse dangerous-command hook is wired,
-#      and the directories the commands/CLAUDE.md reference exist
+#   5. Safety guard + scaffolding: every script settings.json wires (hooks,
+#      statusLine) exists and is executable, the PreToolUse dangerous-command hook
+#      is wired on Bash, and the directories the commands/CLAUDE.md reference exist
 #   6. Posture invariants: the specific deny/.gitignore/regex lines that have
 #      silently regressed in the past (e.g. via an unrebased branch) stay present
 set -uo pipefail
@@ -162,12 +163,60 @@ done
 eval "$shopt_saved"
 
 echo "== 5. Safety guard + scaffolding =="
-# The PreToolUse guard must stay wired (deleting the script or the wiring is caught here).
-if python3 -c "import json; d=json.load(open('.claude/settings.json')); pt=d.get('hooks',{}).get('PreToolUse',[]); raise SystemExit(0 if any('block-dangerous' in h.get('command','') for g in pt for h in g.get('hooks',[])) else 1)" 2>/dev/null; then
-  ok "settings.json wires the PreToolUse dangerous-command guard"
-else
-  err "settings.json does not wire .claude/hooks/block-dangerous.sh as a PreToolUse hook"
-fi
+# Every script settings.json wires as "$CLAUDE_PROJECT_DIR/<path>" (hooks, statusLine) must
+# exist, and be executable when it is the command itself: a hook that can't start is a
+# non-blocking error, so a missing guard would silently turn off. Paths come from the
+# wiring, so a relocated script passes as long as its wiring moved with it.
+if ! python3 -I - <<'PY'
+import json, os, re, sys
+bad = 0
+def ok(m): print(f"  ok   {m}")
+def err(m):
+    global bad
+    bad = 1
+    print(f"  FAIL {m}")
+
+d = json.load(open('.claude/settings.json'))
+PROJ = re.compile(r'\$\{?CLAUDE_PROJECT_DIR\}?/([^"\'\s;|&]+)')
+LEAD = re.compile(r'^\s*"?\$\{?CLAUDE_PROJECT_DIR\}?/')
+wired = []   # (event, matcher, command line)
+hooks = d.get('hooks') if isinstance(d.get('hooks'), dict) else {}
+for event, groups in hooks.items():
+    for g in groups if isinstance(groups, list) else []:
+        if not isinstance(g, dict) or not isinstance(g.get('hooks'), list):
+            continue
+        for h in g['hooks']:
+            if isinstance(h, dict) and h.get('type', 'command') == 'command':
+                args = h.get('args') if isinstance(h.get('args'), list) else []
+                wired.append((event, g.get('matcher', ''), ' '.join(str(p) for p in [h.get('command', '')] + args)))
+sl = d.get('statusLine')
+if isinstance(sl, dict) and isinstance(sl.get('command'), str):
+    wired.append(('statusLine', '', sl['command']))
+
+for event, _, cmd in wired:
+    paths = PROJ.findall(cmd)
+    if not paths:
+        ok(f'wired: {event} -> {cmd[:60]} (not "$CLAUDE_PROJECT_DIR/..."; script not checked)')
+    for i, p in enumerate(paths):
+        if not os.path.isfile(p):
+            err(f"wired: {event} -> {p} is missing")
+        elif i == 0 and LEAD.match(cmd) and not os.access(p, os.X_OK):
+            err(f"wired: {event} -> {p} is not executable (chmod +x {p})")
+        else:
+            ok(f"wired: {event} -> {p}")
+
+def covers_bash(m):
+    try:
+        return m in ('', '*') or re.fullmatch(str(m), 'Bash') is not None
+    except re.error:
+        return False
+if any(e == 'PreToolUse' and 'block-dangerous' in c and covers_bash(m) for e, m, c in wired):
+    ok("settings.json wires the dangerous-command guard as a PreToolUse hook on Bash")
+else:
+    err("settings.json does not wire .claude/hooks/block-dangerous.sh as a PreToolUse hook on Bash")
+sys.exit(bad)
+PY
+then fail=1; fi
 # Directories referenced by CLAUDE.md / AI_CONTEXT.md / commands must exist.
 for d in docs/adr docs/summaries; do
   if [ -d "$d" ]; then ok "$d/ exists"; else err "missing directory: $d"; fi
@@ -199,7 +248,10 @@ for pat in ('*_key', '*_secret'):
     else:
         err(f".gitignore missing {pat}")
 
-src = open('scripts/check-template.sh').read()
+# Only the code before this section, without comments: these markers also appear in this
+# heredoc and in comments, which would make the checks pass even if the real lines regressed.
+src = open('scripts/check-template.sh').read().split('\necho "== 6.', 1)[0]
+src = '\n'.join(l for l in src.splitlines() if not l.lstrip().startswith('#'))
 re_markers = ['_key$', '_secret$', r'\.keystore$']
 missing = [m for m in re_markers if m not in src]
 if missing:
