@@ -89,14 +89,33 @@ Pre-0.1.0 history is kept below in the original date-stamped sections.
 - **Template python ran with the project folder on its import path** — `python3 -c`
   and `python3 -` import from the working directory first, so a `json.py` in a project
   would have run on every Bash call (the guard), every status-line redraw and every
-  compaction. Every python call in the hooks and scripts now uses `-I`.
+  compaction. Every python call in the hooks and scripts now uses `-I`. **Adopters:** check
+  your own hooks for `python3 -c` or `python3 -` without `-I`.
+- **`docs/ADOPTING.md` gaps found by dry-run adoptions** — a fresh adoption and re-syncs
+  of two adopter repos (on throwaway clones) turned up:
+  - **Re-sync could silently drop an adopter's own hooks.** It blind-copied a changed
+    vendor-as-is file even when the local copy had unrecorded changes, so a
+    `settings.json` with added guard hooks lost them and `check-template.sh` still
+    passed. Re-sync now checks every row for drift against the pinned upstream, routes
+    Update vs. Merge by the `VENDORED.md` Notes, and gives a `settings.json` merge
+    recipe that never drops a local hook.
+  - **No step applied `**Migration:**` notes**, so the snapshot `chmod` in this release
+    would fail verification after a re-sync. Re-sync has a Migrate step.
+  - Re-sync now fetches tags and checks out the target, uses `<pin>..<target>` with the
+    **Upstream path** column (local paths of relocated files matched nothing), stages
+    before verifying, reconciles every installed plugin, and runs the code-reviewer.
+  - New-repo adoption captures the tag, asks all its questions in one batch, copies
+    with `cp -p`, applies the `CLAUDE.md` bucket rules (dropping the template-internal
+    ADR highlights), describes a clean audit result, and runs the code-reviewer.
+  - The file map lists which files only work together (session context, decisions,
+    safety), marks `AI_CONTEXT.md` and `AI_SESSION_START.md` as required by
+    `/session-start` and `/handoff`, adds `docs/adr/.gitkeep`, and moves
+    `.claude/settings.json` to Adapt.
+  - The repoint steps and re-sync scan cover `handoff.md`'s `@docs/adr/ADR-004-…` refs
+    (`grep -rnE '@(templates|docs/adr)/'`); the Bucket-1 callout names every
+    reference-only pointer in `CLAUDE.md` and links them at your pinned tag.
+  - Comments in vendored files no longer point at template-only paths as if local.
 
-- **`docs/ADOPTING.md` gaps an adopter could trip on** — the repoint steps and the
-  re-sync scan missed `handoff.md`'s two `@docs/adr/ADR-004-…` refs (they dangle once
-  the template's ADRs move into a sub-folder); the scan is now
-  `grep -rnE '@(templates|docs/adr)/'`. The Bucket-1 callout now names every
-  reference-only pointer in `CLAUDE.md`, including `docs/ADOPTING.md` and the
-  `cc-task-bench` skill. `docs/ADOPTING.md` itself is in the file map.
 ### Added
 - **Idle compaction, documented, with a way to measure it** — Claude Code now compacts a
   long conversation (200K+ tokens) left idle for about 54 minutes, just before its prompt
@@ -117,12 +136,17 @@ Pre-0.1.0 history is kept below in the original date-stamped sections.
   pin, license and local patches to re-apply on every bump.
 
 ### Changed
+- **`.claude/settings.json` is an Adapt file, not vendor-as-is** — nearly every adopter adds
+  allow rules, denies or hooks to it, and re-sync now merges it instead of copying it.
+  **Migration:** if your `VENDORED.md` records it as vendor-as-is but you've changed it,
+  update that row before re-syncing.
 - **Acknowledgements** — README credits Agent Baseline, Trail of Bits'
   `claude-code-config` and zizmor for ideas used in this release (ideas only; nothing
   copied), and the Claude Code docs the new defaults follow.
 - **CODEOWNERS covers everything Claude Code loads or runs** — all of `.claude/` (it
   covered only `settings.json` and `hooks/`, leaving out commands, skills and the status
-  line), `CLAUDE.md`, `.mcp.json.example` and `.github/`, matching what
+  line), `CLAUDE.md` and the `AI_CONTEXT.md` it imports, `.mcp.json.example` and `.github/`,
+  matching what
   `docs/skill-security.md` recommends. It enforces only with "Require review from Code
   Owners", which a solo maintainer can't satisfy, so for solo repos it's documentary.
 - **Permissions: home credential stores denied; `CLAUDE.md` and `.github/` edits ask

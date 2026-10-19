@@ -305,7 +305,7 @@ scan -E "$danger" && high=1
 
 echo
 echo "Reviewed $n_files file(s) under '$target'."
-echo "Reminder: this reports; YOU decide. See docs/skill-security.md."
+echo "Reminder: this reports; YOU decide. See docs/skill-security.md in the template repo."
 if [ "$strict" -eq 1 ] && [ "$high" -eq 1 ]; then
   echo "STRICT: high-signal findings present -> exit 1"; exit 1
 fi

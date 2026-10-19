@@ -10,11 +10,11 @@
 # silent-revert risk class (an unrebased branch whose PR diff looks like deletions of
 # deny-list / redaction lines).
 #
-# Coverage: everything Claude Code loads or runs on its own (all of .claude/, CLAUDE.md,
-# the MCP template) and everything that runs in CI (.github/, which includes this file),
-# as docs/skill-security.md recommends. On a solo repo the toggle above would block your
-# own merges (GitHub doesn't let authors approve their PRs), so there this is documentary;
-# it enforces for teams.
+# Coverage: everything Claude Code loads or runs on its own (all of .claude/, CLAUDE.md and
+# the AI_CONTEXT.md it imports, the MCP template) and everything that runs in CI (.github/,
+# which includes this file), as docs/skill-security.md recommends. On a solo repo the
+# toggle above would block your own merges (GitHub doesn't let authors approve their PRs),
+# so there this is documentary; it enforces for teams.
 #
 # ADOPTERS: the @mjvacas below is the template maintainer, not a placeholder.
 # Replace every @mjvacas with your own GitHub handle/team, or you leave the
@@ -23,6 +23,7 @@
 .gitignore                @mjvacas
 SECURITY.md               @mjvacas
 CLAUDE.md                 @mjvacas
+AI_CONTEXT.md             @mjvacas
 .mcp.json.example         @mjvacas
 .claude/                  @mjvacas
 .github/                  @mjvacas

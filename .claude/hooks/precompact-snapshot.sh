@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # PreCompact hook — fires just before Claude Code compacts the conversation: automatically
-# near the context limit or after a long conversation sits idle (see docs/token-awareness.md
-# → Compaction), or on manual /compact. Compaction replaces the in-context
-# history with a summary; this writes a durable breadcrumb to disk first so the session's
-# recent state survives: a pointer to the append-only transcript (the de-facto write-ahead
-# log Claude Code already keeps) plus a tail of the most recent turns.
+# near the context limit or after a long conversation sits idle (see the template's
+# docs/token-awareness.md → Compaction), or on manual /compact. Compaction replaces the
+# in-context history with a summary; this writes a durable breadcrumb to disk first so the
+# session's recent state survives: a pointer to the append-only transcript (the de-facto
+# write-ahead log Claude Code already keeps) plus a tail of the most recent turns.
 #
 # This is a SAFETY NET for compaction/crash recovery — NOT a substitute for /handoff.
 # Promote anything worth keeping into AI_CONTEXT.md. A PreCompact hook's stdout is added to

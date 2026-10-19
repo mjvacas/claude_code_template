@@ -14,7 +14,7 @@
 # Block contract: we print a deny JSON to stdout AND `exit 2` with a stderr reason, so
 # the block holds on both older (exit-code) and newer (JSON permissionDecision) Claude
 # Code versions. Neither path lets a matched command through. Regression cases live in
-# tests/block-dangerous/cases.txt.
+# the template repo's tests/block-dangerous/cases.txt.
 set -euo pipefail
 
 input=$(cat)
