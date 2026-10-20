@@ -50,10 +50,6 @@ unwire_guard() {
 drop_ssh_deny() {
   python3 -I -c 'import json; p = ".claude/settings.json"; d = json.load(open(p)); d["permissions"]["deny"].remove("Read(~/.ssh/**)"); json.dump(d, open(p, "w"), indent=2)'
 }
-readable_snapshot() {
-  mkdir -p .claude/snapshots && printf 'x\n' > .claude/snapshots/2026-01-01T00-00-00-fixture.md &&
-    chmod 644 .claude/snapshots/2026-01-01T00-00-00-fixture.md
-}
 requote_and_delete_guard() {   # "$CLAUDE_PROJECT_DIR"/... is the style Claude Code's docs show
   python3 -I -c 'import json; p = ".claude/settings.json"; d = json.load(open(p))
 for g in d["hooks"]["PreToolUse"]:
@@ -68,9 +64,6 @@ disable_all_hooks() {
 move_section_6() {   # renamed header + the regression §6 exists to catch
   sed -i.bak -e 's/^echo "== 6\. /echo "== 6 /' -e '/^  hits=/s/git grep -nIE -e /git grep -nIE /' scripts/check-template.sh &&
     grep -q '^echo "== 6 ' scripts/check-template.sh
-}
-unignore_snapshots() {
-  sed -i.bak '/^\.claude\/snapshots\/$/d' .gitignore && ! grep -q 'snapshots/$' .gitignore
 }
 local_only_ref() {   # an @-import of a gitignored file that only exists on the owner's machine
   printf 'local/\n' >> .gitignore && printf 'See @local/notes.md for my data.\n' > LOCAL.md && git add LOCAL.md .gitignore
@@ -89,10 +82,8 @@ mutant "§6 header moved, -e dropped" 'the "== 6." header moved' move_section_6
 mutant "non-executable status line" "statusline.sh is not executable" chmod -x .claude/statusline.sh
 mutant "secret scan without -e" "secret-content scan uses -e" drop_dash_e
 mutant "no ~/.ssh deny" "missing home credential stores: Read(~/.ssh/**)" drop_ssh_deny
-mutant "snapshots not gitignored" "ignores .claude/snapshots/" unignore_snapshots
 mutant "no .gitignore" ".gitignore is missing" rm .gitignore
 variant "@-import of a gitignored local-only file" local_only_ref
-mutant "world-readable snapshot" "2026-01-01T00-00-00-fixture.md mode is 644" readable_snapshot
 
 echo
 if [ "$fail" -ne 0 ]; then echo "RESULT: FAIL"; exit 1; fi

@@ -149,10 +149,10 @@ else
   err "settings.json deny list does not cover .env reads"
 fi
 
-# Local secret-bearing files (when present at the repo root) and the context snapshots
-# (raw conversation) should be owner-only (mode 600). Mirrors the .gitignore /
-# settings.json deny patterns at the filesystem-ACL layer. Silent when no matching files
-# exist — template repos and most CI checkouts have none. Adopters with deeper layouts
+# Local secret-bearing files (when present at the repo root) should be owner-only
+# (mode 600). Mirrors the .gitignore / settings.json deny patterns at the
+# filesystem-ACL layer. Silent when no matching files exist — template repos and
+# most CI checkouts have none. Root-level only; adopters with deeper layouts
 # (e.g. `secrets/`) can extend the patterns list.
 # Save and restore nullglob so we don't disturb a caller that had it on (the script
 # is meant to be executed, not sourced, but `shopt -p` is the bash-idiomatic safe form).
@@ -160,7 +160,7 @@ shopt_saved=$(shopt -p nullglob)
 shopt -s nullglob
 for pattern in '.env' '.env.*' '.mcp.json' '.claude/settings.local.json' \
                '*.pem' '*.key' '*.p12' '*.pfx' '*.keystore' \
-               '*_key' '*_secret' 'id_rsa' 'id_ed25519' '.claude/snapshots/*.md'; do
+               '*_key' '*_secret' 'id_rsa' 'id_ed25519'; do
   for path in $pattern; do
     [ -f "$path" ] || continue
     case "$path" in *.example) continue ;; esac
@@ -248,7 +248,7 @@ echo "== 6. Posture invariants (silent-regression defense) =="
 # whose diff against main looked like deletions of deny-list / redaction lines).
 # These checks ensure those exact protections stay present.
 if ! python3 -I - <<'PY'
-import json, re, subprocess, sys
+import json, re, sys
 posture_fail = 0
 def ok(m): print(f"  ok   {m}")
 def err(m):
@@ -281,14 +281,6 @@ for pat in ('*_key', '*_secret'):
         ok(f".gitignore contains {pat}")
     else:
         err(f".gitignore missing {pat}")
-# Snapshots hold raw conversation, so `git add -A` must never stage them. Ask git when it
-# can answer (any pattern style); outside a repo, look for the template's line.
-probe = subprocess.run(['git', 'check-ignore', '-q', '.claude/snapshots/probe.md'], capture_output=True)
-if probe.returncode in (0, 1):
-    snaps_ignored = probe.returncode == 0
-else:
-    snaps_ignored = bool(re.search(r'^/?\.claude/snapshots(/\*?)?\s*$', gi, re.M))
-(ok if snaps_ignored else err)(".gitignore ignores .claude/snapshots/ (raw conversation)")
 
 # Only the code before this section, without comments: these markers also appear in this
 # heredoc and in comments, which would make the checks pass even if the real lines regressed.

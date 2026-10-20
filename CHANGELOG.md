@@ -30,15 +30,18 @@ MINOR under [ADR-006](docs/adr/ADR-006-versioning-and-release-management.md):
 - **Safer defaults.** The dangerous-command guard keeps working without `python3` and
   catches more forms. Reads of credential stores in your home directory (`~/.ssh`,
   `~/.aws`, …) are denied. Claude asks before editing `CLAUDE.md`, CI config and the
-  template's own checks. Context snapshots are private and pruned.
+  template's own checks.
 - **Compaction you can see.** Claude Code now compacts long sessions left idle.
   `docs/token-awareness.md` explains when and how to opt out, and
   `scripts/compaction-report.sh` shows which of your sessions were compacted and why.
 - **Re-sync that keeps your changes.** Re-sync detects local edits to vendored files and
   merges them instead of overwriting, applies migration notes, and the file map says
   which files only work together.
-- **Tested.** Regression suites for the auditor, the self-check, two hooks and the
+- **Tested.** Regression suites for the auditor, the self-check, the guard hook and the
   compaction report run on Linux and macOS in CI.
+- **One feature removed.** The PreCompact snapshot hook is gone: it was rarely read,
+  Claude Code already points each compacted session at its full transcript, and its file
+  handling could be turned against you (see Removed).
 
 Worked examples: an audit of a sample plugin in
 [`docs/skill-security.md`](docs/skill-security.md#example-what-the-auditor-shows), a
@@ -49,8 +52,10 @@ what Claude sees when it's refused in
 ### Migration
 1. If `VENDORED.md` records `.claude/settings.json` as vendor-as-is but you've changed
    it, update that row before re-syncing. It's an Adapt file now: re-sync merges it.
-2. Make existing context snapshots private (the hook also fixes them the next time it
-   runs): `[ -d .claude/snapshots ] && chmod -R go-rwx .claude/snapshots`
+2. Re-sync deletes `.claude/hooks/precompact-snapshot.sh`; remove its `PreCompact` entry
+   from your `settings.json` if you merged it there. Your `.claude/snapshots/` folder holds
+   old raw conversation: delete it when you no longer need it, and keep its `.gitignore`
+   line until you do.
 3. Add `-I` to the `python3 -c` and `python3 -` calls in your own hooks and scripts.
 4. Headless runs (`claude -p`) that edit `CLAUDE.md`, `.github/`, the check scripts or
    the template's settings, hooks or status line are now denied, because an `ask` rule
@@ -59,7 +64,8 @@ what Claude sees when it's refused in
    `docs/claude-code-setup.md`, repoint their links to template-only files
    (`docs/ADOPTING.md`, `CONTRIBUTING.md`, ADR-003/005/006, `scripts/compaction-report.sh`)
    to upstream URLs at your pinned tag, and record the file as adapted in `VENDORED.md`
-   (file map → Reference only).
+   (file map → Reference only). If you're pinned to an untagged commit, do this when you
+   re-pin to the release tag: until then there's no tag URL to point at.
 
 ### Added
 - **Idle-compaction docs and `scripts/compaction-report.sh`** — Claude Code compacts a
@@ -70,7 +76,7 @@ what Claude sees when it's refused in
   the template leaves the default alone. The report lists recent compactions from your
   local transcripts with size, idle time and an idle flag; it prints metadata only.
 - **Regression tests** — `tests/<suite>/run.sh` for `audit-config.sh`,
-  `check-template.sh`, `block-dangerous.sh`, `precompact-snapshot.sh` and the
+  `check-template.sh`, `block-dangerous.sh` and the
   compaction report, run on Linux and macOS by `.github/workflows/template-tests.yml`.
   Template-internal (file map → Skip).
 - **`docs/skill-security.md`** — partial vendoring (take the skill, leave the plugin),
@@ -99,8 +105,6 @@ what Claude sees when it's refused in
 - **The allow list is empty** — on current Claude Code `git status`, `diff`, `log`,
   `show`, `branch` and `ls` run without a rule, and the old rules also approved
   `git branch -D` and `git diff --output=<file>`.
-- **The PreCompact hook fires on every trigger** — it no longer filters on
-  `auto|manual`, which an idle-specific trigger value would miss.
 - **CODEOWNERS covers what Claude Code loads or runs** — all of `.claude/`, `CLAUDE.md`
   and the `AI_CONTEXT.md` it imports, `.mcp.json.example` and `.github/`, matching
   `docs/skill-security.md`. It enforces only with "Require review from Code Owners",
@@ -108,6 +112,17 @@ what Claude sees when it's refused in
 - **Acknowledgements** — the README credits Agent Baseline, Trail of Bits'
   `claude-code-config` and zizmor for ideas used here (nothing copied), and the Claude
   Code docs the new defaults follow.
+
+### Removed
+- **`.claude/hooks/precompact-snapshot.sh`** — the template's own PreCompact hook, which
+  saved the last 16 messages and a transcript pointer to `.claude/snapshots/` before each
+  compaction. Across 262 sessions in dogfooding projects its 25 snapshots were read 4
+  times; during long agent work its 16 messages were often all Claude's progress notes,
+  none of the user's; Claude Code's own compaction summary already tells the session where
+  the full transcript is; and its file handling could be pointed elsewhere by a committed
+  symlink (writing conversation outside the project, changing permissions on files it
+  didn't own). Claude Code's compaction, `PreCompact` event and transcripts are unchanged
+  (Migration 2).
 
 ### Fixed
 - **`audit-config.sh` missed whole classes of config** — §5 read only `settings*.json`,
@@ -127,10 +142,10 @@ what Claude sees when it's refused in
   guard's name, so a deleted `block-dangerous.sh` passed (and a hook that can't start
   silently turns off); it now checks that every wired script exists and is executable,
   in both quoting styles, and fails on `disableAllHooks`. §6's checks of the secret scan
-  read their own text and always passed. A missing `.gitignore` crashed §6, and
-  unignored snapshots weren't caught. `tests/check-template/` breaks each protection in
-  a copy of the repo and requires the check to fail. `@`-imports of gitignored,
-  local-only files no longer fail §3 on every clone.
+  read their own text and always passed. A missing `.gitignore` crashed §6.
+  `tests/check-template/` breaks each protection in a copy of the repo and requires the
+  check to fail. `@`-imports of gitignored, local-only files no longer fail §3 on every
+  clone.
 - **`check-template.sh` §4 misread file modes on Linux** — it tried BSD `stat -f`
   first, which GNU `stat` reads as filesystem info, so an owner-only `.env` failed.
 - **`docs/ADOPTING.md` gaps** — re-sync could silently drop an adopter's own hooks by
@@ -160,12 +175,8 @@ what Claude sees when it's refused in
   apply silently or leave to Claude Code's defaults. `check-template.sh` §6 asserts the
   home denies. The docs no longer say `cat .env` prompts: a Read deny now refuses it.
   (Checked live on Claude Code 2.1.303 with dummy files.)
-- **Context snapshots were world-readable and never pruned** — `precompact-snapshot.sh`
-  wrote raw conversation (possibly secrets) at mode 644 and kept every snapshot. They
-  are now owner-only, the newest 20 are kept (never the one just written), and
-  `check-template.sh` checks their mode and that they're gitignored (Migration 2).
 - **Template python ran with the project folder on its import path** — a `json.py` in
-  a project would have run on every Bash call, status-line redraw and compaction. Every
+  a project would have run on every Bash call and every status-line redraw. Every
   python call in the hooks and scripts now uses `-I` (Migration 3).
 - **`audit-config.sh`'s report could be rewritten by the files it audits** — carriage
   returns, escape codes, C1 controls, bidi overrides and zero-width marks in an audited

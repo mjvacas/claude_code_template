@@ -28,7 +28,7 @@ the catalog speak one language.
 
 | Class | Tag | What it means | Catalog axis | Examples in this repo |
 |-------|-----|---------------|--------------|-----------------------|
-| Free / local | `free-local` | Runs as code; emits ~nothing into the *model's* context (terminal-only output counts — it never enters the window) | — | `block-dangerous.sh`, `precompact-snapshot.sh`, `statusline.sh`, the `scripts/` |
+| Free / local | `free-local` | Runs as code; emits ~nothing into the *model's* context (terminal-only output counts — it never enters the window) | — | `block-dangerous.sh`, `statusline.sh`, the `scripts/` |
 | One-shot on use | `on-use` | Loaded into context only when invoked; paid once per invocation | `tokens.*.on_invoke` | skills (`verify-refactor`, `llm-eval`, …), `/handoff`, `/adr`, `/commit` |
 | Always-on / session | `session` | Loaded at session start, resident the whole session — the "context tax" | `tokens.*.always_on` | `CLAUDE.md`, `@AI_CONTEXT.md`, the `session-context.sh` injection, a plugin's `always_on` |
 | Per-prompt recurring | `per-prompt` | Re-injected on **every** user turn; scales with conversation length | (not modeled by the catalog — flag it) | `clock.sh` heartbeat |
@@ -141,8 +141,9 @@ version ignores it until restarted, and there only `"autoCompactEnabled": false`
 it, which turns off automatic compaction too. The template doesn't set it: the trade-off
 is personal, and a project setting would override every collaborator's choice.
 
-Every kind fires the `PreCompact` hook, so `precompact-snapshot.sh` saves the recent
-turns before any compaction (owner-only, newest 20 kept). To see which of your sessions
+Nothing is deleted: Claude Code keeps the full transcript in `~/.claude/projects/` (30
+days by default, `cleanupPeriodDays`), and its compaction summary tells the session where
+to find it. To see which of your sessions
 were compacted and why, run `scripts/compaction-report.sh` from your template clone: it
 lists each compaction with its size and how long the session had been idle, and never
 prints message text. Before 2.1.290, idle compactions were recorded with trigger

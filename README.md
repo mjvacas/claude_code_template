@@ -44,13 +44,12 @@ CONTRIBUTING.md               # Sending fixes back + this repo's working agreeme
 .github/workflows/check.yml   # CI: runs check-template.sh + gitleaks (no project build/test)
 .github/workflows/template-tests.yml  # CI: regression tests for the template's scripts and hooks (template-internal)
 .claude/
-├── settings.json             # Permissions, statusline, SessionStart + PreToolUse + PreCompact hooks
+├── settings.json             # Permissions, statusline, SessionStart + PreToolUse hooks
 ├── settings.local.json.example
 ├── settings.lockdown.json.example  # Opt-in egress denies for vetting untrusted skills
 ├── statusline.sh             # Status line: model · dir · branch · cost · context (tokens vs window) · 5h/7d limits + resets
 ├── hooks/session-context.sh  # Prints session-start time + recent git activity at session start
 ├── hooks/block-dangerous.sh  # PreToolUse guard: hard-blocks catastrophic shell commands
-├── hooks/precompact-snapshot.sh  # PreCompact: snapshots context to .claude/snapshots/ before compaction
 ├── hooks/clock.sh            # Opt-in per-prompt time heartbeat (not wired by default)
 ├── commands/                 # /session-start, /handoff, /commit, /adr
 └── skills/                   # verify-refactor, tune-parameters, llm-eval
@@ -160,7 +159,7 @@ standards.
     [CIS Distribution Independent Linux Benchmark §5.3.2 (SSH Private Host
     Key File Permissions)](https://www.tenable.com/audits/items/CIS_Amazon_Linux_2_v2.0.0_L1.audit:078b3bdba9f168f66df57226c9ac50df).
     Extends CIS's `0600` mandate for SSH keys to local secret-bearing
-    files (`.env`, `*.pem`, `*.key`, `id_rsa`, etc.) and the context snapshots.
+    files (`.env`, `*.pem`, `*.key`, `id_rsa`, etc.).
   - **Cryptographic key handling:**
     [NIST SP 800-57 Part 1 Rev. 5 (Key Management)](https://csrc.nist.gov/pubs/sp/800/57/pt1/r5/final).
     Protection-of-keys principle informing both the Read-deny on key
