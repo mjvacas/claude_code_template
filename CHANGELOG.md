@@ -87,7 +87,10 @@ what Claude sees when it's refused in
   verifying; reconciles installed plugins; and runs the code-reviewer. New-repo adoption
   captures the tag, asks its questions in one batch, copies with `cp -p`, applies the
   `CLAUDE.md` bucket rules, and describes a clean audit. The file map lists which files
-  only work together and adds `docs/adr/.gitkeep`.
+  only work together and adds `docs/adr/.gitkeep`. A repo that already has a
+  `VENDORED.md` is sent to re-sync instead of re-adoption; there's guidance for GitLab
+  and other hosts, for repointing links in a reference doc you vendor anyway, and for
+  re-pinning a pre-release SHA to its release tag.
 - **The allow list is empty** — on current Claude Code `git status`, `diff`, `log`,
   `show`, `branch` and `ls` run without a rule, and the old rules also approved
   `git branch -D` and `git diff --output=<file>`.

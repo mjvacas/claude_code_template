@@ -200,9 +200,21 @@ adopting into), with this template available at a path like
 > Especially valuable for the existing-repo procedure, which has more
 > merge decisions and more pre-existing state to reconcile.
 
+**Already adopted?** If the repo has a `VENDORED.md` from this template, don't run
+either procedure below: every vendored file would show up as a conflict. Use
+[§ Re-syncing template updates](#re-syncing-template-updates) instead.
+
 Once the vendored `.claude/settings.json` is in place, Claude Code asks
 before each edit to `CLAUDE.md` or `.github/`. That's expected during
 adoption; approve them.
+
+> **Not on GitHub?** `.github/workflows/check.yml`, `.github/CODEOWNERS` and the
+> `Edit(.github/**)` ask rule in `settings.json` are GitHub-specific. On GitLab or
+> another host, port `check.yml`'s two steps to your CI (run
+> `bash scripts/check-template.sh`, and the gitleaks scan with its pinned hash), put
+> CODEOWNERS where your host reads it (GitLab: the repo root, `docs/` or `.gitlab/`),
+> and point the ask rule at your CI config (for example `Edit(.gitlab-ci.yml)` and
+> `Edit(.gitlab/**)`). Record each as an adaptation in `VENDORED.md`.
 
 > **If your repo already maintains a `docs/adr/` series**, vendor template
 > ADRs into a sub-namespace — `docs/claude-code-template/` or
@@ -269,7 +281,8 @@ The session will:
    and `SECURITY.md` for inline `docs/skill-security.md` / `docs/adr/ADR-NNN-*.md`
    references — they're prose-level path mentions rather than `@`-imports so
    `scripts/check-template.sh` doesn't catch them, but they break the same way. Point
-   each at the upstream URL at your pinned tag, or vendor the file.
+   each at the upstream URL at your pinned tag, or vendor the file (then repoint its
+   own template-only links; see [Reference only](#reference-only-read-dont-copy)).
    Adopters with their own `docs/adr/` series should sub-namespace template
    ADRs (see the callout above).
    `scripts/check-template.sh` § 3 (the `@`-reference resolution check, step 11
@@ -316,7 +329,9 @@ Bias: audit first; never stomp silently.
 
 The session will:
 
-1. **Audit.** For each path the template wants to vendor, check whether
+1. **Audit.** If the repo already has a `VENDORED.md` from this template, stop and
+   use [§ Re-syncing](#re-syncing-template-updates). Otherwise, for each path the
+   template wants to vendor, check whether
    the adopter repo already has it (exact-path conflict). **Also flag
    files with the same basename at a different path** — e.g., the
    adopter has `docs/AI_SESSION_START.md` while the template vendors
@@ -360,7 +375,8 @@ The session will:
    and `SECURITY.md` for inline `docs/skill-security.md` / `docs/adr/ADR-NNN-*.md`
    references — they're prose-level path mentions rather than `@`-imports so
    `scripts/check-template.sh` doesn't catch them, but they break the same way. Point
-   each at the upstream URL at your pinned tag, or vendor the file.
+   each at the upstream URL at your pinned tag, or vendor the file (then repoint its
+   own template-only links; see [Reference only](#reference-only-read-dont-copy)).
    Adopters with their own `docs/adr/` series should sub-namespace template
    ADRs (see the callout above).
    `scripts/check-template.sh` § 3 (the `@`-reference resolution check, step 10
@@ -460,7 +476,9 @@ the upgrade legible (am I behind? is it breaking?), per
 [ADR-006](adr/ADR-006-versioning-and-release-management.md). Until the first
 tag exists (or for anything vendored between releases) pin by **commit SHA** —
 the SHA is always the exact anchor, and the `<tag-or-sha>` placeholders below
-work either way.
+work either way. A SHA from a branch that hasn't been released yet (a release
+candidate, say) can drop out of the template's history if that branch is squash- or
+rebase-merged, so re-pin to the release tag once it's out.
 
 Format (proposed; adopters can customize):
 
@@ -619,6 +637,12 @@ dropping `/session-start` alone, for example, passes.
 | `docs/adr/ADR-006-versioning-and-release-management.md` | How the *template* is versioned/released. Template-internal. Don't vendor. |
 | `CHANGELOG.md` | This template's change log. Read to re-sync. |
 | `CONTRIBUTING.md` | Sending fixes back to this repo + its maintainer-side working agreements. Don't copy — write your own if your project needs one. |
+
+If you vendor one of these docs anyway (adopters often keep `skill-security.md` or
+`token-awareness.md`), its links to template-only files dangle: `docs/ADOPTING.md`,
+`CONTRIBUTING.md`, ADR-003/005/006 and `scripts/compaction-report.sh`. Repoint them to
+upstream URLs at your pinned tag, record the file as adapted in `VENDORED.md`, and
+re-apply the repoints on each re-sync.
 
 ### Skip
 
