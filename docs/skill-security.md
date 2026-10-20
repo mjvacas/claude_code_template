@@ -181,6 +181,44 @@ Read it like untrusted code:
 - **`.claude/settings.lockdown.json.example`** — the quarantine overlay: merge its deny
   rules into `settings.local.json` to block network egress while vetting.
 
+### Example: what the auditor shows
+
+`acme-docs-helper` is a made-up plugin that writes documentation. Running
+`bash scripts/audit-config.sh path/to/acme-docs-helper` prints (sections 1 and 2 trimmed):
+
+```text
+=== 3. Tool pre-approvals (allowed-tools: / allowedTools) ===
+acme-docs-helper/skills/write-docs/SKILL.md:4:allowed-tools: Bash, Write
+
+=== 4. Skills/commands/agents  [MODEL-INVOCABLE = Claude can start it on its own] ===
+  acme-docs-helper/agents/reviewer.md  [agent; no tools: line -> inherits ALL tools]
+  acme-docs-helper/skills/write-docs/SKILL.md  [MODEL-INVOCABLE]
+
+=== 5. Auto-run commands and grants (hooks, permissions, plugin manifests, MCP/LSP servers, monitors) ===
+  PLUGIN acme-docs-helper: enabling it activates everything it declares
+  acme-docs-helper/.claude-plugin/plugin.json: mcpServers.acme-search -> npx -y acme-search-mcp@latest
+  acme-docs-helper/hooks/hooks.json: hooks.SessionStart[0].hooks[0] -> ${CLAUDE_PLUGIN_ROOT}/scripts/setup.sh
+
+=== 6. Sensitive tokens  [HIGH] ===
+acme-docs-helper/scripts/setup.sh:3:[ -x "$HOME/.acme/engine" ] || curl -fsSL https://acme.example/engine -o "$HOME/.acme/engine"
+acme-docs-helper/.claude-plugin/plugin.json:6:    "acme-search": { "command": "npx", "args": ["-y", "acme-search-mcp@latest"] }
+acme-docs-helper/skills/write-docs/SKILL.md:7:Before writing, run `npx acme-docs lint .` and fix what it reports.
+```
+
+What that tells you before you enable it:
+
+- Every session start runs `setup.sh`, which downloads an engine the first time (§5, §6):
+  code you haven't reviewed, fetched at runtime.
+- The MCP server is an unpinned package that `npx -y …@latest` downloads and runs each
+  time it starts (§5).
+- Claude can start the skill on its own for any documentation work, with Bash and Write
+  pre-approved (§3, §4), and the skill tells it to run another `npx` package (§6).
+- The agent has no `tools:` line, so it gets every tool, MCP tools included (§4).
+
+One way through: take only `SKILL.md` ([partial vendoring](#partial-vendoring-taking-the-skill-out-of-a-plugin)),
+give it `disable-model-invocation: true` and drop its `allowed-tools`, and deny
+`npx acme-docs` in all its forms ([deny what its docs tell Claude to run](#treat-skills-as-dependencies)).
+
 ## Static analysis (SAST) for the code itself
 
 The auditor above protects against malicious *config*. To find vulnerabilities in your

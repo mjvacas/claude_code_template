@@ -661,7 +661,9 @@ The session will:
    row, `git -C ../claude_code_template show <pin>:<upstream-path> | diff - <local-path>`.
    A row recorded as vendor-as-is whose copy differs has local changes nobody
    recorded; treat it as **Merge** in step 7 and record the change in its Notes, or a
-   plain update will silently drop it (an added hook, say).
+   plain update will silently drop it. For example, if you wired your own hook into
+   `settings.json`, the diff shows it as a `>` line (`> "command": "…/my-hook.sh"`),
+   and that row goes to Merge.
 4. **Check for newly-vendored files.** Compare the template's current
    [File map](#file-map) against the paths in your `VENDORED.md`; propose
    **adding** any vendor-as-is file you never picked up — most importantly

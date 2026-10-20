@@ -100,7 +100,8 @@ from outside this repo, vet it — see `docs/skill-security.md`. Quick tools:
 - A `PreToolUse` hook (`.claude/hooks/block-dangerous.sh`) hard-blocks catastrophic shell
   commands (`rm -rf /`, `git reset --hard`, `git push --force`, pipe-to-shell, `dd`/`mkfs`).
   It keeps working without `python3` and has a regression suite. It's a safety net,
-  **not** a sandbox — pair it with the lockdown overlay / OS sandbox.
+  **not** a sandbox — pair it with the lockdown overlay / OS sandbox. See
+  [what a refusal looks like](docs/claude-code-setup.md#permissions).
 - Before enabling an MCP server, vet it and copy `.mcp.json.example` → `.mcp.json`
   (gitignored). See the MCP checklist in `docs/skill-security.md`.
 
@@ -109,12 +110,12 @@ from outside this repo, vet it — see `docs/skill-security.md`. Quick tools:
 A few engineering practices, encoded as runnable skills and scripts, a
 cost-legibility layer, and reviewer rules:
 
-- **Vet before you install** — `scripts/audit-config.sh` reports everything a skill or plugin would run or grant, and `docs/skill-security.md` shows how to take just the skill out of a plugin and deny what its docs tell Claude to run.
+- **Vet before you install** — `scripts/audit-config.sh` reports everything a skill or plugin would run or grant, and `docs/skill-security.md` shows how to take just the skill out of a plugin and deny what its docs tell Claude to run. For a sample documentation plugin it shows a download script that runs at every session start, an unpinned `npx` MCP server, a skill Claude can start on its own with Bash pre-approved, and an agent that gets every tool ([example report](docs/skill-security.md#example-what-the-auditor-shows)).
 - **`/verify-refactor`** — prove a refactor preserved behavior by diffing deterministic output (byte-identical), not just "tests pass."
 - **`/tune-parameters`** — pick a threshold by reading the *shape* of the metric surface, rejecting overfit spikes.
 - **`/llm-eval`** — gate AI features on accuracy against a ground-truth set.
 - **Token-cost legibility** — a cost-class model (`docs/token-awareness.md`) plus a status line that surfaces live session cost, context-against-window, and 5h/7d rate-limit budgets with reset times — so the cost of the context system is visible, not guessed.
-- **Compaction you can see** — `scripts/compaction-report.sh` lists which of your sessions were compacted, how large they were and how long they'd sat idle, and `docs/token-awareness.md` explains idle compaction and how to opt out.
+- **Compaction you can see** — `scripts/compaction-report.sh` lists which of your sessions were compacted, how large they were and how long they'd sat idle, and `docs/token-awareness.md` explains idle compaction and how to opt out. If sessions on a 1M window compact at 200–300K tokens about 54 minutes after your last message, that's idle compaction, not the context limit ([example](docs/token-awareness.md#compaction)).
 
 For code review, the template recommends installing
 `pr-review-toolkit@claude-plugins-official` as a baseline plugin during

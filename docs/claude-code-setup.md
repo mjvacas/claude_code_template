@@ -73,9 +73,20 @@ template also asks before edits to `CLAUDE.md`, anything under `.github/`, and
 `scripts/check-template.sh` / `scripts/audit-config.sh`, which check the other protections.
 Claude Code already asks before edits to `.claude/`, `.git/` and `.mcp.json`; the
 template still lists its own settings, hooks and status line, so that gate doesn't depend
-on a default that could change. That covers the file tools and `sed -i`, not a shell copy or redirect (`cp`,
-`>>`), so treat it as a speed bump. With no one to ask (`claude -p`, `dontAsk` mode) an ask
-becomes a deny. `/adr` edits `CLAUDE.md`, so it prompts once per ADR.
+on a default that could change. These asks cover the file tools and `sed -i`, not a shell
+copy or redirect (`cp`, `>>`), so treat them as a speed bump. With no one to ask
+(`claude -p`, `dontAsk` mode) an ask becomes a deny. `/adr` edits `CLAUDE.md`, so it
+prompts once per ADR.
+
+What that looks like in a session:
+
+- Claude runs `cat ~/.ssh/id_ed25519`. The call is refused, and Claude is told
+  `Permission to use Bash with command cat ~/.ssh/id_ed25519 has been denied.`
+- Claude edits `CLAUDE.md` in `acceptEdits` mode. You get a permission prompt instead of
+  a silent edit.
+- Claude runs `git push --force origin main`. The guard refuses it, whatever the
+  permission rules say, and the session shows `PreToolUse:Bash hook error: blocked by block-dangerous.sh:
+  git push --force / -f / +ref / --mirror / --prune (rewrites or deletes remote history)`.
 
 Add your build/test/lint commands to the allow list (project-shared) or to
 `settings.local.json` (just you), e.g.:

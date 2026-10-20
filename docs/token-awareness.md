@@ -146,7 +146,22 @@ turns before any compaction (owner-only, newest 20 kept). To see which of your s
 were compacted and why, run `scripts/compaction-report.sh` from your template clone: it
 lists each compaction with its size and how long the session had been idle, and never
 prints message text. Before 2.1.290, idle compactions were recorded with trigger
-"manual", so check the idle column, not the trigger.
+"manual", so check the idle column, not the trigger. For example (illustrative data):
+
+```text
+time              project                   trigger     tokens  idle min  version    flag
+2026-10-14 16:57  my-app                    manual     312,480      53.9  2.1.289    idle (notice)
+2026-10-15 09:11  my-app                    auto       968,211       0.1  2.1.302
+2026-10-15 12:36  api-server                manual     205,377      54.5  2.1.280    likely idle (gap)
+2026-10-16 15:16  my-app                    auto       241,090      53.8  2.1.302    idle (notice)
+
+4 compaction(s); 3 idle (2 by notice, 1 by gap)
+```
+
+Only the 968K row hit the context limit. The other three came about 54 minutes after the
+last message, at 205K–312K tokens: a fifth to a third of a 1M window. "idle (notice)"
+means Claude Code recorded its own "Compacted while idle" notice; "likely idle (gap)" is
+inferred from the 50–60 minute gap, for versions that didn't record one.
 
 ## Which model for which task
 

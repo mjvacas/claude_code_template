@@ -40,6 +40,12 @@ MINOR under [ADR-006](docs/adr/ADR-006-versioning-and-release-management.md):
 - **Tested.** Regression suites for the auditor, the self-check, two hooks and the
   compaction report run on Linux and macOS in CI.
 
+Worked examples: an audit of a sample plugin in
+[`docs/skill-security.md`](docs/skill-security.md#example-what-the-auditor-shows), a
+compaction report in [`docs/token-awareness.md`](docs/token-awareness.md#compaction), and
+what Claude sees when it's refused in
+[`docs/claude-code-setup.md`](docs/claude-code-setup.md#permissions).
+
 ### Migration
 1. If `VENDORED.md` records `.claude/settings.json` as vendor-as-is but you've changed
    it, update that row before re-syncing. It's an Adapt file now: re-sync merges it.
