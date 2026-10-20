@@ -55,6 +55,11 @@ what Claude sees when it's refused in
 4. Headless runs (`claude -p`) that edit `CLAUDE.md`, `.github/`, the check scripts or
    the template's settings, hooks or status line are now denied, because an `ask` rule
    has no one to ask. `/adr` prompts for its `CLAUDE.md` edit.
+5. If you vendored `docs/skill-security.md`, `docs/token-awareness.md` or
+   `docs/claude-code-setup.md`, repoint their links to template-only files
+   (`docs/ADOPTING.md`, `CONTRIBUTING.md`, ADR-003/005/006, `scripts/compaction-report.sh`)
+   to upstream URLs at your pinned tag, and record the file as adapted in `VENDORED.md`
+   (file map → Reference only).
 
 ### Added
 - **Idle-compaction docs and `scripts/compaction-report.sh`** — Claude Code compacts a
