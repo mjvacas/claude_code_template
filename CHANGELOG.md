@@ -58,7 +58,13 @@ what Claude sees when it's refused in
    old raw conversation: delete it when you no longer need it, and keep its `.gitignore`
    line until you do. `audit-config.sh` still reports the folder's files but doesn't print
    their lines, and under `--strict` they can fail the check until you delete it.
-3. Add `-I` to the `python3 -c` and `python3 -` calls in your own hooks and scripts.
+3. Add `-I` to the `python3 -c`, `python3 -` and `python3 <script>` calls in your own
+   hooks and scripts, and to scripts started through a `#!/usr/bin/env python3` line
+   (`#!/usr/bin/env -S python3 -I`): without it, a script's own folder and your working
+   folder come first on its import path. If a script imports modules from its own
+   folder, add that folder to `sys.path` in the script instead (or leave `-I` off for
+   it), then run the hook once to confirm it still works: a hook that crashes doesn't
+   block anything.
 4. Headless runs (`claude -p`) that edit `CLAUDE.md`, `.github/`, the check scripts or
    the template's settings, hooks or status line are now denied, because an `ask` rule
    has no one to ask. `/adr` prompts for its `CLAUDE.md` edit.
@@ -68,6 +74,9 @@ what Claude sees when it's refused in
    to upstream URLs at your pinned tag, and record the file as adapted in `VENDORED.md`
    (file map → Reference only). If you're pinned to an untagged commit, do this when you
    re-pin to the release tag: until then there's no tag URL to point at.
+6. If your `CLAUDE.md` doesn't take keep-verbatim changes (it diverged on purpose),
+   add the "Personal info stays local" bullet from the template's `## Conventions` by
+   hand.
 
 ### Added
 - **Privacy convention in `CLAUDE.md`** — "Personal info stays local" tells Claude to ask
@@ -97,7 +106,9 @@ what Claude sees when it's refused in
   plugin's docs tell Claude to run (bare, versioned and auto-confirm forms, checked
   live), and dev-server/CSP changes as security changes.
 - **`VENDORED.md` format** — optional `## Third-party skills` section recording the pin,
-  license and local patches to re-apply on every bump.
+  license and local patches to re-apply on every bump, and optional `## Considered
+  plugins` recording declined discovery candidates. "Installed plugins" gains a Notes
+  column for audit decisions.
 
 ### Changed
 - **`.claude/settings.json` is an Adapt file** — nearly every adopter adds allow rules,
@@ -112,7 +123,19 @@ what Claude sees when it's refused in
   only work together and adds `docs/adr/.gitkeep`. A repo that already has a
   `VENDORED.md` is sent to re-sync instead of re-adoption; there's guidance for GitLab
   and other hosts, for repointing links in a reference doc you vendor anyway, and for
-  re-pinning a pre-release SHA to its release tag.
+  re-pinning a pre-release SHA to its release tag. A dry run of the release candidate
+  added more:
+  - adoption and re-sync start from a clean repo, so staging takes only their changes;
+  - plugin discovery reads each marketplace's refreshed manifest, not a catalog cache
+    that can go stale, and finds licenses where partner plugins keep them;
+  - third-party plugins are re-audited when the installed version changes, reading
+    the auditor's report on the copy Claude Code loads, and the decision is recorded;
+  - discovery runs when the stack changed, and declined plugins are recorded, at
+    adoption too;
+  - `VENDORED.md` Notes win over the keep-verbatim rule when merging, but Migration
+    items still apply;
+  - deletes are followed by a search for prose that still names the file, and a new
+    session afterwards loads the merged settings.
 - **The allow list is empty** — on current Claude Code `git status`, `diff`, `log`,
   `show`, `branch` and `ls` run without a rule, and the old rules also approved
   `git branch -D` and `git diff --output=<file>`.
@@ -202,6 +225,12 @@ what Claude sees when it's refused in
   `checksums.txt` from the same release, which catches corruption but not a replaced
   release. The hash now changes only by PR, and `sha256sum --strict` rejects a
   malformed one.
+- **Plugin discovery took partner plugins for Anthropic's** — any string `source` counted
+  as Anthropic-authored, but the plugins under `./external_plugins/` in
+  `claude-plugins-official` (14 on 2026-11-18, including `context7` and `playwright`)
+  are third-party, so adoption and re-sync skipped vetting them. Only a `./plugins/`
+  path in `claude-plugins-official` counts as Anthropic-authored now, not one in any
+  other marketplace.
 - **CI checkouts don't keep credentials on disk** — `persist-credentials: false` on every
   checkout; neither workflow pushes.
 
