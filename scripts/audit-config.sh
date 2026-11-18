@@ -54,6 +54,21 @@ target="${1:-.claude}"
 # find and BSD grep don't descend into a link.
 [ -L "$target" ] && target=$(python3 -I -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' "$target")
 
+# In a .claude dir, snapshots/ holds conversation saved by the PreCompact hook v0.3.0
+# removed, and printing its matching lines would put that conversation in the report.
+# Its files are still listed, checked and counted like any others (loaded config can
+# point into it, so nothing there may go unreported); the line-printing greps only name
+# the matching files. $roots is the target's other top-level files and dirs (what grep -r
+# would read below the top: no links, FIFOs or devices); $held_back is snapshots/.
+roots=("$target")
+held_back=""
+if [ -d "$target/snapshots" ] && [ ! -L "$target/snapshots" ] && [ "$(basename "$target")" = .claude ]; then
+  held_back="${target%/}/snapshots"
+  roots=()
+  while IFS= read -r -d '' p; do roots+=("$p"); done \
+    < <(find "${target%/}" -mindepth 1 -maxdepth 1 ! -name snapshots \( -type f -o -type d \) -print0)
+fi
+
 high=0
 hdr() { printf '\n=== %s ===\n' "$*"; }
 
@@ -62,12 +77,19 @@ hdr() { printf '\n=== %s ===\n' "$*"; }
 # reading as "none". Returns 0 when something matched. LC_ALL=C so text with invalid
 # UTF-8 isn't taken for binary and skipped by -I.
 scan() {
-  LC_ALL=C grep -rnI "$@" -- "$target"
-  case $? in
-    0) return 0 ;;
-    1) echo "  none" ;;
-    *) echo "  ERROR: grep could not finish (unreadable file or unsupported pattern) -> INCOMPLETE"; high=1 ;;
-  esac
+  local rc=1 held_rc=1 held
+  if [ "${#roots[@]}" -gt 0 ]; then LC_ALL=C grep -rnI "$@" -- "${roots[@]}"; rc=$?; fi
+  if [ -n "$held_back" ]; then
+    held=$(LC_ALL=C grep -rlI "$@" -- "$held_back"); held_rc=$?
+    [ -n "$held" ] && printf '%s\n' "$held" | sed 's/$/: matched (lines not shown: open the file to review)/'
+  fi
+  if [ "$rc" -ge 2 ] || [ "$held_rc" -ge 2 ]; then
+    echo "  ERROR: grep could not finish (unreadable file or unsupported pattern) -> INCOMPLETE"; high=1
+  elif [ "$rc" -eq 0 ] || [ "$held_rc" -eq 0 ]; then
+    return 0
+  else
+    echo "  none"
+  fi
   return 1
 }
 
@@ -112,6 +134,7 @@ while IFS= read -r -d '' f; do
   printf '  %-7s %s\n' "[$mark]" "$(ls -ldh -- "$f" 2>/dev/null)"
 done < <(find "$target" \( -type f -o -type l \) -print0)
 [ "$n_files" -eq 0 ] && echo "  (no files)"
+[ -n "$held_back" ] && echo "  [note] $held_back/ should hold only conversation saved by the removed PreCompact hook. Its files are listed, checked and counted, but sections 2, 3 and 6 name matching files without printing their lines: review any file there that isn't saved conversation, and anything config points to there. Delete the folder when you no longer need it."
 
 # --- 2. Dynamic shell execution: runs at LOAD time, before the model sees output.
 hdr "2. Dynamic shell execution  [HIGH]"

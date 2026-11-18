@@ -56,7 +56,8 @@ what Claude sees when it's refused in
 2. Re-sync deletes `.claude/hooks/precompact-snapshot.sh`; remove its `PreCompact` entry
    from your `settings.json` if you merged it there. Your `.claude/snapshots/` folder holds
    old raw conversation: delete it when you no longer need it, and keep its `.gitignore`
-   line until you do.
+   line until you do. `audit-config.sh` still reports the folder's files but doesn't print
+   their lines, and under `--strict` they can fail the check until you delete it.
 3. Add `-I` to the `python3 -c` and `python3 -` calls in your own hooks and scripts.
 4. Headless runs (`claude -p`) that edit `CLAUDE.md`, `.github/`, the check scripts or
    the template's settings, hooks or status line are now denied, because an `ask` rule
@@ -148,6 +149,12 @@ what Claude sees when it's refused in
   symlinked target (zero files reviewed on macOS), a NUL past the first 8KB, or a file
   Python couldn't parse could all read as clean. Each now prints ERROR, LINK, BINARY or
   UNREAD and counts as HIGH.
+- **`audit-config.sh` printed old conversation** — a `.claude/snapshots/` folder left by
+  the removed PreCompact hook was audited like config, so §6 printed lines from saved
+  conversation. Its files are still listed, checked and counted, because loaded config
+  can point into the folder, but sections 2, 3 and 6 now name the matching files instead
+  of printing their lines, and §1 says so. Only a real `.claude/snapshots/` folder is
+  held back this way.
 - **`check-template.sh` passed with protections broken** — §5 only looked for the
   guard's name, so a deleted `block-dangerous.sh` passed (and a hook that can't start
   silently turns off); it now checks that every wired script exists and is executable,

