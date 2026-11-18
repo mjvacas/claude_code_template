@@ -49,6 +49,7 @@ src/                # or app/, lib/, cmd/ — follow your stack's idiom
 - Types first: define data contracts (types/schemas/models) before building features
 - Defensive defaults at boundaries only: normalize external/untrusted data with safe fallbacks (JS `?? 0`, Python `.get(key, default)`); don't validate trusted internal calls
 - After refactoring deterministic code, verify behavior is unchanged against a saved baseline output — stronger than "tests still pass"
+- **Personal info stays local.** Never send the user's email or other personal info (name, phone number, address) to an outside service without asking first. That includes request headers (a User-Agent counts), URLs, request bodies, MCP tool inputs, and code written to send it later. If an API wants contact info or a custom User-Agent, ask the user what to send: even a project name can identify them. This applies to subagents too.
 - Treat `.claude/` skills/commands/agents/hooks and MCP servers as dependencies: vet before adding, review every update, keep unvetted ones out of version control — see docs/skill-security.md
 
 ## Hard Constraints (guarded by code)

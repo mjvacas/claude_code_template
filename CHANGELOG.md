@@ -30,7 +30,8 @@ MINOR under [ADR-006](docs/adr/ADR-006-versioning-and-release-management.md):
 - **Safer defaults.** The dangerous-command guard keeps working without `python3` and
   catches more forms. Reads of credential stores in your home directory (`~/.ssh`,
   `~/.aws`, …) are denied. Claude asks before editing `CLAUDE.md`, CI config and the
-  template's own checks.
+  template's own checks. A new `CLAUDE.md` convention tells it to ask before sending your
+  email or other personal info to an outside service.
 - **Compaction you can see.** Claude Code now compacts long sessions left idle.
   `docs/token-awareness.md` explains when and how to opt out, and
   `scripts/compaction-report.sh` shows which of your sessions were compacted and why.
@@ -68,6 +69,15 @@ what Claude sees when it's refused in
    re-pin to the release tag: until then there's no tag URL to point at.
 
 ### Added
+- **Privacy convention in `CLAUDE.md`** — "Personal info stays local" tells Claude to ask
+  before sending the user's email or other personal info to an outside service, whether in
+  a request header (a User-Agent counts), a URL, a request body, an MCP tool input or code
+  that sends it later, and to ask what to send when an API wants contact info or a custom
+  User-Agent, since even a project name can identify the user. Coding agents in
+  dogfooding projects put the user's email in User-Agent headers sent to public APIs,
+  although Claude Code's own instructions already say not to. A convention lowers the
+  odds but enforces nothing. It's in the keep-verbatim Conventions block, so re-sync
+  brings it in.
 - **Idle-compaction docs and `scripts/compaction-report.sh`** — Claude Code compacts a
   conversation of 200K+ tokens left idle for about 54 minutes, just before its prompt
   cache expires, and turned this on server-side. `docs/token-awareness.md` gains a
