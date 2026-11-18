@@ -21,10 +21,10 @@ Claude Code's live native tools (`/context`, `/usage`) for the actual numbers.
 
 Most cost decisions don't hinge on "47 tokens" — they hinge on the *shape* of
 the cost: paid once, or every session, or every turn? These four classes are
-the vocabulary the rest of the repo annotates against. They map onto the plugin
-catalog's two cost axes (`tokens.<model>.always_on` / `tokens.<model>.on_invoke`,
-surfaced during [plugin discovery](ADOPTING.md#plugin-discovery)) so the doc and
-the catalog speak one language.
+the vocabulary the rest of the repo annotates against. They map onto the two cost
+axes Claude Code's plugin catalog has used (`always_on` / `on_invoke`); a plugin's
+actual cost shows in `/context` once it's installed (see
+[plugin discovery](ADOPTING.md#plugin-discovery)).
 
 | Class | Tag | What it means | Catalog axis | Examples in this repo |
 |-------|-----|---------------|--------------|-----------------------|
@@ -48,10 +48,10 @@ numbers live.
 | Item | How to see its real cost |
 |------|--------------------------|
 | `CLAUDE.md` | `/context` → "Memory files" |
-| `@AI_CONTEXT.md` (auto-imported by `CLAUDE.md`) | `/context`; capped at 750 lines by design — see [ADR-004](adr/ADR-004-ai-context-archive-threshold-bump.md) |
+| `@AI_CONTEXT.md` (auto-imported by `CLAUDE.md`) | `/context`; capped at 1000 lines by design — see [ADR-007](adr/ADR-007-ai-context-archive-threshold-1000.md) |
 | `MEMORY.md` index + recalled auto-memories | `/context` (varies by what's recalled) |
 | `session-context.sh` SessionStart injection | `/context` → conversation/system |
-| Each baseline/discovered plugin's `always_on` | the plugin's catalog entry; `/usage` for the live split |
+| Each baseline/discovered plugin's `always_on` | `/context` once it's installed; `/usage` for the live split |
 
 **Don't trust a frozen total — measure it:**
 
@@ -82,7 +82,7 @@ below. It's a `free-local` signal — the status line never enters the model's
 context, so this costs zero tokens.
 
 The single largest fixed item is usually a full `AI_CONTEXT.md`; its budget is
-owned by [ADR-004](adr/ADR-004-ai-context-archive-threshold-bump.md) — don't copy
+owned by [ADR-007](adr/ADR-007-ai-context-archive-threshold-1000.md) — don't copy
 the figure here, it would drift. Run `/context` for your actual total rather than
 trusting any number in prose.
 

@@ -77,6 +77,15 @@ what Claude sees when it's refused in
 6. If your `CLAUDE.md` doesn't take keep-verbatim changes (it diverged on purpose),
    add the "Personal info stays local" bullet from the template's `## Conventions` by
    hand.
+7. `/handoff` and the SessionStart hook now point at ADR-007 and archive above 1000
+   lines. Vendor `docs/adr/ADR-007-ai-context-archive-threshold-1000.md` next to
+   ADR-004 (sub-namespace or renumber it if your own ADR series has a 007), and repoint
+   its path the way you did for ADR-004: `handoff.md`'s two `@` refs and the path in
+   `templates/AI_SESSION_START.md`, plus, if you renumbered it, the hook's echo line and
+   ADR-004's status link. In your `CLAUDE.md` `## Architecture Decisions`, mark the
+   ADR-004 entry superseded and add the ADR-007 highlight from the template, with your
+   path. Your own `AI_CONTEXT.md` header likely still says ~750 and links ADR-004; update
+   it too. If you keep a different cap on purpose, record it in `VENDORED.md`.
 
 ### Added
 - **Privacy convention in `CLAUDE.md`** — "Personal info stays local" tells Claude to ask
@@ -146,6 +155,13 @@ what Claude sees when it's refused in
 - **Acknowledgements** — the README credits Agent Baseline, Trail of Bits'
   `claude-code-config` and zizmor for ideas used here (nothing copied), and the Claude
   Code docs the new defaults follow.
+- **The `AI_CONTEXT.md` archive cap is 1000 lines** ([ADR-007](docs/adr/ADR-007-ai-context-archive-threshold-1000.md),
+  superseding ADR-004). ADR-004's reason for 750, a 10k-token envelope from 2023
+  research, no longer fits 1M-token models, and real files run 15–26 tokens a line, not
+  12. A replay of archive history in projects using the template showed 1000 cuts
+  archiving by about 30–50% for roughly 2k more tokens per session. The SessionStart
+  reminder and `/handoff` use the new number; the state-sufficiency rule is unchanged
+  (Migration 7).
 
 ### Removed
 - **`.claude/hooks/precompact-snapshot.sh`** — the template's own PreCompact hook, which

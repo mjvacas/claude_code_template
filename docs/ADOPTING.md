@@ -245,8 +245,10 @@ adoption; approve them.
 > `docs/adr/_upstream/` are both common — to avoid numbering collisions.
 > The template ships `ADR-001-vendor-with-source-pin.md`,
 > `ADR-002-ai-context-archive-threshold.md` (superseded — kept as historical
-> record), and `ADR-004-ai-context-archive-threshold-bump.md` (live rationale
-> for the `AI_CONTEXT.md` threshold + `/handoff` discipline); vendoring those
+> record), `ADR-004-ai-context-archive-threshold-bump.md` (superseded, but it
+> defines the `/handoff` discipline), and
+> `ADR-007-ai-context-archive-threshold-1000.md` (live rationale for the
+> `AI_CONTEXT.md` threshold); vendoring those
 > naïvely into a repo with its own ADR-001 silently corrupts the adopter's
 > ADR sequence.
 > Patch the inline references in `templates/AI_SESSION_START.md` (and any
@@ -302,7 +304,7 @@ The session will:
    | `.claude/commands/handoff.md` | `@templates/ADR-template.md`, `@templates/AI_SESSION_START.md` |
    | `.claude/commands/adr.md` | `@templates/ADR-template.md` |
 
-   `handoff.md` also carries two `@docs/adr/ADR-004-…` refs; repoint them too if you
+   `handoff.md` also carries two `@docs/adr/ADR-007-…` refs; repoint them too if you
    moved the template's ADRs into a sub-folder. Quick scan to confirm:
    `grep -rnE '@(templates|docs/adr)/' .claude/commands .claude/skills`.
    Also scan vendored skeleton templates (especially `templates/AI_SESSION_START.md`)
@@ -401,7 +403,7 @@ The session will:
    | `.claude/commands/handoff.md` | `@templates/ADR-template.md`, `@templates/AI_SESSION_START.md` |
    | `.claude/commands/adr.md` | `@templates/ADR-template.md` |
 
-   `handoff.md` also carries two `@docs/adr/ADR-004-…` refs; repoint them too if you
+   `handoff.md` also carries two `@docs/adr/ADR-007-…` refs; repoint them too if you
    moved the template's ADRs into a sub-folder. Quick scan to confirm:
    `grep -rnE '@(templates|docs/adr)/' .claude/commands .claude/skills`.
    Also scan vendored skeleton templates (especially `templates/AI_SESSION_START.md`)
@@ -479,7 +481,7 @@ replace the bracketed placeholders with the project's actual content.
 | Section | Keep | Replace |
 |---------|------|---------|
 | `## Hard Constraints (guarded by code)` | The intro philosophy ("Critical invariants are enforced in code... never a runtime toggle/UI") + the `block-dangerous.sh` PreToolUse hook bullet (template-provided) | The `<INVARIANT>` and `<limit/threshold>` placeholders → your project's actual code-guarded invariants |
-| `## Architecture Decisions` | The one-line-highlight-per-ADR format | Keep the ADR-001 / ADR-002 / ADR-004 entries **only for the ADRs you vendored** (sub-namespaced or otherwise); drop ADR-003, ADR-005 and ADR-006, which are template-internal. Add your project's own ADR entries below. |
+| `## Architecture Decisions` | The one-line-highlight-per-ADR format | Keep the ADR-001 / ADR-002 / ADR-004 / ADR-007 entries **only for the ADRs you vendored** (sub-namespaced or otherwise); drop ADR-003, ADR-005 and ADR-006, which are template-internal. Add your project's own ADR entries below. |
 | `## AI Integration Patterns (if applicable)` | The section if your project uses LLMs | Customize the bullets freely; drop the section entirely if your project doesn't use AI integrations. |
 
 ### Bucket 3 — Pure project scaffold, replace
@@ -603,7 +605,7 @@ Some files only work together. Take each of these sets whole, never part of one:
 
 - **Session context:** `/session-start` and `/handoff`, `AI_CONTEXT.md` (and its
   `@AI_CONTEXT.md` line in `CLAUDE.md`'s Context System), `templates/AI_SESSION_START.md`,
-  `docs/summaries/`, ADR-002 and ADR-004, and the `session-context.sh` hook with its
+  `docs/summaries/`, ADR-002, ADR-004 and ADR-007, and the `session-context.sh` hook with its
   `settings.json` wiring. `/handoff` also uses the Decisions set.
 - **Decisions:** `/adr`, `templates/ADR-template.md` and `docs/adr/`.
 - **Safety:** `settings.json`, `block-dangerous.sh`, `statusline.sh`, `check-template.sh`,
@@ -638,7 +640,8 @@ dropping `/session-start` alone, for example, passes.
 | `templates/ADR-template.md` | ADR scaffold (referenced by `/adr`). |
 | `docs/adr/ADR-001-vendor-with-source-pin.md` | Rationale for the `VENDORED.md` sidecar manifest. Sub-namespace if you maintain your own `docs/adr/` series (see § First-time adoption callout). |
 | `docs/adr/ADR-002-ai-context-archive-threshold.md` | Historical record — the original 500-line research-anchored derivation. Superseded by ADR-004 but kept in-repo (ADR-004 cites its evidence chain). Same sub-namespacing caveat. |
-| `docs/adr/ADR-004-ai-context-archive-threshold-bump.md` | Live rationale for the 750-line `AI_CONTEXT.md` archive threshold + `/handoff` state-sufficiency requirement (referenced from `templates/AI_SESSION_START.md` and CLAUDE.md's Context System). Same sub-namespacing caveat. |
+| `docs/adr/ADR-004-ai-context-archive-threshold-bump.md` | Superseded by ADR-007 but kept: it defines the `/handoff` state-sufficiency requirement ADR-007 keeps, and ADR-007 cites it. Same sub-namespacing caveat. |
+| `docs/adr/ADR-007-ai-context-archive-threshold-1000.md` | Live rationale for the `AI_CONTEXT.md` archive threshold (referenced from the SessionStart hook, `/handoff`, `templates/AI_SESSION_START.md` and CLAUDE.md). Same sub-namespacing caveat. |
 | `docs/adr/.gitkeep` | Keeps `docs/adr/` under version control; `check-template.sh` §5 requires the directory. Needed if you sub-namespace the template's ADRs and have none of your own yet. |
 | `docs/summaries/.gitkeep` | Keeps the (initially empty) monthly-summary archive dir under version control. **Easy to miss** — it's the only file under `docs/summaries/`, and `check-template.sh` §5 fails (`missing directory: docs/summaries`) without it. Copying it is what makes a fresh adoption pass verification. |
 
@@ -749,8 +752,8 @@ The session will:
    reference-only and skip files aren't proposed here; they show up in the
    `CHANGELOG`.
    Also add any file a *changed* command/skill now references (e.g. an updated
-   `handoff.md` that references `docs/adr/ADR-004-…` co-requires vendoring
-   ADR-004). If an incoming ADR's number already exists in your own `docs/adr/`
+   `handoff.md` that references `docs/adr/ADR-007-…` co-requires vendoring
+   ADR-007). If an incoming ADR's number already exists in your own `docs/adr/`
    series, **sub-namespace or renumber it** — don't assume the template's
    `ADR-NNN` slot is free.
 5. **Check plugins** (`claude plugin list`) against the whole "Installed plugins"
