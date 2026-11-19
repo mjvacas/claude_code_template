@@ -47,8 +47,15 @@ fi
 
 strict=0
 [ "${1:-}" = "--strict" ] && { strict=1; shift; }
+caller=$PWD
 cd "$(dirname "$0")/.." || exit 1
 target="${1:-.claude}"
+# A relative PATH names a folder where the auditor was run from, not in this script's
+# repo: running a template clone's copy from an adopter's repo must audit the adopter's
+# files. (With no PATH, it audits the .claude/ next to the script.)
+if [ -n "${1:-}" ]; then
+  case $target in /*) ;; *) [ "$caller" -ef "$PWD" ] || target="$caller/$target" ;; esac
+fi
 [ -e "$target" ] || { echo "audit-config: no such path: $target" >&2; exit 2; }
 # Review a symlinked target (e.g. ~/.claude/skills/x -> ~/src/x) as what it points to:
 # find and BSD grep don't descend into a link.

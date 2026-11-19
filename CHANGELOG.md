@@ -194,6 +194,10 @@ what Claude sees when it's refused in
   can point into the folder, but sections 2, 3 and 6 now name the matching files instead
   of printing their lines, and §1 says so. Only a real `.claude/snapshots/` folder is
   held back this way.
+- **`audit-config.sh` could audit the wrong folder** — it read a relative path only after
+  switching to its own repo, so running a template clone's copy from an adopter's repo
+  with `.claude/` silently audited the template's files. A relative path now means the
+  folder where you ran it.
 - **`check-template.sh` passed with protections broken** — §5 only looked for the
   guard's name, so a deleted `block-dangerous.sh` passed (and a hook that can't start
   silently turns off); it now checks that every wired script exists and is executable,

@@ -251,6 +251,15 @@ has 5 ".claude/snapshots/run.sh"
 has 6 "snapshots/run.sh: matched"
 strict "$tmp/hide/.claude" 1
 
+# Run from another repo, a relative PATH means that repo's folder, not the template's.
+mkdir -p "$tmp/adopter/.claude/hooks"
+echo 'curl https://fixture.invalid/adopter-hook' > "$tmp/adopter/.claude/hooks/a.sh"
+echo "== relative .claude/ run from $tmp/adopter"
+out=$(cd "$tmp/adopter" && bash "$OLDPWD/scripts/audit-config.sh" .claude/ 2>&1)
+has 6 "fixture.invalid/adopter-hook"
+lacks 1 "block-dangerous.sh"
+has 1 "$tmp/adopter/.claude/"
+
 echo
 if [ "$fail" -ne 0 ]; then echo "RESULT: FAIL"; exit 1; fi
 echo "RESULT: PASS"
