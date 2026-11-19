@@ -34,7 +34,7 @@ if [ -f AI_CONTEXT.md ]; then
     echo
     echo "### AI_CONTEXT.md needs archiving (${lines} lines > 1000)"
     echo "Move oldest session blocks into docs/summaries/$(date +%Y-%m).md before /handoff."
-    echo "See docs/adr/ADR-007-ai-context-archive-threshold-1000.md for the why."
+    echo "See the template's ADR-007 (AI_CONTEXT.md archive threshold) for the why."
   fi
 fi
 exit 0

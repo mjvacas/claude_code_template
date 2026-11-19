@@ -40,7 +40,7 @@ The curve is smooth and falls steadily under both policies and in both halves of
 
 1. **Threshold: 1000 lines**, the middle of the acceptable region. That's about 12–13k tokens loaded per session on average and ~15–26k at the cap, 1.5–2.6% of a 1M window.
 2. **ADR-004's state-sufficiency requirement and two-layer enforcement stay as they are**: the SessionStart hook reminds above the cap, and `/handoff` archives the oldest blocks before committing.
-3. The number is a single source of truth. Changing it means updating the hook, the `/handoff` command, the `AI_CONTEXT.md` header, `templates/AI_SESSION_START.md`, `docs/token-awareness.md` and the CLAUDE.md ADR highlight, adding a Migration item for adopters, and superseding this ADR.
+3. The number is a single source of truth. Changing it means updating the hook, the `/handoff` command, the `AI_CONTEXT.md` header, `templates/AI_SESSION_START.md`, the template's `docs/token-awareness.md` and the CLAUDE.md ADR highlight, adding a Migration item for adopters, and superseding this ADR.
 
 ## Consequences
 

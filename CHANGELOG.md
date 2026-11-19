@@ -59,12 +59,14 @@ what Claude sees when it's refused in
    line until you do. `audit-config.sh` still reports the folder's files but doesn't print
    their lines, and under `--strict` they can fail the check until you delete it.
 3. Add `-I` to the `python3 -c`, `python3 -` and `python3 <script>` calls in your own
-   hooks and scripts, and to scripts started through a `#!/usr/bin/env python3` line
-   (`#!/usr/bin/env -S python3 -I`): without it, a script's own folder and your working
-   folder come first on its import path. If a script imports modules from its own
-   folder, add that folder to `sys.path` in the script instead (or leave `-I` off for
-   it), then run the hook once to confirm it still works: a hook that crashes doesn't
-   block anything.
+   hooks and scripts, and if anything runs a script directly through its
+   `#!/usr/bin/env python3` line, change that line to `#!/usr/bin/env -S python3 -I`:
+   without `-I`, a script's own folder and your working folder come first on its import
+   path. If a script imports modules from its own folder, add that folder to `sys.path`
+   in the script instead (or leave `-I` off for it), then run the hook once to confirm
+   it still works: a hook that crashes doesn't block anything. Feed it a sample event
+   from a file (`{"tool_name":"Bash","tool_input":{"command":"…"}}`); typed inline, a
+   test command that contains a blocked string is stopped by the live guard first.
 4. Headless runs (`claude -p`) that edit `CLAUDE.md`, `.github/`, the check scripts or
    the template's settings, hooks or status line are now denied, because an `ask` rule
    has no one to ask. `/adr` prompts for its `CLAUDE.md` edit.
@@ -76,13 +78,15 @@ what Claude sees when it's refused in
    re-pin to the release tag: until then there's no tag URL to point at.
 6. If your `CLAUDE.md` doesn't take keep-verbatim changes (it diverged on purpose),
    add the "Personal info stays local" bullet from the template's `## Conventions` by
-   hand.
+   hand. Put it with your file's privacy or convention rules, and if a rule there names
+   a single way data may leave (say, web search only), reconcile the two.
 7. `/handoff` and the SessionStart hook now point at ADR-007 and archive above 1000
    lines. Vendor `docs/adr/ADR-007-ai-context-archive-threshold-1000.md` next to
    ADR-004 (sub-namespace or renumber it if your own ADR series has a 007), and repoint
    its path the way you did for ADR-004: `handoff.md`'s two `@` refs and the path in
-   `templates/AI_SESSION_START.md`, plus, if you renumbered it, the hook's echo line and
-   ADR-004's status link. In your `CLAUDE.md` `## Architecture Decisions`, mark the
+   `templates/AI_SESSION_START.md`, plus, if you renumbered it, ADR-004's status link.
+   If you sub-namespaced it instead and your own series has an ADR-007, say "upstream
+   ADR-007" where your prose names the template's. In your `CLAUDE.md` `## Architecture Decisions`, mark the
    ADR-004 entry superseded and add the ADR-007 highlight from the template, with your
    path. Your own `AI_CONTEXT.md` header likely still says ~750 and links ADR-004; update
    it too. If you keep a different cap on purpose, record it in `VENDORED.md`.

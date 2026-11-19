@@ -250,7 +250,9 @@ adoption; approve them.
 > `ADR-007-ai-context-archive-threshold-1000.md` (live rationale for the
 > `AI_CONTEXT.md` threshold); vendoring those
 > naïvely into a repo with its own ADR-001 silently corrupts the adopter's
-> ADR sequence.
+> ADR sequence. Sub-namespacing fixes paths, not names: if your series has
+> its own ADR-NNN, say "upstream ADR-NNN" wherever your prose names the
+> template's, or renumber it.
 > Patch the inline references in `templates/AI_SESSION_START.md` (and any
 > other vendored docs that cross-link to template ADRs) to the
 > sub-namespace path you chose.
@@ -716,7 +718,13 @@ The session will:
    pin sits relative to the tags. **Your own repo must be clean too:**
    `git status --porcelain` must print nothing; otherwise ask the user to commit or
    stash their work, and stop if they don't. Step 9's `git add -A` then stages only
-   the re-sync.
+   the re-sync. A `git worktree` on a new branch
+   (`git worktree add -b resync ../<repo>-resync main`) also works and leaves work in
+   progress in place. Gitignored local files (`.env`, `.claude/snapshots/`, private
+   lists) aren't in it, so the checks see a different tree; give the template clone's
+   path as an absolute path, since `../claude_code_template` resolves from the
+   worktree; and merge the branch into your main branch after step 10, before starting
+   the new session.
 2. Read the template's `CHANGELOG.md` from the first section after your pin up to
    the target; a MAJOR (or, in 0.x beta, MINOR) bump flags a breaking
    adoption-contract change. Identify entries affecting vendored paths or baseline
@@ -738,7 +746,8 @@ The session will:
    recorded; treat it as **Merge** in step 7 and record the change in its Notes, or a
    plain update will silently drop it. For example, if you wired your own hook into
    `settings.json`, the diff shows it as a `>` line (`> "command": "…/my-hook.sh"`),
-   and that row goes to Merge.
+   and that row goes to Merge. For an adapted row, compare the drift against its Notes
+   too: record any adaptation the Notes don't list, or step 7's Merge may drop it.
 4. **Check for newly-vendored files.** Compare the template's current
    [File map](#file-map) against the paths in your `VENDORED.md`; propose
    **adding** any vendor-as-is file you never picked up — most importantly
@@ -765,7 +774,8 @@ The session will:
    third-party plugin (authorship per [Plugin discovery](#plugin-discovery)):
    - Find the copy Claude Code loads for this project (user scope, or project scope
      here), not the newest cache folder or another project's install:
-     `jq -r --arg p "$(git rev-parse --show-toplevel)" '.plugins["<name>@<marketplace>"][]? | select(.scope == "user" or .projectPath == $p) | .installPath' ~/.claude/plugins/installed_plugins.json`.
+     `jq -r --arg p "$(git worktree list --porcelain | sed -n '1s/^worktree //p')" '.plugins["<name>@<marketplace>"][]? | select(.scope == "user" or .projectPath == $p) | .installPath' ~/.claude/plugins/installed_plugins.json`
+     (`$p` is your main checkout, even when you work in a worktree).
      No output means it isn't installed for this project: fix its row instead.
    - Re-audit when that path's version (its last folder) differs from the one in
      the plugin's Notes, or when this range changed `scripts/audit-config.sh` or
@@ -786,7 +796,10 @@ The session will:
    and the stack changed if a dependency manifest changed anywhere in the repo
    (`git diff --name-only "$base"..HEAD | grep -E '(^|/)(package\.json|pyproject\.toml|requirements[^/]*\.txt|go\.mod|Cargo\.toml|Gemfile)$'`)
    or a top-level directory is new
-   (`comm -13 <(git ls-tree -d --name-only "$base" | sort) <(git ls-tree -d --name-only HEAD | sort)`). Candidates are catalog entries that match
+   (`comm -13 <(git ls-tree -d --name-only "$base" | sort) <(git ls-tree -d --name-only HEAD | sort)`).
+   A repo without code (notes, docs) won't trip the manifest check; there, ask the
+   user whether they've taken up a new tool or workflow since the last sync, and run
+   discovery if so. Candidates are catalog entries that match
    the stack, minus what's installed and what "Considered plugins" records as
    declined. The output is a short list with the fields discovery surfaces, or
    "no new candidates". Record each candidate the user declines (name, date,
