@@ -9,6 +9,7 @@
 # time in a temp dir, so the repo never holds them.
 set -uo pipefail
 cd "$(dirname "$0")/../.." || exit 1
+root=$PWD
 
 fx=tests/audit-config/fixtures
 fail=0
@@ -17,8 +18,10 @@ err() { printf '  FAIL %s\n' "$*"; fail=1; }
 
 # audit PATH [errors-ok] — run the auditor and keep its report in $out. A crash, a
 # control character in the report, or (unless errors-ok) an ERROR line fails the case.
+# AUDIT_CWD=dir runs it from that directory; an empty PATH runs it with no PATH.
 audit() {
-  echo "== $1"; out=$(bash scripts/audit-config.sh "$1" 2>&1)
+  echo "== ${1:-(no PATH)}${AUDIT_CWD:+ run from $AUDIT_CWD}"
+  out=$(cd "${AUDIT_CWD:-.}" && bash "$root/scripts/audit-config.sh" ${1:+"$1"} 2>&1)
   case $out in *Traceback*) err "auditor crashed on $1" ;; esac
   # CR, ESC, C1 CSI (U+009B), right-to-left override (U+202E), zero-width space (U+200B)
   case $out in *$'\r'*|*$'\033'*|*$'\xc2\x9b'*|*$'\xe2\x80\xae'*|*$'\xe2\x80\x8b'*)
@@ -251,14 +254,20 @@ has 5 ".claude/snapshots/run.sh"
 has 6 "snapshots/run.sh: matched"
 strict "$tmp/hide/.claude" 1
 
-# Run from another repo, a relative PATH means that repo's folder, not the template's.
+# Run from another repo, a relative PATH, and no PATH, mean that repo's .claude, not the
+# template's. Run from inside a .claude dir, "." still holds back snapshot lines.
 mkdir -p "$tmp/adopter/.claude/hooks"
 echo 'curl https://fixture.invalid/adopter-hook' > "$tmp/adopter/.claude/hooks/a.sh"
-echo "== relative .claude/ run from $tmp/adopter"
-out=$(cd "$tmp/adopter" && bash "$OLDPWD/scripts/audit-config.sh" .claude/ 2>&1)
-has 6 "fixture.invalid/adopter-hook"
-lacks 1 "block-dangerous.sh"
-has 1 "$tmp/adopter/.claude/"
+adopter=$(cd "$tmp/adopter" && pwd -P)
+for p in .claude/ ""; do
+  AUDIT_CWD="$tmp/adopter" audit "$p"
+  has 6 "fixture.invalid/adopter-hook"
+  lacks 1 "block-dangerous.sh"
+  has 1 "$adopter/.claude"
+done
+AUDIT_CWD="$tmp/snap/.claude" audit .
+has 1 "[note]"
+lacks 6 "snapshot-order"
 
 echo
 if [ "$fail" -ne 0 ]; then echo "RESULT: FAIL"; exit 1; fi

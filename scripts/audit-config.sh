@@ -11,7 +11,7 @@
 # or an unusual/absent extension (`setup.ts`, an extensionless binary).
 #
 # Usage:
-#   scripts/audit-config.sh [PATH]            # default: .claude
+#   scripts/audit-config.sh [PATH]            # default: .claude in the current directory
 #   scripts/audit-config.sh path/to/SKILL.md  # a single candidate skill
 #   scripts/audit-config.sh --strict [PATH]   # exit 1 if any HIGH-signal finding
 set -uo pipefail
@@ -47,15 +47,13 @@ fi
 
 strict=0
 [ "${1:-}" = "--strict" ] && { strict=1; shift; }
-caller=$PWD
+caller=$(pwd -P)
 cd "$(dirname "$0")/.." || exit 1
 target="${1:-.claude}"
-# A relative PATH names a folder where the auditor was run from, not in this script's
-# repo: running a template clone's copy from an adopter's repo must audit the adopter's
-# files. (With no PATH, it audits the .claude/ next to the script.)
-if [ -n "${1:-}" ]; then
-  case $target in /*) ;; *) [ "$caller" -ef "$PWD" ] || target="$caller/$target" ;; esac
-fi
+# A relative PATH (and the default .claude) names a folder where the auditor was run
+# from, not in this script's repo: running a template clone's copy from an adopter's
+# repo must audit the adopter's files. Run from the repo root, paths stay relative.
+case $target in /*) ;; *) [ "$caller" -ef "$PWD" ] || target="$caller/$target" ;; esac
 [ -e "$target" ] || { echo "audit-config: no such path: $target" >&2; exit 2; }
 # Review a symlinked target (e.g. ~/.claude/skills/x -> ~/src/x) as what it points to:
 # find and BSD grep don't descend into a link.
@@ -69,7 +67,7 @@ fi
 # would read below the top: no links, FIFOs or devices); $held_back is snapshots/.
 roots=("$target")
 held_back=""
-if [ -d "$target/snapshots" ] && [ ! -L "$target/snapshots" ] && [ "$(basename "$target")" = .claude ]; then
+if [ -d "$target/snapshots" ] && [ ! -L "$target/snapshots" ] && [ "$(cd "$target" && basename "$(pwd -P)")" = .claude ]; then
   held_back="${target%/}/snapshots"
   roots=()
   while IFS= read -r -d '' p; do roots+=("$p"); done \
