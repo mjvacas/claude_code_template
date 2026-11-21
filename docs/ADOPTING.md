@@ -725,10 +725,8 @@ The session will:
    the re-sync. A `git worktree` on a new branch
    (`git worktree add -b resync ../<repo>-resync main`) also works and leaves work in
    progress in place. Gitignored local files (`.env`, `.claude/snapshots/`, private
-   lists) aren't in it, so the checks see a different tree; give the template clone's
-   path as an absolute path, since `../claude_code_template` resolves from the
-   worktree; and merge the branch into your main branch after step 10, before starting
-   the new session.
+   lists) aren't in it, so the checks see a different tree. Merge the branch into your
+   main branch after step 10, before starting the new session.
 2. Read the template's `CHANGELOG.md` from the first section after your pin up to
    the target; a MAJOR (or, in 0.x beta, MINOR) bump flags a breaking
    adoption-contract change. Identify entries affecting vendored paths or baseline

@@ -80,11 +80,13 @@ what Claude sees when it's refused in
    add the "Personal info stays local" bullet from the template's `## Conventions` by
    hand. Put it with your file's privacy or convention rules, and if a rule there names
    a single way data may leave (say, web search only), reconcile the two. If you must
-   shorten it, keep three things: personal info is open-ended (the examples aren't a
-   closed list); request headers count, the User-Agent included; and the user is asked
-   before anything is sent, including what to send when an API wants contact info,
-   since even a project name can identify them. Or keep one line that points to a doc
-   holding the full text.
+   shorten it, keep four things: personal info is open-ended (the examples aren't a
+   closed list); request headers count, the User-Agent included; it covers MCP tool
+   inputs and code Claude writes that sends the data later, not only requests Claude
+   makes itself; and the user is asked before anything is sent, including what to send
+   when an API wants contact info, since even a project name can identify them. Or keep
+   one line that `@`-imports a doc holding the full text (a plain link isn't loaded
+   into context).
 7. `/handoff` and the SessionStart hook now point at ADR-007 and archive above 1000
    lines. Vendor `docs/adr/ADR-007-ai-context-archive-threshold-1000.md` next to
    ADR-004 (sub-namespace or renumber it if your own ADR series has a 007), and repoint

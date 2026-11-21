@@ -15,6 +15,7 @@
 #   scripts/audit-config.sh path/to/SKILL.md  # a single candidate skill
 #   scripts/audit-config.sh --strict [PATH]   # exit 1 if any HIGH-signal finding
 set -uo pipefail
+unset CDPATH   # an exported CDPATH would send `cd <relative path>` elsewhere and print it
 
 # Untrusted files can hold terminal escapes, carriage returns and invisible formatting
 # (bidi overrides, zero-width marks) that would overwrite or disguise lines of this
@@ -56,7 +57,9 @@ target="${1:-.claude}"
 case $target in /*) ;; *) [ "$caller" -ef "$PWD" ] || target="$caller/$target" ;; esac
 [ -e "$target" ] || { echo "audit-config: no such path: $target" >&2; exit 2; }
 # Review a symlinked target (e.g. ~/.claude/skills/x -> ~/src/x) as what it points to:
-# find and BSD grep don't descend into a link.
+# find and BSD grep don't descend into a link. Keep the name it was given for the
+# .claude check below: a linked .claude may point at a folder named something else.
+name=$(basename "$target")
 [ -L "$target" ] && target=$(python3 -I -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' "$target")
 
 # In a .claude dir, snapshots/ holds conversation saved by the PreCompact hook v0.3.0
@@ -67,11 +70,13 @@ case $target in /*) ;; *) [ "$caller" -ef "$PWD" ] || target="$caller/$target" ;
 # would read below the top: no links, FIFOs or devices); $held_back is snapshots/.
 roots=("$target")
 held_back=""
-if [ -d "$target/snapshots" ] && [ ! -L "$target/snapshots" ] && [ "$(cd "$target" && basename "$(pwd -P)")" = .claude ]; then
+if [ -d "$target/snapshots" ] && [ ! -L "$target/snapshots" ] &&
+   { [ "$name" = .claude ] || [ "$(cd -- "$target" && basename "$(pwd -P)")" = .claude ]; }; then
   held_back="${target%/}/snapshots"
   roots=()
+  # "$target" keeps any trailing slash, so find descends into a linked .claude/.
   while IFS= read -r -d '' p; do roots+=("$p"); done \
-    < <(find "${target%/}" -mindepth 1 -maxdepth 1 ! -name snapshots \( -type f -o -type d \) -print0)
+    < <(find "$target" -mindepth 1 -maxdepth 1 ! -name snapshots \( -type f -o -type d \) -print0)
 fi
 
 high=0

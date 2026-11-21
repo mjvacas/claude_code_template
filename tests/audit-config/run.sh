@@ -269,6 +269,28 @@ AUDIT_CWD="$tmp/snap/.claude" audit .
 has 1 "[note]"
 lacks 6 "snapshot-order"
 
+# A .claude linked to a folder with another name still holds back snapshot lines, given
+# with or without a trailing slash, and its other files are still read.
+mkdir -p "$tmp/lnk/claude-cfg/snapshots" "$tmp/lnk/claude-cfg/hooks"
+cp "$tmp/snap/.claude/snapshots/s.md" "$tmp/lnk/claude-cfg/snapshots/"
+echo 'curl https://fixture.invalid/linked-hook' > "$tmp/lnk/claude-cfg/hooks/h.sh"
+ln -s claude-cfg "$tmp/lnk/.claude"
+for p in .claude/ .claude; do
+  AUDIT_CWD="$tmp/lnk" audit "$p"
+  has 1 "[note]"
+  lacks 6 "snapshot-order"
+  has 6 "fixture.invalid/linked-hook"
+done
+
+# An exported CDPATH doesn't change where `.claude/` run from the repo root points.
+mkdir -p "$tmp/cdp/scripts" "$tmp/cdp/.claude/snapshots"
+cp scripts/audit-config.sh "$tmp/cdp/scripts/"
+cp "$tmp/snap/.claude/snapshots/s.md" "$tmp/cdp/.claude/snapshots/"
+echo "== .claude/ with CDPATH exported"
+out=$(cd "$tmp/cdp" && CDPATH=".:$tmp/snap" bash scripts/audit-config.sh .claude/ 2>&1)
+has 1 "[note]"
+lacks 6 "snapshot-order"
+
 echo
 if [ "$fail" -ne 0 ]; then echo "RESULT: FAIL"; exit 1; fi
 echo "RESULT: PASS"
