@@ -79,14 +79,21 @@ what Claude sees when it's refused in
 6. If your `CLAUDE.md` doesn't take keep-verbatim changes (it diverged on purpose),
    add the "Personal info stays local" bullet from the template's `## Conventions` by
    hand. Put it with your file's privacy or convention rules, and if a rule there names
-   a single way data may leave (say, web search only), reconcile the two.
+   a single way data may leave (say, web search only), reconcile the two. If you must
+   shorten it, keep three things: personal info is open-ended (the examples aren't a
+   closed list); request headers count, the User-Agent included; and the user is asked
+   before anything is sent, including what to send when an API wants contact info,
+   since even a project name can identify them. Or keep one line that points to a doc
+   holding the full text.
 7. `/handoff` and the SessionStart hook now point at ADR-007 and archive above 1000
    lines. Vendor `docs/adr/ADR-007-ai-context-archive-threshold-1000.md` next to
    ADR-004 (sub-namespace or renumber it if your own ADR series has a 007), and repoint
    its path the way you did for ADR-004: `handoff.md`'s two `@` refs and the path in
    `templates/AI_SESSION_START.md`, plus, if you renumbered it, ADR-004's status link.
-   If you sub-namespaced it instead and your own series has an ADR-007, say "upstream
-   ADR-007" where your prose names the template's. In your `CLAUDE.md` `## Architecture Decisions`, mark the
+   If you sub-namespaced the template's ADRs instead, check every number you vendored
+   (ADR-001, 002, 004 and 007) against your own series: where they collide, say
+   "upstream ADR-NNN" in prose that names the template's, as `docs/ADOPTING.md`'s
+   sub-namespacing note describes. In your `CLAUDE.md` `## Architecture Decisions`, mark the
    ADR-004 entry superseded and add the ADR-007 highlight from the template, with your
    path. Your own `AI_CONTEXT.md` header likely still says ~750 and links ADR-004; update
    it too. If you keep a different cap on purpose, record it in `VENDORED.md`.

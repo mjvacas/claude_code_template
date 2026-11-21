@@ -706,8 +706,12 @@ After adoption, re-sync periodically. Paste-prompt for the adopter's
 Claude Code session:
 
 > Re-sync vendored files from `claude_code_template` (at
-> `../claude_code_template`). Check the template's `CHANGELOG.md` since
+> `<template-clone>`). Check the template's `CHANGELOG.md` since
 > the version/SHA in `VENDORED.md`; show me what's changed and propose updates.
+
+Replace `<template-clone>` with the clone's absolute path: a relative one resolves
+from wherever the session runs, and with more than one clone around it can point at
+the wrong one.
 
 The session will:
 
