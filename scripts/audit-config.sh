@@ -11,27 +11,129 @@
 # or an unusual/absent extension (`setup.ts`, an extensionless binary).
 #
 # Usage:
-#   scripts/audit-config.sh [PATH]            # default: .claude
+#   scripts/audit-config.sh [PATH]            # default: .claude in the current directory
 #   scripts/audit-config.sh path/to/SKILL.md  # a single candidate skill
 #   scripts/audit-config.sh --strict [PATH]   # exit 1 if any HIGH-signal finding
 set -uo pipefail
+unset CDPATH   # an exported CDPATH would send `cd <relative path>` elsewhere and print it
 
-# Untrusted files can hold terminal escapes and carriage returns that would overwrite
-# lines of this report. Run the report through a filter that deletes control characters
-# (tabs and newlines are kept), with errors merged in so none go unseen.
+# Untrusted files can hold terminal escapes, carriage returns and invisible formatting
+# (bidi overrides, zero-width marks) that would overwrite or disguise lines of this
+# report. Run the report through a filter that deletes control and format characters
+# (tabs and newlines are kept), with errors merged in so none go unseen. Without python3
+# it falls back to deleting the ASCII controls only.
+sanitize() {
+  if python3 -I -c '' 2>/dev/null; then
+    python3 -I -c '
+import sys, unicodedata
+def keep(c):
+    o = ord(c)
+    if c in "\t\n":
+        return True
+    if 0xDC80 <= o <= 0xDCFF:   # a byte that is not valid UTF-8: drop the C1 range only
+        return o > 0xDC9F
+    return unicodedata.category(c) not in ("Cc", "Cf", "Co", "Cs")
+for line in sys.stdin.buffer:
+    text = line.decode("utf-8", "surrogateescape")
+    sys.stdout.buffer.write("".join(c for c in text if keep(c)).encode("utf-8", "surrogateescape"))
+    sys.stdout.flush()'
+  else
+    LC_ALL=C tr -d '\000-\010\013-\037\177'
+  fi
+}
 if [ -z "${AUDIT_CONFIG_FILTERED:-}" ]; then
-  AUDIT_CONFIG_FILTERED=1 bash "$0" "$@" 2>&1 | LC_ALL=C tr -d '\000-\010\013-\037\177'
+  AUDIT_CONFIG_FILTERED=1 bash "$0" "$@" 2>&1 | sanitize
   exit "${PIPESTATUS[0]}"
 fi
 
 strict=0
 [ "${1:-}" = "--strict" ] && { strict=1; shift; }
+caller=$(pwd -P)
 cd "$(dirname "$0")/.." || exit 1
 target="${1:-.claude}"
+# A relative PATH (and the default .claude) names a folder where the auditor was run
+# from, not in this script's repo: running a template clone's copy from an adopter's
+# repo must audit the adopter's files. Run from the repo root, paths stay relative.
+case $target in /*) ;; *) [ "$caller" -ef "$PWD" ] || target="$caller/$target" ;; esac
 [ -e "$target" ] || { echo "audit-config: no such path: $target" >&2; exit 2; }
 # Review a symlinked target (e.g. ~/.claude/skills/x -> ~/src/x) as what it points to:
-# find and BSD grep don't descend into a link.
-[ -L "$target" ] && target=$(python3 -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' "$target")
+# find and BSD grep don't descend into a link. Keep the name it was given for the
+# .claude check below: a linked .claude may point at a folder named something else.
+name=$(basename "$target")
+[ -L "$target" ] && target=$(python3 -I -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' "$target")
+
+# Two folders in a .claude dir need care:
+# - snapshots/ holds conversation saved by the PreCompact hook v0.3.0 removed. Its files
+#   are listed, checked and counted like any others (loaded config can point into it, so
+#   nothing there may go unreported), but the line-printing greps only name them.
+# - worktrees/ holds Claude Code's worktrees: full copies of the repo. Each one's own
+#   .claude/ is the config its sessions load, so that is audited like this one; the rest
+#   is repo code, outside this audit just as the repo itself is, and §1 says so.
+# $walk is what §1, §4 and §5 read; $roots is what the line-printing greps read (plain
+# files and dirs only, as grep -r reads below the top: no links, FIFOs or devices);
+# $held_back lists the snapshots/ folders. Without either folder, both are the target.
+walk=("$target") roots=("$target") held_back=() worktrees="" wt_list=()
+# add_claude DIR [top]: add a .claude dir's entries; with "top", its worktrees/ is left
+# for the caller. "$1" keeps any trailing slash, so find descends into a linked .claude/.
+# A dir find can't list is added whole, so grep reports it as an ERROR, not "none".
+add_claude() {
+  local p
+  if [ ! -r "$1" ] || [ ! -x "$1" ]; then walk+=("$1"); roots+=("$1"); return; fi
+  while IFS= read -r -d '' p; do
+    [ -n "${2:-}" ] && [ "${p##*/}" = worktrees ] && [ -d "$p" ] && [ ! -L "$p" ] && continue
+    walk+=("$p")
+    if [ "${p##*/}" = snapshots ] && [ -d "$p" ] && [ ! -L "$p" ]; then held_back+=("$p")
+    elif [ ! -L "$p" ] && { [ -f "$p" ] || [ -d "$p" ]; }; then roots+=("$p"); fi
+  done < <(find "$1" -mindepth 1 -maxdepth 1 -print0)
+}
+# is_worktree DIR: a git worktree, checked the way git links one: DIR/.git is a file
+# naming a gitdir outside the audited .claude, and that gitdir's own "gitdir" file points
+# back at DIR/.git. A one-line .git file written by anyone else doesn't pass. What this
+# doesn't stop is out of scope: a clone can't create a .git file (git refuses the path),
+# and an archive that ships its own gitdir controls the whole repo, whose files outside
+# .claude this audit never reads anyway. git itself isn't run here: it would load the
+# audited repo's own config.
+is_worktree() {
+  local g back top
+  [ -d "$1" ] && [ ! -L "$1" ] && [ -f "$1/.git" ] && [ ! -L "$1/.git" ] || return 1
+  g=$(sed -n '1s/^gitdir: //p' "$1/.git")
+  [ -n "$g" ] || return 1
+  case $g in /*) ;; *) g="$1/$g" ;; esac
+  # Resolve the gitdir on disk once (cd -P follows links before "..") and check that
+  # path, so a link plus ".." can't make the text and the disk disagree.
+  g=$(cd -P -- "$g" 2>/dev/null && pwd -P) && top=$(cd -P -- "$target" && pwd -P) || return 1
+  case "$g/" in "$top/"*) return 1 ;; esac
+  [ -f "$g/gitdir" ] || return 1
+  back=$(sed -n '1p' "$g/gitdir")
+  case $back in /*) ;; *) back="$g/$back" ;; esac
+  [ -n "$back" ] && [ "$back" -ef "$1/.git" ]
+}
+if [ -d "$target" ] && { [ -d "$target/snapshots" ] || [ -d "$target/worktrees" ]; } &&
+   { [ "$name" = .claude ] || [ "$(cd -- "$target" && basename "$(pwd -P)")" = .claude ]; }; then
+  walk=() roots=()
+  add_claude "$target" top
+  if [ -d "$target/worktrees" ] && [ ! -L "$target/worktrees" ]; then
+    worktrees="${target%/}/worktrees"
+    if [ ! -r "$worktrees" ] || [ ! -x "$worktrees" ]; then
+      walk+=("$worktrees"); roots+=("$worktrees")
+    else
+      # Only a real git worktree is treated as one (is_worktree); anything else in
+      # worktrees/ is read in full, so the folder can't hide other files.
+      while IFS= read -r -d '' e; do
+        if is_worktree "$e"; then
+          wt_list+=("$e")
+          if [ -d "$e/.claude" ] && [ ! -L "$e/.claude" ]; then add_claude "$e/.claude"
+          elif [ -e "$e/.claude" ] || [ -L "$e/.claude" ]; then walk+=("$e/.claude"); fi
+        else
+          walk+=("$e")
+          [ ! -L "$e" ] && { [ -f "$e" ] || [ -d "$e" ]; } && roots+=("$e")
+        fi
+      done < <(find "$worktrees" -mindepth 1 -maxdepth 1 -print0)
+    fi
+  fi
+fi
+# find over $walk, or nothing when it's empty: find with no path would read "." instead.
+walk_find() { [ "${#walk[@]}" -gt 0 ] || return 0; find "${walk[@]}" "$@"; }
 
 high=0
 hdr() { printf '\n=== %s ===\n' "$*"; }
@@ -41,12 +143,19 @@ hdr() { printf '\n=== %s ===\n' "$*"; }
 # reading as "none". Returns 0 when something matched. LC_ALL=C so text with invalid
 # UTF-8 isn't taken for binary and skipped by -I.
 scan() {
-  LC_ALL=C grep -rnI "$@" -- "$target"
-  case $? in
-    0) return 0 ;;
-    1) echo "  none" ;;
-    *) echo "  ERROR: grep could not finish (unreadable file or unsupported pattern) -> INCOMPLETE"; high=1 ;;
-  esac
+  local rc=1 held_rc=1 held
+  if [ "${#roots[@]}" -gt 0 ]; then LC_ALL=C grep -rnI "$@" -- "${roots[@]}"; rc=$?; fi
+  if [ "${#held_back[@]}" -gt 0 ]; then
+    held=$(LC_ALL=C grep -rlI "$@" -- "${held_back[@]}"); held_rc=$?
+    [ -n "$held" ] && printf '%s\n' "$held" | sed 's/$/: matched (lines not shown: open the file to review)/'
+  fi
+  if [ "$rc" -ge 2 ] || [ "$held_rc" -ge 2 ]; then
+    echo "  ERROR: grep could not finish (unreadable file or unsupported pattern) -> INCOMPLETE"; high=1
+  elif [ "$rc" -eq 0 ] || [ "$held_rc" -eq 0 ]; then
+    return 0
+  else
+    echo "  none"
+  fi
   return 1
 }
 
@@ -55,7 +164,7 @@ scan() {
 # The whole file is checked because grep -I skips a file with a NUL, so §2 and §6 would
 # never read it. Exit 2 = couldn't read the file.
 is_binary() {
-  python3 - "$1" <<'PY' 2>/dev/null
+  python3 -I - "$1" <<'PY' 2>/dev/null
 import sys
 try:
     with open(sys.argv[1], "rb") as fh:
@@ -89,8 +198,15 @@ while IFS= read -r -d '' f; do
     esac
   fi
   printf '  %-7s %s\n' "[$mark]" "$(ls -ldh -- "$f" 2>/dev/null)"
-done < <(find "$target" \( -type f -o -type l \) -print0)
+done < <(walk_find \( -type f -o -type l \) -print0)
 [ "$n_files" -eq 0 ] && echo "  (no files)"
+for h in ${held_back[@]+"${held_back[@]}"}; do
+  echo "  [note] $h/ should hold only conversation saved by the removed PreCompact hook. Its files are listed, checked and counted, but sections 2, 3 and 6 name matching files without printing their lines: review any file there that isn't saved conversation, and anything config points to there. Delete the folder when you no longer need it."
+done
+if [ "${#wt_list[@]}" -gt 0 ]; then
+  echo "  [note] $worktrees/ holds ${#wt_list[@]} git worktree(s), named below: each one's .claude/ is audited here like this one. Their other files are checkouts of the repo, outside this audit like the repo itself, and a section 5 command that points into one isn't followed. Remove merged ones with \`git worktree remove <path>\`."
+  for w in "${wt_list[@]}"; do echo "    $w"; done
+fi
 
 # --- 2. Dynamic shell execution: runs at LOAD time, before the model sees output.
 hdr "2. Dynamic shell execution  [HIGH]"
@@ -170,7 +286,7 @@ while IFS= read -r -d '' f; do
             for k in $live_keys; do fm_key "$k" <<<"$fm"; done; })
   [ -z "$shown" ] && grep -qE "(^|[[:space:]{,])[\"']?(${live_keys// /|})[\"']?[[:space:]]*:" <<<"$fm" && shown=$fm
   [ -n "$shown" ] && printf '%s\n' "$shown" | sed 's/^/      | /'
-done < <(find "$target" -type f \( -iname 'SKILL.md' -o -path '*/commands/*.md' -o -path 'commands/*.md' \
+done < <(walk_find -type f \( -iname 'SKILL.md' -o -path '*/commands/*.md' -o -path 'commands/*.md' \
   -o -path '*/agents/*.md' -o -path 'agents/*.md' \) -print0)
 [ "$found" -eq 0 ] && echo "  none"
 
@@ -181,11 +297,11 @@ done < <(find "$target" -type f \( -iname 'SKILL.md' -o -path '*/commands/*.md' 
 # Found by key, not by schema, so an odd shape can't hide a command. A `.claude-plugin/`
 # dir is flagged: enabling it activates them all. (Frontmatter hooks are listed in §4.)
 hdr "5. Auto-run commands and grants (hooks, permissions, plugin manifests, MCP/LSP servers, monitors)"
-python3 - "$target" <<'PY' || { echo "  ERROR: section 5 is INCOMPLETE (see above)"; high=1; }
+python3 -I - "$target" ${walk[@]+"${walk[@]}"} <<'PY' || { echo "  ERROR: section 5 is INCOMPLETE (see above)"; high=1; }
 import json, os, re, sys
 
 sys.stdout.reconfigure(errors="backslashreplace")   # a lone "\ud800" in a value can't crash print
-target = sys.argv[1]
+target, starts = sys.argv[1], sys.argv[2:]   # starts: $walk (the target, or its entries)
 NAMES = re.compile(r'^(settings.*|hooks|plugin|marketplace|\.mcp|\.lsp|monitors)\.json(\.example)?$')
 # settings / MCP keys whose string value is itself a command
 HELPERS = {"apiKeyHelper", "awsAuthRefresh", "awsCredentialExport", "gcpAuthRefresh",
@@ -230,16 +346,26 @@ def commands(node, path=""):
         for i, v in enumerate(node):
             yield from commands(v, f"{path}[{i}]")
 
+files, plugin_dirs = [], []
 if os.path.isfile(target):
     # A lone SKILL.md isn't config JSON; only parse what could be.
-    is_json = NAMES.match(os.path.basename(target)) or target.endswith(".json")
-    files, plugin_dirs = ([target] if is_json else []), []
+    if NAMES.match(os.path.basename(target)) or target.endswith(".json"):
+        files.append(target)
 else:
-    files, plugin_dirs = [], []
-    for d, dirs, names in os.walk(target):
-        if os.path.basename(d) == ".claude-plugin":
-            plugin_dirs.append(d)
-        files += [os.path.join(d, n) for n in names if NAMES.match(n)]
+    for start in starts:
+        # Sorted the way one os.walk over the target sorts entries: anything that isn't a
+        # dir (a file, a link to one, a dangling link) is a name to match; a dir is walked
+        # unless it's a link, which os.walk doesn't enter either (§1 lists it as LINK).
+        if not os.path.isdir(start):
+            if NAMES.match(os.path.basename(start)):
+                files.append(start)
+            continue
+        if os.path.islink(start):
+            continue
+        for d, dirs, names in os.walk(start):
+            if os.path.basename(d) == ".claude-plugin":
+                plugin_dirs.append(d)
+            files += [os.path.join(d, n) for n in names if NAMES.match(n)]
 
 for pd in sorted(plugin_dirs):
     root = os.path.dirname(pd)
@@ -305,7 +431,9 @@ scan -E "$danger" && high=1
 
 echo
 echo "Reviewed $n_files file(s) under '$target'."
-echo "Reminder: this reports; YOU decide. See docs/skill-security.md."
+[ "$high" -eq 1 ] && [ "$strict" -eq 0 ] &&
+  echo "HIGH-signal findings above; exit 0 because --strict wasn't given."
+echo "Reminder: this reports; YOU decide. See docs/skill-security.md in the template repo."
 if [ "$strict" -eq 1 ] && [ "$high" -eq 1 ]; then
   echo "STRICT: high-signal findings present -> exit 1"; exit 1
 fi

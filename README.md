@@ -23,7 +23,7 @@ Adoption is driven by a Claude Code session reading [`docs/ADOPTING.md`](docs/AD
 3. Paste one of these prompts:
 
    **New repo (or near-empty):**
-   > Read `../claude_code_template/docs/ADOPTING.md` and adopt this template into the current repo. **New project.** Follow the new-repo procedure.
+   > Read `../claude_code_template/docs/ADOPTING.md` and adopt this template into the current repo. **New project.** Tech stack: `<fill in>`. Follow the new-repo procedure.
 
    **Existing repo (Claude Code already in use):**
    > Read `../claude_code_template/docs/ADOPTING.md` and adopt this template into the current repo. **Existing project** — already has its own Claude Code config / `CLAUDE.md` / etc. Follow the existing-repo procedure.
@@ -42,22 +42,22 @@ CONTRIBUTING.md               # Sending fixes back + this repo's working agreeme
 .gitignore                    # Ignores Claude-local files, secrets/env, .mcp.json, scan output
 .mcp.json.example             # Vetted-server template; copy to .mcp.json (gitignored) after review
 .github/workflows/check.yml   # CI: runs check-template.sh + gitleaks (no project build/test)
-.github/workflows/template-tests.yml  # CI: audit-config.sh regression fixtures (template-internal)
+.github/workflows/template-tests.yml  # CI: regression tests for the template's scripts and hooks (template-internal)
 .claude/
-├── settings.json             # Permissions, statusline, SessionStart + PreToolUse + PreCompact hooks
+├── settings.json             # Permissions, statusline, SessionStart + PreToolUse hooks
 ├── settings.local.json.example
 ├── settings.lockdown.json.example  # Opt-in egress denies for vetting untrusted skills
 ├── statusline.sh             # Status line: model · dir · branch · cost · context (tokens vs window) · 5h/7d limits + resets
 ├── hooks/session-context.sh  # Prints session-start time + recent git activity at session start
 ├── hooks/block-dangerous.sh  # PreToolUse guard: hard-blocks catastrophic shell commands
-├── hooks/precompact-snapshot.sh  # PreCompact: snapshots context to .claude/snapshots/ before compaction
 ├── hooks/clock.sh            # Opt-in per-prompt time heartbeat (not wired by default)
 ├── commands/                 # /session-start, /handoff, /commit, /adr
 └── skills/                   # verify-refactor, tune-parameters, llm-eval
 scripts/
 ├── check-template.sh         # Integrity + secrets smoke-test (run manually + in CI)
-└── audit-config.sh           # Reports what .claude/ artifacts and plugins do — vet before trusting
-tests/audit-config/           # Fixtures + runner for audit-config.sh (template-internal)
+├── audit-config.sh           # Reports what .claude/ artifacts and plugins do — vet before trusting
+└── compaction-report.sh      # Lists your recent compactions and which were idle (reads ~/.claude)
+tests/                        # Regression tests for the scripts and hooks (template-internal)
 docs/
 ├── ADOPTING.md               # Adoption + re-sync procedure (the session reads this to adopt)
 ├── claude-code-setup.md      # How the native config is wired; what to customize
@@ -85,27 +85,36 @@ If a human decided it, it goes in `AI_CONTEXT.md`. If Claude noticed it, let aut
 Skills, commands, hooks, and MCP servers are code you install. Before adding anything
 from outside this repo, vet it — see `docs/skill-security.md`. Quick tools:
 
-- `bash scripts/audit-config.sh <path>` — report what a skill/config actually does
-  (dynamic execution, tool grants, egress/secret tokens) before you trust it.
+- `bash scripts/audit-config.sh <path>` — report what a skill, plugin or config actually
+  does before you trust it: every command that runs without a prompt (hooks, MCP/LSP
+  servers, monitors, code-loading env vars), permission grants, which skills and agents
+  Claude can start on its own, and egress/secret tokens.
 - `bash scripts/check-template.sh` — validate config integrity + secrets hygiene.
-- The default `settings.json` denies the Read tool from secret files and keeps the shell
-  allow-list minimal (so `cat .env` prompts rather than running unattended);
+- The default `settings.json` denies reads of secret files in the project and of credential
+  stores in your home directory (`~/.ssh`, `~/.aws`, `~/.config/gh`, …); on current Claude
+  Code that covers shell reads too, so `cat .env` is refused. It asks before edits to
+  `CLAUDE.md`, `.github/`, the two check scripts and its own settings and hooks, and
+  ships an empty allow list;
   `settings.lockdown.json.example` adds network-egress denies for quarantining untrusted skills.
 - A `PreToolUse` hook (`.claude/hooks/block-dangerous.sh`) hard-blocks catastrophic shell
   commands (`rm -rf /`, `git reset --hard`, `git push --force`, pipe-to-shell, `dd`/`mkfs`).
-  It's a safety net, **not** a sandbox — pair it with the lockdown overlay / OS sandbox.
+  It keeps working without `python3` and has a regression suite. It's a safety net,
+  **not** a sandbox — pair it with the lockdown overlay / OS sandbox. See
+  [what a refusal looks like](docs/claude-code-setup.md#permissions).
 - Before enabling an MCP server, vet it and copy `.mcp.json.example` → `.mcp.json`
   (gitignored). See the MCP checklist in `docs/skill-security.md`.
 
 ## Highlights
 
-A few engineering practices, encoded as runnable skills, a cost-legibility
-layer, and reviewer rules:
+A few engineering practices, encoded as runnable skills and scripts, a
+cost-legibility layer, and reviewer rules:
 
+- **Vet before you install** — `scripts/audit-config.sh` reports everything a skill or plugin would run or grant, and `docs/skill-security.md` shows how to take just the skill out of a plugin and deny what its docs tell Claude to run. For a sample documentation plugin it shows a download script that runs at every session start, an unpinned `npx` MCP server, a skill Claude can start on its own with Bash pre-approved, and an agent that gets every tool ([example report](docs/skill-security.md#example-what-the-auditor-shows)).
 - **`/verify-refactor`** — prove a refactor preserved behavior by diffing deterministic output (byte-identical), not just "tests pass."
 - **`/tune-parameters`** — pick a threshold by reading the *shape* of the metric surface, rejecting overfit spikes.
 - **`/llm-eval`** — gate AI features on accuracy against a ground-truth set.
 - **Token-cost legibility** — a cost-class model (`docs/token-awareness.md`) plus a status line that surfaces live session cost, context-against-window, and 5h/7d rate-limit budgets with reset times — so the cost of the context system is visible, not guessed.
+- **Compaction you can see** — `scripts/compaction-report.sh` lists which of your sessions were compacted, how large they were and how long they'd sat idle, and `docs/token-awareness.md` explains idle compaction and how to opt out. If sessions on a 1M window compact at 200–300K tokens about 54 minutes after your last message, that's idle compaction, not the context limit ([example](docs/token-awareness.md#compaction)).
 
 For code review, the template recommends installing
 `pr-review-toolkit@claude-plugins-official` as a baseline plugin during
@@ -119,7 +128,20 @@ This template builds on patterns and ideas from a number of projects and
 standards.
 
 - **Anthropic Claude Code** — the platform this template extends; settings,
-  hooks, commands, agents, and skills follow its conventions.
+  hooks, commands, agents, and skills follow its conventions. Its
+  [documentation](https://code.claude.com/docs) on permissions, protected paths
+  and compaction shaped the v0.3.0 defaults and the idle-compaction notes.
+- **[Agent Baseline](https://agentbaseline.org)** — the v0.3.0 security review
+  checked the template against its control catalogue and *The Secure Software
+  Factory* reference architecture (v1.0-draft, October 2026). The guard no longer
+  failing open, the denies on home-directory credentials, and asking before edits to
+  agent and CI config came from that pass. Ideas only; its prose is CC BY 4.0
+  and its controls Apache-2.0.
+- **[trailofbits/claude-code-config](https://github.com/trailofbits/claude-code-config)**
+  — the list of home-directory credential stores to deny. Ideas only: the repo
+  has no license, and nothing is copied.
+- **[zizmor](https://github.com/zizmorcore/zizmor)** — its "artipacked" audit is
+  why CI checkouts don't keep credentials on disk.
 - **[multica-ai/andrej-karpathy-skills](https://github.com/multica-ai/andrej-karpathy-skills)**
   — Andrej Karpathy's engineering-discipline practices; the behavioral
   guidelines in `CLAUDE.md` (think-before-coding, simplicity-first,
@@ -136,8 +158,8 @@ standards.
     section 4):
     [CIS Distribution Independent Linux Benchmark §5.3.2 (SSH Private Host
     Key File Permissions)](https://www.tenable.com/audits/items/CIS_Amazon_Linux_2_v2.0.0_L1.audit:078b3bdba9f168f66df57226c9ac50df).
-    Extends CIS's `0600` mandate for SSH keys to all 13 local
-    secret-bearing patterns (`.env`, `*.pem`, `*.key`, `id_rsa`, etc.).
+    Extends CIS's `0600` mandate for SSH keys to local secret-bearing
+    files (`.env`, `*.pem`, `*.key`, `id_rsa`, etc.).
   - **Cryptographic key handling:**
     [NIST SP 800-57 Part 1 Rev. 5 (Key Management)](https://csrc.nist.gov/pubs/sp/800/57/pt1/r5/final).
     Protection-of-keys principle informing both the Read-deny on key

@@ -12,62 +12,290 @@ Pre-0.1.0 history is kept below in the original date-stamped sections.
 
 ## [Unreleased]
 
-### Fixed
-- **`audit-config.sh` §5 missed plugin hooks** — it read only `settings*.json`, so a
-  plugin's `hooks/hooks.json` and the `hooks` in `.claude-plugin/plugin.json` (inline
-  or by path) went unreported. §5 now lists the commands declared in settings, plugin,
-  MCP, LSP and monitor JSON: hooks (including `mcp_tool` hooks), `statusLine` and
-  helper keys (`apiKeyHelper` etc.), `env` vars that load code (`BASH_ENV`,
-  `CLAUDE_ENV_FILE`, `ZDOTDIR`, `NODE_OPTIONS`, `LD_PRELOAD`, …), MCP/LSP servers and
-  monitors, plus the grants that skip prompts (`permissions.allow`, `defaultMode`,
-  `allowedTools`, MCP auto-approval). Frontmatter hooks are listed in §4. It also
-  flags each `.claude-plugin/` directory and the paths or inline content `plugin.json`
-  gives for commands, agents and skills. Commands are found by key rather than by
-  schema, so a malformed hook entry can no longer crash the parser and hide the hooks
-  after it, and a file it can't parse or fully read (deep nesting, a huge number, a
-  lone surrogate) is reported as an ERROR, counted as HIGH, instead of ending the
-  section.
-- **`audit-config.sh` §4 decided by path** — every `.md` under `skills/` counted as a
-  skill (reference files were flagged), and a `SKILL.md` copied anywhere else was
-  missed. It now matches files named `SKILL.md` plus `commands/*.md` and
-  `agents/*.md`, and lists every one, tagged model-invocable or opted out, so a
-  frontmatter trick can mislabel a file but not hide it. The opt-out counts only in
-  frontmatter as Claude Code reads it (ended by the next `---`, none if unclosed),
-  exactly once and set to `true`; a quote left open at the end of a frontmatter line
-  marks it unverified. Agents show their `tools:` (none listed = all tools), and
-  frontmatter `hooks:`, `mcpServers:` and `permissionMode:` are printed (the whole
-  frontmatter, when its layout can't be read key by key).
-- **`audit-config.sh` §6 misses and false hits** — package runners (`npx`, `bunx`,
-  `bun x`, `pnpx`, `uvx`, `pipx run`, `npm exec`/`npm x`, `pnpm dlx`, `yarn dlx`,
-  `uv tool run`), `nc` and `*_API_KEY` reads are now flagged, and tool names must
-  stand alone as words, so `ncat` no longer matches "truncate" or "concatenated".
-  (Surfaced by vetting a third-party plugin in a personal project dogfooding the
-  template.)
-- **`audit-config.sh` could report "none" for what it never read** — a grep error
-  (an unreadable file) printed "none" and dropped the HIGH flag; a symlinked target
-  (`~/.claude/skills/x -> ~/src/x`) reviewed zero files on macOS; a file with a NUL
-  past its first 8KB was skipped by the greps but not marked binary. Errors now print
-  ERROR and count as HIGH, symlinks are listed (LINK, HIGH) and a symlinked target is
-  followed, and any NUL marks a file BINARY. Control characters are stripped from the
-  report, so a crafted file can't overwrite its lines.
+A security release. Vetting a third-party plugin showed that `audit-config.sh` missed
+whole classes of config that runs without a prompt. A review against
+[Agent Baseline](https://agentbaseline.org), and dry-run adoptions on throwaway clones of
+adopter repos, then found gaps in the default protections and in the re-sync procedure.
+MINOR under [ADR-006](docs/adr/ADR-006-versioning-and-release-management.md):
+`settings.json` becomes an Adapt file and new `ask` rules change what prompts, so read
+**Migration** before re-syncing.
+
+### Highlights
+- **Vet a whole plugin before you install it.** `audit-config.sh` reports everything
+  that runs without a prompt (hooks in settings, plugin manifests and skill or agent
+  frontmatter, MCP and LSP servers, monitors, code-loading `env` vars, permission
+  grants) and lists every skill, command and agent with whether Claude can start it on
+  its own. `docs/skill-security.md` adds partial vendoring and deny rules for what a
+  plugin's docs tell Claude to run.
+- **Safer defaults.** The dangerous-command guard keeps working without `python3` and
+  catches more forms. Reads of credential stores in your home directory (`~/.ssh`,
+  `~/.aws`, …) are denied. Claude asks before editing `CLAUDE.md`, CI config and the
+  template's own checks. A new `CLAUDE.md` convention tells it to ask before sending your
+  email or other personal info to an outside service.
+- **Compaction you can see.** Claude Code now compacts long sessions left idle.
+  `docs/token-awareness.md` explains when and how to opt out, and
+  `scripts/compaction-report.sh` shows which of your sessions were compacted and why.
+- **Re-sync that keeps your changes.** Re-sync detects local edits to vendored files and
+  merges them instead of overwriting, applies migration notes, and the file map says
+  which files only work together.
+- **Tested.** Regression suites for the auditor, the self-check, the guard hook and the
+  compaction report run on Linux and macOS in CI.
+- **One feature removed.** The PreCompact snapshot hook is gone: it was rarely read,
+  Claude Code already points each compacted session at its full transcript, and its file
+  handling could be turned against you (see Removed).
+
+Worked examples: an audit of a sample plugin in
+[`docs/skill-security.md`](docs/skill-security.md#example-what-the-auditor-shows), a
+compaction report in [`docs/token-awareness.md`](docs/token-awareness.md#compaction), and
+what Claude sees when it's refused in
+[`docs/claude-code-setup.md`](docs/claude-code-setup.md#permissions).
+
+### Migration
+1. If `VENDORED.md` records `.claude/settings.json` as vendor-as-is but you've changed
+   it, update that row before re-syncing. It's an Adapt file now: re-sync merges it.
+2. Re-sync deletes `.claude/hooks/precompact-snapshot.sh`; remove its `PreCompact` entry
+   from your `settings.json` if you merged it there. Your `.claude/snapshots/` folder holds
+   old raw conversation: delete it when you no longer need it, and keep its `.gitignore`
+   line until you do. `audit-config.sh` still reports the folder's files but doesn't print
+   their lines, and under `--strict` they can fail the check until you delete it.
+3. Add `-I` to the system `python3 -c`, `python3 -` and `python3 <script>` calls in your
+   own hooks and shell scripts. Leave alone any run that needs `PYTHONPATH` or a venv's
+   setup (`PYTHONPATH=src venv/bin/python …`): `-I` also ignores `PYTHONPATH` and the
+   other `PYTHON*` variables, so it would break them. If anything runs a script directly through its
+   `#!/usr/bin/env python3` line, change that line to `#!/usr/bin/env -S python3 -I`:
+   without `-I`, a script's own folder and your working folder come first on its import
+   path. If a script imports modules from its own folder, add that folder to `sys.path`
+   in the script instead (or leave `-I` off for it), then run the hook once to confirm
+   it still works: a hook that crashes doesn't block anything. Feed it a sample event
+   from a file (`{"tool_name":"Bash","tool_input":{"command":"…"}}`); typed inline, a
+   test command that contains a blocked string is stopped by the live guard first.
+4. Headless runs (`claude -p`) that edit `CLAUDE.md`, `.github/`, the check scripts or
+   the template's settings, hooks or status line are now denied, because an `ask` rule
+   has no one to ask. `/adr` prompts for its `CLAUDE.md` edit.
+5. If you vendored `docs/skill-security.md`, `docs/token-awareness.md` or
+   `docs/claude-code-setup.md`, repoint their links to template-only files
+   (`docs/ADOPTING.md`, `CONTRIBUTING.md`, ADR-003/005/006, `scripts/compaction-report.sh`)
+   to upstream URLs at your pinned tag, and record the file as adapted in `VENDORED.md`
+   (file map → Reference only). Code-span mentions of those files count too: reword them
+   as "the template's <file>" or link them. If you're pinned to an untagged commit,
+   record the rows as adapted now with a note to repoint at the tag, and leave the links
+   until you re-pin: there's no tag URL to point at yet, and a commit that isn't on GitHub
+   has none either. ADR-005 is now Reference only: keep a vendored copy while your
+   vendored docs link it, and otherwise remove it and its row.
+6. If your `CLAUDE.md` doesn't take keep-verbatim changes (it diverged on purpose),
+   add the "Personal info stays local" bullet from the template's `## Conventions` by
+   hand. Put it with your file's privacy or convention rules, and if a rule there names
+   a single way data may leave (say, web search only), reconcile the two. If you must
+   shorten it, keep four things: personal info is open-ended (the examples aren't a
+   closed list); request headers count, the User-Agent included; it covers MCP tool
+   inputs and code Claude writes that sends the data later, not only requests Claude
+   makes itself; and the user is asked before anything is sent, including what to send
+   when an API wants contact info, since even a project name can identify them. Or keep
+   one line that `@`-imports a doc holding the full text (a plain link isn't loaded
+   into context); that form also suits a `CLAUDE.md` already at its line cap.
+7. `/handoff` and the SessionStart hook now point at ADR-007 and archive above 1000
+   lines. Vendor `docs/adr/ADR-007-ai-context-archive-threshold-1000.md` next to
+   ADR-004 (sub-namespace or renumber it if your own ADR series has a 007), and repoint
+   its path the way you did for ADR-004: `handoff.md`'s two `@` refs and the path in your
+   copy of `AI_SESSION_START.md`, wherever you keep it, plus, if you renumbered it,
+   ADR-004's status link. The SessionStart hook names the template's ADR-007 without a
+   path, so it needs no repoint.
+   If you sub-namespaced the template's ADRs instead, check every number you vendored
+   (ADR-001, 002, 004 and 007) against your own series: where they collide, say
+   "upstream ADR-NNN" in prose that names the template's, as `docs/ADOPTING.md`'s
+   sub-namespacing note describes. In your `CLAUDE.md` `## Architecture Decisions`, mark the
+   ADR-004 entry superseded and add the ADR-007 highlight from the template, with your
+   path. Your own `AI_CONTEXT.md` header likely still says ~750 and links ADR-004; update
+   it too. If you keep a different cap on purpose, record it in `VENDORED.md`.
+8. Re-vet the allow rules you keep in `settings.json`, as the template did when it
+   emptied its own list: a broad rule also approves destructive forms. `Bash(find:*)`
+   allows `find -delete` and `-exec rm`, and `Bash(rg:*)` allows `rg --pre <cmd>`;
+   narrow such a rule or move it to `ask`.
 
 ### Added
-- **Regression fixtures for `audit-config.sh`** — `tests/audit-config/run.sh` plus
-  inert fixtures, run on Linux and macOS by `.github/workflows/template-tests.yml`.
+- **Privacy convention in `CLAUDE.md`** — "Personal info stays local" tells Claude to ask
+  before sending the user's email or other personal info to an outside service, whether in
+  a request header (a User-Agent counts), a URL, a request body, an MCP tool input or code
+  that sends it later, and to ask what to send when an API wants contact info or a custom
+  User-Agent, since even a project name can identify the user. Coding agents in
+  dogfooding projects put the user's email in User-Agent headers sent to public APIs,
+  although Claude Code's own instructions already say not to. A convention lowers the
+  odds but enforces nothing. It's in the keep-verbatim Conventions block, so re-sync
+  brings it in.
+- **Idle-compaction docs and `scripts/compaction-report.sh`** — Claude Code compacts a
+  conversation of 200K+ tokens left idle for about 54 minutes, just before its prompt
+  cache expires, and turned this on server-side. `docs/token-awareness.md` gains a
+  Compaction section: the three kinds, the trade-off, opting out in user settings
+  (`"idleCompaction": false`, Claude Code 2.1.290+) or raising the threshold, and why
+  the template leaves the default alone. The report lists recent compactions from your
+  local transcripts with size, idle time and an idle flag; it prints metadata only.
+- **Regression tests** — `tests/<suite>/run.sh` for `audit-config.sh`,
+  `check-template.sh`, `block-dangerous.sh` and the
+  compaction report, run on Linux and macOS by `.github/workflows/template-tests.yml`.
   Template-internal (file map → Skip).
-- **`docs/skill-security.md`** — partial vendoring (take the skill, leave the
-  plugin), same-source checksums aren't provenance, egress in compiled code and
-  ambient `*_API_KEY` use, dormant hooks, `disable-model-invocation` for broad or
-  persona-setting skills, deny rules for commands vetted docs tell Claude to run, and
-  dev-server/CSP changes as security changes.
-- **`VENDORED.md` format** — optional `## Third-party skills` section recording the
-  pin, license and local patches to re-apply on every bump.
+- **`docs/skill-security.md`** — partial vendoring (take the skill, leave the plugin),
+  same-source checksums aren't provenance, egress in compiled code and ambient
+  `*_API_KEY` use, dormant hooks, frontmatter hooks, code-loading `env` vars, symlinks,
+  `disable-model-invocation` for broad or persona skills, deny rules for commands a
+  plugin's docs tell Claude to run (bare, versioned and auto-confirm forms, checked
+  live), and dev-server/CSP changes as security changes.
+- **`VENDORED.md` format** — optional `## Third-party skills` section recording the pin,
+  license and local patches to re-apply on every bump, and optional `## Considered
+  plugins` recording declined discovery candidates. "Installed plugins" gains a Notes
+  column for audit decisions.
 
 ### Changed
-- **`check.yml` pins the gitleaks hash in-repo** — it verified the tarball against a
-  `checksums.txt` downloaded from the same release, which catches corruption but not
-  a replaced release. The expected sha256 now lives in the workflow and changes only
-  by PR, and `sha256sum --strict` fails on a malformed hash too.
+- **`.claude/settings.json` is an Adapt file** — nearly every adopter adds allow rules,
+  denies or hooks to it, so re-sync merges it instead of copying it (Migration 1).
+- **Adoption and re-sync procedure** — re-sync checks every vendored file for local
+  changes against the pin and routes it to Update or Merge by its `VENDORED.md` Notes;
+  merges `settings.json` without dropping local hooks; applies the Migration section;
+  fetches tags and logs `<pin>..<target>` over the Upstream path column; stages before
+  verifying; reconciles installed plugins; and runs the code-reviewer. New-repo adoption
+  captures the tag, asks its questions in one batch, copies with `cp -p`, applies the
+  `CLAUDE.md` bucket rules, and describes a clean audit. The file map lists which files
+  only work together and adds `docs/adr/.gitkeep`. A repo that already has a
+  `VENDORED.md` is sent to re-sync instead of re-adoption; there's guidance for GitLab
+  and other hosts, for repointing links in a reference doc you vendor anyway, and for
+  re-pinning a pre-release SHA to its release tag. A dry run of the release candidate
+  added more:
+  - adoption and re-sync start from a clean repo, so staging takes only their changes;
+  - plugin discovery lists candidates with `claude plugin list --available --json`
+    (which includes the built-in plugin directory), not a catalog cache that can go
+    stale, and finds licenses where partner plugins keep them;
+  - third-party plugins are re-audited when the installed version changes, reading
+    the auditor's report on the copy Claude Code loads, and the decision is recorded;
+  - discovery runs when the stack changed, and declined plugins are recorded, at
+    adoption too;
+  - `VENDORED.md` Notes win over the keep-verbatim rule when merging, but Migration
+    items still apply;
+  - deletes are followed by a search for prose that still names the file, and a new
+    session afterwards loads the merged settings;
+  - discovery inspects the commit a plugin pins rather than its branch tip, and adds
+    `claude plugin details` for its components and token cost, while the auditor's
+    report stays what you vet;
+  - re-sync checks each row's recorded class against the file map, re-vets kept allow
+    rules, merges `settings.json` last, and can run in a git worktree;
+  - step 7 shows its batch as its own message before asking for approval, and step 9
+    asks about removing merged worktrees before the audit.
+- **The allow list is empty** — on current Claude Code `git status`, `diff`, `log`,
+  `show`, `branch` and `ls` run without a rule, and the old rules also approved
+  `git branch -D` and `git diff --output=<file>`.
+- **CODEOWNERS covers what Claude Code loads or runs** — all of `.claude/`, `CLAUDE.md`
+  and the `AI_CONTEXT.md` it imports, `.mcp.json.example` and `.github/`, matching
+  `docs/skill-security.md`. It enforces only with "Require review from Code Owners",
+  which a solo maintainer can't satisfy.
+- **Acknowledgements** — the README credits Agent Baseline, Trail of Bits'
+  `claude-code-config` and zizmor for ideas used here (nothing copied), and the Claude
+  Code docs the new defaults follow.
+- **The `AI_CONTEXT.md` archive cap is 1000 lines** ([ADR-007](docs/adr/ADR-007-ai-context-archive-threshold-1000.md),
+  superseding ADR-004). ADR-004's reason for 750, a 10k-token envelope from 2023
+  research, no longer fits 1M-token models, and real files run 15–26 tokens a line, not
+  12. A replay of archive history in projects using the template showed 1000 cuts
+  archiving by about 30–50% for roughly 2k more tokens per session. The SessionStart
+  reminder and `/handoff` use the new number; the state-sufficiency rule is unchanged
+  (Migration 7).
+- **CI pins `actions/checkout` v7.0.1** (`3d3c42e…`) instead of v4.3.1, which runs on
+  Node 20, now deprecated by GitHub. v5 moved to Node 24, v6 keeps persisted credentials
+  in a separate file, and v7 refuses to check out fork pull requests under
+  `pull_request_target` or `workflow_run`. `persist-credentials: false` stays. Adopters get it with the
+  vendored `check.yml`.
+
+### Removed
+- **`.claude/hooks/precompact-snapshot.sh`** — the template's own PreCompact hook, which
+  saved the last 16 messages and a transcript pointer to `.claude/snapshots/` before each
+  compaction. Across 262 sessions in dogfooding projects its 25 snapshots were read 4
+  times; during long agent work its 16 messages were often all Claude's progress notes,
+  none of the user's; Claude Code's own compaction summary already tells the session where
+  the full transcript is; and its file handling could be pointed elsewhere by a committed
+  symlink (writing conversation outside the project, changing permissions on files it
+  didn't own). Claude Code's compaction, `PreCompact` event and transcripts are unchanged
+  (Migration 2).
+
+### Fixed
+- **`audit-config.sh` missed whole classes of config** — §5 read only `settings*.json`,
+  so plugin hooks (`hooks/hooks.json`, `plugin.json`), MCP/LSP servers, monitors,
+  `statusLine` and helper keys, code-loading `env` vars and permission grants went
+  unreported; it now finds commands by key, not schema. §4 decided by path, flagging
+  reference files and missing a copied `SKILL.md`; it now lists every skill, command
+  and agent, tagged model-invocable or opted out as Claude Code reads the frontmatter,
+  with agents' `tools:` and any frontmatter hooks or MCP servers. §6 missed package
+  runners (`npx`, `bunx`, `uvx`, `pipx run`, `npm exec`, `pnpm dlx`, …), `nc` and
+  `*_API_KEY` reads, and matched tool names inside words ("truncate").
+- **`audit-config.sh` reported "none" for what it never read** — a grep error, a
+  symlinked target (zero files reviewed on macOS), a NUL past the first 8KB, or a file
+  Python couldn't parse could all read as clean. Each now prints ERROR, LINK, BINARY or
+  UNREAD and counts as HIGH.
+- **`audit-config.sh` printed old conversation** — a `.claude/snapshots/` folder left by
+  the removed PreCompact hook was audited like config, so §6 printed lines from saved
+  conversation. Its files are still listed, checked and counted, because loaded config
+  can point into the folder, but sections 2, 3 and 6 now name the matching files instead
+  of printing their lines, and §1 says so. Only a real `.claude/snapshots/` folder is
+  held back this way.
+- **`audit-config.sh` could audit the wrong folder** — it read a relative path only after
+  switching to its own repo, so running a template clone's copy from an adopter's repo
+  with `.claude/`, or with no path, silently audited the template's files. A relative
+  path and the default `.claude` now mean the folder where you ran it.
+- **`audit-config.sh` read Claude Code's worktrees as config** — `.claude/worktrees/` holds
+  full copies of the repo, and in one adopter 15 of them (703 MB) turned the report into
+  tens of thousands of lines that buried the real config. It now audits each worktree's
+  own `.claude/` (the config its sessions load) and says in §1 what it left out. A footer
+  also explains exit 0 when there are HIGH-signal findings and `--strict` wasn't given.
+- **`check-template.sh` passed with protections broken** — §5 only looked for the
+  guard's name, so a deleted `block-dangerous.sh` passed (and a hook that can't start
+  silently turns off); it now checks that every wired script exists and is executable,
+  in both quoting styles, and fails on `disableAllHooks`. §6's checks of the secret scan
+  read their own text and always passed. A missing `.gitignore` crashed §6.
+  `tests/check-template/` breaks each protection in a copy of the repo and requires the
+  check to fail. `@`-imports of gitignored, local-only files no longer fail §3 on every
+  clone.
+- **`check-template.sh` §4 misread file modes on Linux** — it tried BSD `stat -f`
+  first, which GNU `stat` reads as filesystem info, so an owner-only `.env` failed.
+- **`docs/ADOPTING.md` gaps** — re-sync could silently drop an adopter's own hooks by
+  copying over a locally changed `settings.json`; no step applied migration notes; the
+  repoint scans missed `handoff.md`'s `@docs/adr/ADR-004-…` refs; the Bucket-1 callout
+  missed reference-only pointers; comments in vendored files pointed at template-only
+  paths as if local. See Changed for the new procedure.
+
+### Security
+- **`block-dangerous.sh` failed open, and missed common forms** — without a working
+  `python3` (a Mac without the Xcode tools has a stub that fails) every command passed,
+  as did a dangerous command followed by more than ~64KB of text (`grep -q` under
+  `pipefail`). It also missed force pushes written as `+ref`, `--mirror`, `--prune`,
+  `-uf` or `git -C dir push`, deleting `main`/`master` on the remote, quoted `rm`
+  targets, commands split with a trailing backslash or closed by `)`, and an `rm`
+  target after another path; and it blocked a harmless `git push … && rm -f tmp.txt`.
+  It now falls back to reading the raw event, and `tests/block-dangerous/` covers each
+  case with and without `python3` and under bash 3.2. Deleting other remote branches
+  still only prompts (`ask: git push`).
+- **Credential stores in the home directory are denied; agent and CI config ask
+  first** — `settings.json` denies reads of `~/.ssh`, `~/.aws`, `~/.azure`,
+  `~/.config/gcloud`, `~/.config/gh`, `~/.gnupg`, `~/.kube`, `~/.docker/config.json`,
+  `~/.git-credentials`, `~/.netrc`, `~/.npmrc`, `~/.pypirc` and
+  `~/.claude/.credentials.json`; the old rules covered files inside the project only.
+  It asks before edits to `CLAUDE.md`, `.github/**`, the two check scripts and the
+  template's own settings, hooks and status line, which `acceptEdits` would otherwise
+  apply silently or leave to Claude Code's defaults. `check-template.sh` §6 asserts the
+  home denies. The docs no longer say `cat .env` prompts: a Read deny now refuses it.
+  (Checked live on Claude Code 2.1.303 with dummy files.)
+- **Template python ran with the project folder on its import path** — a `json.py` in
+  a project would have run on every Bash call and every status-line redraw. Every
+  python call in the hooks and scripts now uses `-I` (Migration 3).
+- **`audit-config.sh`'s report could be rewritten by the files it audits** — carriage
+  returns, escape codes, C1 controls, bidi overrides and zero-width marks in an audited
+  file reached the terminal. The report is filtered now.
+- **`check.yml` pins the gitleaks hash in-repo** — the tarball was checked against a
+  `checksums.txt` from the same release, which catches corruption but not a replaced
+  release. The hash now changes only by PR, and `sha256sum --strict` rejects a
+  malformed one.
+- **Plugin discovery took partner plugins for Anthropic's** — any string `source` counted
+  as Anthropic-authored, but the plugins under `./external_plugins/` in
+  `claude-plugins-official` (14 on 2026-11-18, including `context7` and `playwright`)
+  are third-party, so adoption and re-sync skipped vetting them. Only a `./plugins/`
+  path in `claude-plugins-official` counts as Anthropic-authored now, not one in any
+  other marketplace.
+- **CI checkouts don't keep credentials on disk** — `persist-credentials: false` on every
+  checkout; neither workflow pushes.
 
 ## [0.2.2] - 2026-06-27
 

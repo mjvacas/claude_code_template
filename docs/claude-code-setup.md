@@ -7,12 +7,11 @@ after you copy it into a new project.
 
 | Path | What it does | Cost | Customize? |
 |------|--------------|------|-----------|
-| `settings.json` | Permissions (Read-tool denies for secret files; a minimal shell allow-list — only `ls` + read-only `git`; `defaultMode: acceptEdits` **auto-applies file edits without prompting**), statusline, and SessionStart/PreToolUse/PreCompact hooks. Committed, team-shared. | `free-local` | Yes — add your build/test/lint to the allow list. |
+| `settings.json` | Permissions (denies for secret files in the project and credential stores in `~`; asks before edits to `CLAUDE.md`, `.github/` and the check scripts; an empty allow list; `defaultMode: acceptEdits` **auto-applies other file edits without prompting**), statusline, and SessionStart/PreToolUse hooks. Committed, team-shared. | `free-local` | Yes — add your build/test/lint to the allow list. |
 | `settings.local.json` | Your personal overrides. **Gitignored.** Copy `settings.local.json.example` to start. | `free-local` | Personal. |
 | `hooks/session-context.sh` | `SessionStart` hook: prints the session-start time, recent commits + working-tree status into context. Outside git only the clock line prints. | `session` | Optional — delete the hook entry in `settings.json` to disable. |
 | `hooks/clock.sh` | `UserPromptSubmit` heartbeat (**opt-in, not wired by default**): injects the current time into context on every prompt, so the session can notice elapsed time and date rollovers. | `per-prompt` | Opt-in — see [§ Optional: session clock heartbeat](#optional-session-clock-heartbeat). |
-| `hooks/block-dangerous.sh` | `PreToolUse(Bash)` guard: hard-blocks catastrophic commands (`rm -rf /`, `git reset --hard`, `git push --force`, pipe-to-shell, `dd`/`mkfs`, fork bomb) via exit 2. A safety net, **not** a sandbox. | `free-local` | Tune the pattern list to your needs. |
-| `hooks/precompact-snapshot.sh` | `PreCompact` hook: before the context is compacted, writes a recovery breadcrumb (transcript pointer + recent turns) to `.claude/snapshots/` (gitignored). A safety net, not a replacement for `/handoff`. | `free-local` | Optional — delete the hook entry in `settings.json` to disable. |
+| `hooks/block-dangerous.sh` | `PreToolUse(Bash)` guard: hard-blocks catastrophic commands (`rm -rf /`, `git reset --hard`, `git push --force`, pipe-to-shell, `dd`/`mkfs`, fork bomb) via exit 2, and still blocks when `python3` is missing. A safety net, **not** a sandbox. | `free-local` | Tune the pattern list to your needs. To try a pattern, save `{"tool_name":"Bash","tool_input":{"command":"<cmd>"}}` to a file with the Write tool and run `.claude/hooks/block-dangerous.sh < sample.json`: exit 2 with a deny message means blocked (without `tool_name` the hook ignores the event). Typed inline in a Claude session, the sample command trips the live guard first. |
 | `statusline.sh` | Status line: model · dir · git branch, plus live session context as absolute tokens vs the window (`ctx 152k/1M`, `⚠` at ~200k), 5-hour + weekly rate-limit usage with reset clocks (`5h 24% (16:30)`/`7d 41% (Tue 16:30)`, subscription plans), and an estimated session cost `~$` (pay-as-you-go only — it's notional on a subscription, so the line hides it there and the rate-limit windows carry the real signal). | `free-local` | Optional — remove the `statusLine` key in `settings.json` to disable. |
 | `commands/session-start.md` | `/session-start` — restore context and orient before coding. | `on-use` | As needed. |
 | `commands/handoff.md` | `/handoff` — record decisions in `AI_CONTEXT.md` and commit code + context atomically. | `on-use` | As needed. |
@@ -48,21 +47,47 @@ Two complementary stores — keep them from overlapping:
 Rule of thumb: if a human decided it, it goes in `AI_CONTEXT.md`. If Claude noticed it,
 let auto-memory hold it. Don't copy one into the other.
 
-Both of those are *deliberate* checkpoints. As a backstop against losing an in-progress
-session, the `PreCompact` hook (`hooks/precompact-snapshot.sh`) auto-snapshots recent turns
-+ a pointer to the append-only transcript into `.claude/snapshots/` (gitignored) right
-before Claude Code compacts the context. It's a recovery breadcrumb, not curated memory —
-promote anything that matters into `AI_CONTEXT.md` with `/handoff`.
+Both of those are *deliberate* checkpoints. If a long session is compacted before you run
+`/handoff`, the detail isn't gone: Claude Code keeps the full transcript in
+`~/.claude/projects/` (30 days by default), and its compaction summary tells the session
+where to find it. See `docs/token-awareness.md` → Compaction.
 
 ## Permissions
 
-`settings.json` denies the **Read tool** from reading common secret files (`.env*`,
-`secrets/**`, keys) — these deny rules win over any allow. Note this governs the Read tool,
-not the shell: a `Read(.env)` deny does **not** stop `cat .env`. That's why the allow list
-is intentionally minimal — only `ls` and read-only `git` — so shell readers (`cat`, `grep`,
-`rg`, `find`) prompt instead of running unattended. (Bash-pattern denies for file reads are
-leaky; for a hard guarantee against untrusted code, use the sandbox.) Add your build/test/
-lint commands to the allow list (project-shared) or to `settings.local.json` (just you), e.g.:
+`settings.json` denies reading common secret files (`.env*`, `secrets/**`, keys) and the
+credential stores in your home directory (`~/.ssh`, `~/.aws`, `~/.config/gh`, `~/.kube`,
+`~/.npmrc`, …). Deny rules win over any allow. On current Claude Code they also cover the
+shell commands it recognizes as reads (`cat`, `head`, `tail`, `sed`, `grep` on a denied
+path, `<` redirects), so `cat .env` is refused. They don't cover code that opens files
+itself (a Python one-liner, a bundled script); for untrusted code the real boundary is the
+sandbox. `Read(~/.aws/**)` also hides `~/.aws/config`, so use the CLI for tool settings
+(`aws configure list`, `ssh -G <host>`, `gh auth status`).
+
+Read-only commands (`ls`, `cat`, `grep`, `git status`, `git diff`, `git log`, …) run
+without a prompt whatever the allow list says, so the template's allow list is empty;
+everything else prompts unless allowed. Allow only what you'd approve every time: a broad
+`Bash(git diff:*)` would also approve `git diff --output=<file>`, which writes a file. The
+template also asks before edits to `CLAUDE.md`, anything under `.github/`, and
+`scripts/check-template.sh` / `scripts/audit-config.sh`, which check the other protections.
+Claude Code already asks before edits to `.claude/`, `.git/` and `.mcp.json`; the
+template still lists its own settings, hooks and status line, so that gate doesn't depend
+on a default that could change. These asks cover the file tools and `sed -i`, not a shell
+copy or redirect (`cp`, `>>`), so treat them as a speed bump. With no one to ask
+(`claude -p`, `dontAsk` mode) an ask becomes a deny. `/adr` edits `CLAUDE.md`, so it
+prompts once per ADR.
+
+What that looks like in a session:
+
+- Claude runs `cat ~/.ssh/id_ed25519`. The call is refused, and Claude is told
+  `Permission to use Bash with command cat ~/.ssh/id_ed25519 has been denied.`
+- Claude edits `CLAUDE.md` in `acceptEdits` mode. You get a permission prompt instead of
+  a silent edit.
+- Claude runs `git push --force origin main`. The guard refuses it, whatever the
+  permission rules say, and the session shows `PreToolUse:Bash hook error: blocked by block-dangerous.sh:
+  git push --force / -f / +ref / --mirror / --prune (rewrites or deletes remote history)`.
+
+Add your build/test/lint commands to the allow list (project-shared) or to
+`settings.local.json` (just you), e.g.:
 
 ```json
 {
@@ -79,10 +104,10 @@ Three layers, on by default — keep them in place (the self-check below enforce
 1. **`.gitignore`** ignores `.env*`, `*.pem`, `*.key`, `*.p12`, `id_rsa`/`id_ed25519`,
    `.aws/credentials`, and `secrets/` so they can't be committed. Commit only
    `*.example` variants (e.g. `.env.example`).
-2. **`settings.json` deny rules** block the *Read tool* (and the dedicated file tools) from
-   reading those files, and the shell allow-list omits `cat`/`grep`/`rg`/`find` so they
-   can't read a secret unattended either. (Bash-pattern denies aren't airtight — for untrusted
-   code the real boundary is the sandbox.)
+2. **`settings.json` deny rules** block reading those files and the credential stores in
+   `~`, through the file tools and the shell commands Claude Code recognizes as reads
+   (`cat .env` is refused). Code that opens files itself isn't covered; for untrusted code
+   the real boundary is the sandbox.
 3. **`scripts/check-template.sh`** (run locally and in CI) fails if a secret-like file
    gets tracked, if obvious secret material (private keys, AWS keys, GitHub/Slack/Google
    tokens) appears in tracked content, or if either protection above is removed.
@@ -97,8 +122,9 @@ never in tracked files. For deeper scanning across git history, add
 bash scripts/check-template.sh
 ```
 
-Validates JSON, hook scripts, every `@reference`, that the PreToolUse guard stays wired,
-the referenced doc directories exist, and the secrets protections above. Runs automatically
+Validates JSON, hook scripts, every `@reference`, that every script `settings.json` wires
+exists and the PreToolUse guard stays wired on Bash, that the referenced doc directories
+exist, and the secrets protections above (including the home-directory denies). Runs automatically
 on push/PR via `.github/workflows/check.yml` (which also runs a `gitleaks` secret scan and
 deliberately runs no project build/test, so fork PRs can't execute untrusted code).
 
@@ -166,7 +192,9 @@ write-ups so nothing is duplicated:
   its own inline rationale (golden-output diffing; surface-shape parameter tuning;
   ground-truth accuracy harness).
 - `docs/token-awareness.md` — the cost classes behind the **Cost** column above, the
-  per-session context tax, and model-routing guidance.
+  per-session context tax, compaction (including idle compaction and how to opt out),
+  and model-routing guidance. `scripts/compaction-report.sh` shows which of your
+  sessions were compacted.
 
 These are loaded on demand (when a command/skill references them), not on every session,
 which keeps the always-loaded context lean.

@@ -30,8 +30,9 @@ manifest during adoption — no freeform "search").
 
 Universally useful regardless of project. The adopter's CC session
 installs them by default at user scope; the user opts out per plugin if
-not wanted. Both are Anthropic-authored (string `source` field — see
-the authorship discriminator under [Plugin discovery](#plugin-discovery)),
+not wanted. Both are Anthropic-authored (`claude-plugins-official` lists them
+with a `./plugins/` path — see the authorship discriminator under
+[Plugin discovery](#plugin-discovery)),
 so the third-party vetting rubric below doesn't apply.
 
 - **`security-guidance@claude-plugins-official`** — reactive SAST and
@@ -56,64 +57,87 @@ exist in any marketplace.
 
 **Enumeration (the session runs these in order):**
 
-1. Refresh marketplaces so the local catalog matches upstream:
+1. Refresh marketplaces:
    ```bash
    claude plugin marketplace update
    ```
-2. Enumerate the authoritative catalog. One JSON file covers all
-   configured marketplaces and carries description, author, version,
-   source SHA, last commit, component inventory, and per-model token
-   costs:
+2. Enumerate with Claude Code's own listing. It covers every configured
+   marketplace, including the built-in `anthropic-plugin-directory`, and gives
+   each plugin's source and the commit it installs:
    ```bash
-   # List of every available plugin (as <name>@<marketplace> keys):
-   jq -r '.catalog.plugins | keys[]' ~/.claude/plugins/plugin-catalog-cache.json
-
-   # Full metadata for a specific candidate:
-   jq '.catalog.plugins."<name>@<marketplace>"' \
-     ~/.claude/plugins/plugin-catalog-cache.json
+   f=$(mktemp) && claude plugin list --available --json > "$f"
+   # Every plugin not yet installed, as <name>@<marketplace>:
+   jq -r '.available[].pluginId' "$f"
+   # Full entry for a candidate (description, version, source):
+   jq '.available[] | select(.pluginId == "<name>@<marketplace>")' "$f"
    ```
+   Installed plugins are under `.installed`. Don't use
+   `~/.claude/plugins/plugin-catalog-cache.json`, which older versions of this guide
+   read: `marketplace update` can leave it months out of date.
 3. Match against the user's stack **using only names that appear in
    step 2's output.** A name not in the catalog does not exist;
    propose it and the install will fail with "not found." Confabulation
    is rejected by construction.
 
-For each verified candidate, surface (all readable from the catalog
-entry — no guessing):
+For each verified candidate, surface (from its listing entry or its own
+files — no guessing):
 
-- **Name + marketplace + description** (`marketplace_entry.description`)
-- **Components** — skills / agents / hooks / MCP / LSP servers
-  (`components.{commands,agents,skills,hooks,mcpServers,lspServers}`)
-- **Maintainer + last commit** (`marketplace_entry.author.name`,
-  `last_updated`)
-- **Per-session token cost** (`tokens.<model>.always_on` and
-  `tokens.<model>.on_invoke` — the `session` / `on-use` cost classes in
-  [`docs/token-awareness.md`](token-awareness.md))
+- **Name + marketplace + description** (`.description`)
+- **Its files**, as Claude Code would install them, in a folder you can inspect:
+  `<installLocation>/<source path>` for a string source (`installLocation` is the
+  marketplace's entry in `~/.claude/plugins/known_marketplaces.json`). For a `url` or
+  `git-subdir` source, fetch the commit it pins (`.source.sha`), not the branch tip:
+  `git init -q <tmp> && git -C <tmp> fetch -q --depth 1 <url> <sha> && git -C <tmp> checkout -q FETCH_HEAD`,
+  then its `.source.path` subfolder for `git-subdir` (in zsh, don't keep it in a
+  variable named `path`: zsh ties that name to `$PATH`).
+- **What runs** — `bash <template-clone>/scripts/audit-config.sh <folder>`, the
+  template clone's auditor: hooks, MCP and LSP servers, monitors, commands,
+  permission grants and model-invocable skills. Vet from this report.
+- **Components and token cost** — `claude --plugin-dir <folder> plugin details <name>`
+  prints the plugin's component inventory and projected always-on and per-use token
+  cost (the `session` / `on-use` cost classes in
+  [`docs/token-awareness.md`](token-awareness.md)) without installing it. It isn't a
+  complete list of what runs, so don't use it to dismiss anything the auditor reports.
+- **Maintainer + last commit** — the marketplace manifest's `.author.name` when it has
+  one, otherwise the source repo's owner, and
+  `gh api "repos/<owner>/<repo>/commits?path=<path>&per_page=1" --jq '.[0].commit.committer.date'`.
+  For a string source, `<owner>/<repo>` is the marketplace's `source.repo` in
+  `known_marketplaces.json` and `<path>` is the source path without `./`.
 - **How it relates to this template** (orthogonal / complementary /
   overlapping)
 
 **License** is not in the catalog. The trust model is
 **authorship-based, not marketplace-based** — being listed in
 `claude-plugins-official` is curation, not authorship. The discriminator
-is one field:
+is where the plugin's code lives:
 
 ```jq
-.marketplace_entry.source | type == "string"   # ⇒ Anthropic-authored
+# Only in the claude-plugins-official manifest (source.repo = anthropics/claude-plugins-official):
+.source | type == "string" and startswith("./plugins/")   # ⇒ Anthropic-authored
 ```
 
-A **string** source (e.g., `"./plugins/security-guidance"`) is a path
-within the `anthropics/claude-plugins-official` repo itself —
-Anthropic-authored, trusted by default. An **object** source
-(`{ "url": "https://github.com/<vendor>/<repo>.git", ... }`, or
-`{ "repo": "<vendor>/<repo>", ... }` for the `github` sub-schema) points
-to a vendor-maintained repo — third-party-authored, **needs the full
-vetting rubric regardless of which marketplace lists it.** Of the 222
-plugins in `claude-plugins-official` at the time of writing, only 50 are
-Anthropic-authored; the other 172 are third-party-curated.
+A plugin is Anthropic-authored only when the **`claude-plugins-official`**
+marketplace (its `source.repo` in `~/.claude/plugins/known_marketplaces.json`
+is `anthropics/claude-plugins-official`) lists it with a source under
+**`./plugins/`** (e.g., `"./plugins/security-guidance"`): Anthropic's own
+code in that repo, trusted by default. Everything else is third-party-authored
+and **needs the full vetting rubric**:
+- a `./external_plugins/` path in the same repo (partner plugins, e.g.
+  `context7` by Upstash, which calls a remote MCP server);
+- an **object** source: `url` (a vendor's repo), `git-subdir` (a `path`
+  inside a vendor's repo) or `command` (a local tool that supplies the plugin);
+- any plugin from another marketplace, whatever its paths look like.
 
-For each third-party-authored candidate, fetch the license from the
-source repo (`marketplace_entry.source.url` when present; otherwise
-construct from `marketplace_entry.source.repo`) and confirm a declared
-license before installing — see
+On 2026-11-18, 41 of the 317 plugins in `claude-plugins-official` were
+Anthropic-authored; 14 sat under `./external_plugins/`, and 262 had object
+sources (163 `url`, 98 `git-subdir`, 1 `command`).
+
+For each third-party-authored candidate, find the license and confirm one is
+declared before installing: its own `plugin.json` or folder first; for an
+`./external_plugins/` path, then the marketplace repo's root `LICENSE`; for a
+`git-subdir` source, `.source.path` inside `.source.url`, then that repo's
+root; for a `url` source, the repo at `.source.url`. A `command` source has no
+repo to read, so check it by hand. See
 [Vetting rubric](#vetting-rubric-third-party-authored-plugins-and-mcp-servers).
 
 User picks. Session installs (`claude plugin install <name>@<marketplace>`)
@@ -122,8 +146,9 @@ and records selections in `VENDORED.md` under "Installed plugins".
 > **Adopting `claude-community`.** Only configured marketplaces are
 > enumerable. To consider plugins from `claude-community`, the user
 > runs `claude plugin marketplace add anthropics/claude-community`
-> before step 1; otherwise step 2 surfaces only `claude-plugins-official`
-> entries. All `claude-community` plugins are third-party-authored
+> before step 1; otherwise step 2 surfaces only the marketplaces already
+> configured (`claude-plugins-official` and the built-in directory). All
+> `claude-community` plugins are third-party-authored
 > by construction, so every candidate runs the full vetting rubric.
 
 ### MCP server discovery
@@ -149,22 +174,26 @@ plugins" section — they're a different distribution model.
 
 ### Vetting rubric (third-party-authored plugins and MCP servers)
 
-Default-deny. Scope is **any plugin whose `marketplace_entry.source`
-is an object** — that includes the third-party-curated majority of
-`claude-plugins-official` as well as everything in `claude-community`.
+Default-deny. Scope is **every plugin that isn't a `./plugins/` path in
+`claude-plugins-official`**: its object sources and `./external_plugins/`
+paths, which together are the third-party majority of that marketplace, plus
+every plugin from any other marketplace, `claude-community` included.
 To accept such a plugin, the session must confirm:
 
-- Explicit **license** declared (in `plugin.json` or `LICENSE`).
+- Explicit **license** declared (in `plugin.json`, the plugin's folder, or the
+  root `LICENSE` of the repo that holds it).
 - **Named maintainer** (not anonymous).
 - **Commit within ~6 months** (or explicit "stable, not abandoned"
   justification).
 - **Explicit user approval** before install.
 
 Surface ambiguous cases rather than auto-install. **Anthropic-authored**
-plugins — those whose `marketplace_entry.source` is a string path
-within `anthropics/claude-plugins-official`, including both baselines —
-are trusted by default and skip this rubric. The discriminator is the
-schema of the `source` field, not the marketplace name.
+plugins — those that `claude-plugins-official` lists with a `./plugins/`
+path, including both baselines — are trusted by default and skip this
+rubric. A string source alone isn't enough: `./external_plugins/` paths are
+third-party, and so is a `./plugins/` path in any other marketplace. The
+discriminator is the source path within `claude-plugins-official`; a listing
+alone isn't authorship.
 
 ### Activation caveat (silent-failure trap)
 
@@ -200,15 +229,35 @@ adopting into), with this template available at a path like
 > Especially valuable for the existing-repo procedure, which has more
 > merge decisions and more pre-existing state to reconcile.
 
+**Already adopted?** If the repo has a `VENDORED.md` from this template, don't run
+either procedure below: every vendored file would show up as a conflict. Use
+[§ Re-syncing template updates](#re-syncing-template-updates) instead.
+
+Once the vendored `.claude/settings.json` is in place, Claude Code asks
+before each edit to `CLAUDE.md` or `.github/`. That's expected during
+adoption; approve them.
+
+> **Not on GitHub?** `.github/workflows/check.yml`, `.github/CODEOWNERS` and the
+> `Edit(.github/**)` ask rule in `settings.json` are GitHub-specific. On GitLab or
+> another host, port `check.yml`'s two steps to your CI (run
+> `bash scripts/check-template.sh`, and the gitleaks scan with its pinned hash), put
+> CODEOWNERS where your host reads it (GitLab: the repo root, `docs/` or `.gitlab/`),
+> and point the ask rule at your CI config (for example `Edit(.gitlab-ci.yml)` and
+> `Edit(.gitlab/**)`). Record each as an adaptation in `VENDORED.md`.
+
 > **If your repo already maintains a `docs/adr/` series**, vendor template
 > ADRs into a sub-namespace — `docs/claude-code-template/` or
 > `docs/adr/_upstream/` are both common — to avoid numbering collisions.
 > The template ships `ADR-001-vendor-with-source-pin.md`,
 > `ADR-002-ai-context-archive-threshold.md` (superseded — kept as historical
-> record), and `ADR-004-ai-context-archive-threshold-bump.md` (live rationale
-> for the `AI_CONTEXT.md` threshold + `/handoff` discipline); vendoring those
+> record), `ADR-004-ai-context-archive-threshold-bump.md` (superseded, but it
+> defines the `/handoff` discipline), and
+> `ADR-007-ai-context-archive-threshold-1000.md` (live rationale for the
+> `AI_CONTEXT.md` threshold); vendoring those
 > naïvely into a repo with its own ADR-001 silently corrupts the adopter's
-> ADR sequence.
+> ADR sequence. Sub-namespacing fixes paths, not names: if your series has
+> its own ADR-NNN, say "upstream ADR-NNN" wherever your prose names the
+> template's, or renumber it.
 > Patch the inline references in `templates/AI_SESSION_START.md` (and any
 > other vendored docs that cross-link to template ADRs) to the
 > sub-namespace path you chose.
@@ -225,16 +274,29 @@ The session will:
 
 1. Read `docs/ADOPTING.md`, `CLAUDE.md`, `SECURITY.md`, and
    `docs/adr/ADR-001-vendor-with-source-pin.md` from the template.
-2. Capture the source SHA: `(cd ../claude_code_template && git rev-parse HEAD)`.
-   Refuse to proceed on a dirty template tree.
-3. Ask enough about the project (tech stack, structure, key commands) to
-   fill the `CLAUDE.md` skeleton placeholders.
-4. Copy every **vendor-as-is** file from the file map.
+2. Capture the source SHA and tag:
+   `(cd ../claude_code_template && git rev-parse HEAD && git describe --tags --exact-match || echo untagged)`.
+   Pin to the tag when there is one. Refuse to proceed on a dirty template tree.
+   **Your own repo must be clean too:** `git status --porcelain` must print
+   nothing; otherwise ask the user to commit or stash their work (an initial
+   commit is fine in a new repo), and stop if they don't. Step 11's `git add -A`
+   then stages only the adoption.
+3. Ask, in one batch, everything the later steps need: tech stack, structure and
+   key commands (the `CLAUDE.md` placeholders, and which of those commands to add to
+   the `settings.json` allow list), the GitHub handle or team for CODEOWNERS, the
+   LICENSE holder, a security contact, whether to fill in the PROJECT_SPEC /
+   ARCHITECTURE / BUILD_PLAN triad now (either way the blanks go in `templates/`;
+   filled-in copies go to `docs/<NAME>.md`), and any baseline plugin to skip.
+4. Copy every **vendor-as-is** file from the file map with `cp -p`, which keeps
+   the hooks and scripts executable.
 5. Copy each **adapt** file and make the project-specific edits
    (CODEOWNERS handles, `.gitignore` patterns, LICENSE holder, SECURITY
    contact).
 6. Copy each **skeleton** file and fill placeholders from the user's
-   answers.
+   answers. For `CLAUDE.md`, apply [§ Merging the template's `CLAUDE.md`](#merging-the-templates-claudemd)
+   even though there's nothing to merge with: keep bucket 1, drop the highlights of
+   the template-internal ADRs (003, 005, 006), and repoint or drop pointers to
+   reference-only docs.
 7. **Repoint `@templates/...` references.** Four `@`-refs across three
    files in `.claude/commands/` point at `@templates/...`. If this
    adoption relocated or stripped `templates/`, repoint each match to
@@ -249,11 +311,15 @@ The session will:
    | `.claude/commands/handoff.md` | `@templates/ADR-template.md`, `@templates/AI_SESSION_START.md` |
    | `.claude/commands/adr.md` | `@templates/ADR-template.md` |
 
-   Quick scan to confirm: `grep -rn '@templates/' .claude/commands .claude/skills`.
+   `handoff.md` also carries two `@docs/adr/ADR-007-…` refs; repoint them too if you
+   moved the template's ADRs into a sub-folder. Quick scan to confirm:
+   `grep -rnE '@(templates|docs/adr)/' .claude/commands .claude/skills`.
    Also scan vendored skeleton templates (especially `templates/AI_SESSION_START.md`)
-   for inline `docs/skill-security.md` / `docs/adr/ADR-NNN-*.md` references —
-   they're prose-level path mentions rather than `@`-imports so
-   `scripts/check-template.sh` doesn't catch them, but they break the same way.
+   and `SECURITY.md` for inline `docs/skill-security.md` / `docs/adr/ADR-NNN-*.md`
+   references — they're prose-level path mentions rather than `@`-imports so
+   `scripts/check-template.sh` doesn't catch them, but they break the same way. Point
+   each at the upstream URL at your pinned tag, or vendor the file (then repoint its
+   own template-only links; see [Reference only](#reference-only-read-dont-copy)).
    Adopters with their own `docs/adr/` series should sub-namespace template
    ADRs (see the callout above).
    `scripts/check-template.sh` § 3 (the `@`-reference resolution check, step 11
@@ -269,21 +335,29 @@ The session will:
 9. **Run plugin + MCP discovery** per [Plugins](#plugins). Surface
    plugin and standalone MCP-server candidates for the user's project;
    install accepted plugins at the user's chosen scope and add accepted
-   MCP servers to `.mcp.json`. **After steps 8-9 complete, if any
+   MCP servers to `.mcp.json`. Record each candidate the user declines
+   for step 10's "Considered plugins". **After steps 8-9 complete, if any
    plugins were installed (baseline or discovered), prompt the user
    once to run `/reload-plugins`** so hooks/agents bind to this session
    (see [Activation caveat](#activation-caveat-silent-failure-trap));
    skipping means the adoption commit ships without plugin review.
 10. Create `VENDORED.md` at repo root (see [Source-pin manifest](#source-pin-manifest)),
-    including the "Installed plugins" section listing baseline + discovered.
+    including the "Installed plugins" section listing baseline + discovered (each
+    with a one-line purpose in its Notes),
+    and "Considered plugins" for any the user declined.
 11. **Stage first** (`git add -A`), then run `bash scripts/check-template.sh`
-    and `bash scripts/audit-config.sh .claude/`. Report. (Staging first is what
+    and `bash scripts/audit-config.sh .claude/`. Report. On a clean adoption the
+    auditor's HIGH sections hold only the template's own material: the `` !`…` ``
+    lines in the four commands (§2), and its deny rules, `$schema` URLs, guard
+    patterns and lockdown denies (§6); anything else needs a look. (Staging first is what
     makes `check-template.sh` §4 — the secret-content scan — actually cover the
     just-vendored files; on an unstaged tree it silently scans nothing. See
     [Verification](#verification).)
-12. Commit the staged changes as one atomic commit:
-    `chore: adopt claude_code_template @ <sha>` with a body listing what was
-    adopted (files + plugins).
+12. Run your review plugin's code-reviewer on the staged diff (`CLAUDE.md` →
+    Conventions), then commit the staged changes as one atomic commit:
+    `chore: adopt claude_code_template @ <tag-or-sha>` with a body listing what was
+    adopted (files + plugins). Then start a new Claude Code session: the guard and
+    other hooks load at session start, so they aren't active in this one.
 
 ### Existing repo (Claude Code already in use)
 
@@ -296,7 +370,9 @@ Bias: audit first; never stomp silently.
 
 The session will:
 
-1. **Audit.** For each path the template wants to vendor, check whether
+1. **Audit.** If the repo already has a `VENDORED.md` from this template, stop and
+   use [§ Re-syncing](#re-syncing-template-updates). Otherwise, for each path the
+   template wants to vendor, check whether
    the adopter repo already has it (exact-path conflict). **Also flag
    files with the same basename at a different path** — e.g., the
    adopter has `docs/AI_SESSION_START.md` while the template vendors
@@ -307,7 +383,9 @@ The session will:
    keep stale prose that contradicts the freshly-vendored code). Build
    a conflict list **and** a basename-clash list.
 2. Read the template docs as above; capture source SHA; refuse on dirty
-   template tree.
+   template tree. **Your own repo must be clean too:** `git status --porcelain`
+   must print nothing; otherwise ask the user to commit or stash their work, and
+   stop if they don't. Step 10's `git add -A` then stages only the adoption.
 3. **Ask the user** how to resolve each conflict — *merge*, *replace*,
    *keep mine*, or *skip*. For known-mergeable files (`.gitignore`,
    `.claude/settings.json` deny-list), propose a specific merge. **For
@@ -333,11 +411,15 @@ The session will:
    | `.claude/commands/handoff.md` | `@templates/ADR-template.md`, `@templates/AI_SESSION_START.md` |
    | `.claude/commands/adr.md` | `@templates/ADR-template.md` |
 
-   Quick scan to confirm: `grep -rn '@templates/' .claude/commands .claude/skills`.
+   `handoff.md` also carries two `@docs/adr/ADR-007-…` refs; repoint them too if you
+   moved the template's ADRs into a sub-folder. Quick scan to confirm:
+   `grep -rnE '@(templates|docs/adr)/' .claude/commands .claude/skills`.
    Also scan vendored skeleton templates (especially `templates/AI_SESSION_START.md`)
-   for inline `docs/skill-security.md` / `docs/adr/ADR-NNN-*.md` references —
-   they're prose-level path mentions rather than `@`-imports so
-   `scripts/check-template.sh` doesn't catch them, but they break the same way.
+   and `SECURITY.md` for inline `docs/skill-security.md` / `docs/adr/ADR-NNN-*.md`
+   references — they're prose-level path mentions rather than `@`-imports so
+   `scripts/check-template.sh` doesn't catch them, but they break the same way. Point
+   each at the upstream URL at your pinned tag, or vendor the file (then repoint its
+   own template-only links; see [Reference only](#reference-only-read-dont-copy)).
    Adopters with their own `docs/adr/` series should sub-namespace template
    ADRs (see the callout above).
    `scripts/check-template.sh` § 3 (the `@`-reference resolution check, step 10
@@ -355,13 +437,16 @@ The session will:
    [Activation caveat](#activation-caveat-silent-failure-trap)).
 9. Create or update `VENDORED.md` (existing repos may already have one
    from a prior adoption; merge entries). Includes the "Installed plugins"
-   section.
+   section (each plugin with a one-line purpose in its Notes), and "Considered plugins"
+   for candidates the user declined in step 8.
 10. **Stage first** (`git add -A`), then run both verification scripts (see
     [Verification](#verification) for why staging matters). Distinguish failures
     originating from template files vs. pre-existing project state.
-11. Stage one atomic commit; body lists what was adopted, what was merged
-    (with strategy), what was skipped, plugins installed, and the current
-    pinned SHA.
+11. Run your review plugin's code-reviewer on the staged diff, then make one
+    atomic commit, `chore: adopt claude_code_template @ <tag-or-sha>`; the body lists what was adopted, what was merged (with
+    strategy), what was skipped, plugins installed, and the pinned tag or SHA.
+    Then start a new Claude Code session: the hooks and merged settings load at
+    session start.
 
 ## Merging the template's `CLAUDE.md`
 
@@ -382,16 +467,18 @@ into the adopter's `CLAUDE.md` unchanged.
 
 > **One edit even in the "keep verbatim" sections:** they carry prose pointers to
 > docs the file map classifies *reference-only* — `## Conventions` ends with "see
-> docs/skill-security.md", and `## Context System` mentions `docs/token-awareness.md`
-> and `docs/claude-code-setup.md`. If you didn't vendor those (the common case), the
-> pointers dangle. They're prose, not `@`-imports, so `check-template.sh` §3 won't
-> catch them — repoint each to the upstream URL
-> (`https://github.com/mjvacas/claude_code_template/blob/main/docs/<file>`) or drop
+> docs/skill-security.md", and `## Context System` mentions `docs/token-awareness.md`,
+> `docs/claude-code-setup.md` and `docs/ADOPTING.md`, and lists the `cc-task-bench`
+> skill. If you didn't vendor those (the common case), the pointers dangle; drop
+> `cc-task-bench` from the skills list unless you vendored it. They're prose, not
+> `@`-imports, so `check-template.sh` §3 won't catch them — repoint each to the
+> upstream URL at your pinned tag
+> (`https://github.com/mjvacas/claude_code_template/blob/<tag>/docs/<file>`) or drop
 > the clause. Everything else in these sections stays verbatim.
 
 | Section | Why it's template-shared |
 |---------|--------------------------|
-| `## Conventions` block (the engineering principles: don't-duplicate, types-first, defensive-defaults-at-boundaries, refactor-verify against baseline, treat `.claude/` as deps, review-before-commit, no-amend-after-push) | These are the shared engineering stance the rest of the template assumes. Skills like `verify-refactor` reference the baseline-output rule directly. |
+| `## Conventions` block (the engineering principles: don't-duplicate, keep-entry-points-thin, types-first, defensive-defaults-at-boundaries, refactor-verify against baseline, personal-info-stays-local, treat `.claude/` as deps, review-before-commit, no-amend-after-push) | These are the shared engineering stance the rest of the template assumes. Skills like `verify-refactor` reference the baseline-output rule directly. |
 | `## Context System` (entire section) | Load-bearing for `/handoff`, `/session-start`, hybrid-memory model, ADR/summaries archive mechanics. The template's commands, hooks, and skills assume this paragraph exists. |
 | Behavioral guidelines block at the bottom (the four principles: Think Before Coding, Simplicity First, Surgical Changes, Goal-Driven Execution) | Referenced as the "four principles" throughout AI sessions; dropping them changes the contract for what the model is being asked to optimize for. |
 
@@ -403,7 +490,7 @@ replace the bracketed placeholders with the project's actual content.
 | Section | Keep | Replace |
 |---------|------|---------|
 | `## Hard Constraints (guarded by code)` | The intro philosophy ("Critical invariants are enforced in code... never a runtime toggle/UI") + the `block-dangerous.sh` PreToolUse hook bullet (template-provided) | The `<INVARIANT>` and `<limit/threshold>` placeholders → your project's actual code-guarded invariants |
-| `## Architecture Decisions` | The one-line-highlight-per-ADR format | Include ADR-001 / ADR-002 entries **only if you vendored those ADRs** (sub-namespaced or otherwise). Add your project's own ADR entries below. |
+| `## Architecture Decisions` | The one-line-highlight-per-ADR format | Keep the ADR-001 / ADR-002 / ADR-004 / ADR-007 entries **only for the ADRs you vendored** (sub-namespaced or otherwise); drop ADR-003, ADR-005 and ADR-006, which are template-internal. Add your project's own ADR entries below. |
 | `## AI Integration Patterns (if applicable)` | The section if your project uses LLMs | Customize the bullets freely; drop the section entirely if your project doesn't use AI integrations. |
 
 ### Bucket 3 — Pure project scaffold, replace
@@ -422,7 +509,7 @@ equivalents in their own `CLAUDE.md`).
 
 Keep the merged file under **200 lines** (`CLAUDE.md` auto-loads every
 session — token discipline matters here). The template's bucket-1 sections
-add up to ~30 lines together; the rest is the project's responsibility.
+add up to about 40 lines together; the rest is the project's responsibility.
 
 ## Source-pin manifest
 
@@ -435,7 +522,9 @@ the upgrade legible (am I behind? is it breaking?), per
 [ADR-006](adr/ADR-006-versioning-and-release-management.md). Until the first
 tag exists (or for anything vendored between releases) pin by **commit SHA** —
 the SHA is always the exact anchor, and the `<tag-or-sha>` placeholders below
-work either way.
+work either way. A SHA from a branch that hasn't been released yet (a release
+candidate, say) can drop out of the template's history if that branch is squash- or
+rebase-merged, so re-pin to the release tag once it's out.
 
 Format (proposed; adopters can customize):
 
@@ -443,7 +532,8 @@ Format (proposed; adopters can customize):
 # Vendored from claude_code_template
 
 Upstream: https://github.com/mjvacas/claude_code_template
-Last sync: <tag-or-sha>   (e.g. v0.2.1 @ 10f58a0)
+Last sync: <tag-or-sha>   (e.g. v0.2.1 @ 10f58a0; for an untagged release candidate,
+                           6f20ee5, untagged v0.3.0 release candidate: re-pin to the tag)
 
 ## Files
 
@@ -456,11 +546,17 @@ Last sync: <tag-or-sha>   (e.g. v0.2.1 @ 10f58a0)
 
 ## Installed plugins
 
-| Plugin | Marketplace | Scope | Installed | Source |
-|--------|-------------|-------|-----------|--------|
-| `security-guidance` | `claude-plugins-official` | user | 2026-06-01 | baseline |
-| `pr-review-toolkit` | `claude-plugins-official` | user | 2026-06-01 | baseline |
-| `commit-commands` | `claude-plugins-official` | user | 2026-06-01 | discovered |
+| Plugin | Marketplace | Scope | Installed | Source | Notes |
+|--------|-------------|-------|-----------|--------|-------|
+| `security-guidance` | `claude-plugins-official` | user | 2026-06-01 | baseline | security review of code Claude writes |
+| `pr-review-toolkit` | `claude-plugins-official` | user | 2026-06-01 | baseline | PR review agents, including code-reviewer |
+| `context7` | `claude-plugins-official` | project | 2026-06-01 | discovered | for library docs lookups; third-party (license: marketplace repo root); audited 2026-11-18 at `43fd1f9db094`, kept |
+
+## Considered plugins
+
+| Plugin | Date | Why declined |
+|--------|------|--------------|
+| `<name>@<marketplace>` | 2026-11-18 | overlaps the baseline reviewer |
 
 ## Third-party skills
 
@@ -481,11 +577,17 @@ The optional **`## Deliberately not vendored`** section records reference-only /
 skip files you intentionally left out, so a re-sync's add-check (§ Re-syncing,
 step 4) doesn't keep re-proposing them as "missed."
 
+The optional **`## Considered plugins`** section records discovery candidates the
+user declined, so a re-sync's discovery (§ Re-syncing, step 6) doesn't keep
+re-proposing them. The "Installed plugins" Notes column starts with a one-line
+purpose when you install a plugin, and holds third-party audit decisions
+(§ Re-syncing, step 5), so a later re-audit can say what the plugin is for.
+
 The optional **`## Third-party skills`** section records skills vendored from
 outside this template, and the local patches to re-apply when you bump them (see
 `docs/skill-security.md` → Partial vendoring).
 
-**Why a sidecar (not per-file headers).** Four of the vendor-as-is files
+**Why a sidecar (not per-file headers).** Four of the vendored files
 are strict JSON with `$schema` validation (`.claude/settings.json`,
 `.mcp.json.example`, the two `.claude/settings.*.example` files). They
 can't carry `//` comments. A sidecar covers every file format uniformly
@@ -510,20 +612,34 @@ convenience.
 
 ## File map
 
+Some files only work together. Take each of these sets whole, never part of one:
+
+- **Session context:** `/session-start` and `/handoff`, `AI_CONTEXT.md` (and its
+  `@AI_CONTEXT.md` line in `CLAUDE.md`'s Context System), `templates/AI_SESSION_START.md`,
+  `docs/summaries/`, ADR-002, ADR-004 and ADR-007, and the `session-context.sh` hook with its
+  `settings.json` wiring. `/handoff` also uses the Decisions set.
+- **Decisions:** `/adr`, `templates/ADR-template.md` and `docs/adr/`.
+- **Safety:** `settings.json`, `block-dangerous.sh`, `statusline.sh`, `check-template.sh`,
+  `audit-config.sh` and `check.yml`.
+
+Today the template expects all three: `check-template.sh` requires `docs/adr/`,
+and `docs/summaries/`, and `/handoff` imports the ADR
+template, so skipping a set means editing the others. Within a set, the check catches some
+gaps (a missing `@`-import target, a wired hook whose script is gone) but not all:
+dropping `/session-start` alone, for example, passes.
+
 ### Vendor as-is (copy verbatim)
 
 | Path | Why |
 |------|-----|
-| `.claude/settings.json` | Deny-list + permissions baseline. |
 | `.claude/settings.local.json.example` | Personal-overrides template. |
 | `.claude/settings.lockdown.json.example` | Optional egress denies for untrusted skills. |
 | `.claude/statusline.sh` | Status line; API-drift-defensive. |
 | `.claude/hooks/session-context.sh` | Safe SessionStart hook. |
 | `.claude/hooks/block-dangerous.sh` | **Critical**: PreToolUse hard-block of `rm -rf /`, `git push --force`, pipe-to-shell, etc. |
-| `.claude/hooks/precompact-snapshot.sh` | Pre-compaction breadcrumb snapshots. |
 | `.claude/hooks/clock.sh` | Opt-in per-prompt time heartbeat (ships unwired; a few tokens/prompt when enabled — see `docs/claude-code-setup.md`). |
 | `.claude/commands/commit.md` | `/commit` slash command. |
-| `.claude/commands/adr.md` | `/adr` slash command. Carries an `@templates/ADR-template.md` ref — repoint it if you relocate/strip `templates/` (§ First-time adoption step 7). |
+| `.claude/commands/adr.md` | `/adr` slash command. Carries an `@templates/ADR-template.md` ref — repoint it if you relocate/strip `templates/` (new-repo step 7, existing-repo step 6). |
 | `.claude/skills/verify-refactor/` | Golden-output byte-identical diffing. |
 | `.claude/skills/tune-parameters/` | Threshold-tuning skill. |
 | `.claude/skills/llm-eval/` | Ground-truth accuracy harness. |
@@ -535,17 +651,20 @@ convenience.
 | `templates/ADR-template.md` | ADR scaffold (referenced by `/adr`). |
 | `docs/adr/ADR-001-vendor-with-source-pin.md` | Rationale for the `VENDORED.md` sidecar manifest. Sub-namespace if you maintain your own `docs/adr/` series (see § First-time adoption callout). |
 | `docs/adr/ADR-002-ai-context-archive-threshold.md` | Historical record — the original 500-line research-anchored derivation. Superseded by ADR-004 but kept in-repo (ADR-004 cites its evidence chain). Same sub-namespacing caveat. |
-| `docs/adr/ADR-004-ai-context-archive-threshold-bump.md` | Live rationale for the 750-line `AI_CONTEXT.md` archive threshold + `/handoff` state-sufficiency requirement (referenced from `templates/AI_SESSION_START.md` and CLAUDE.md's Context System). Same sub-namespacing caveat. |
+| `docs/adr/ADR-004-ai-context-archive-threshold-bump.md` | Superseded by ADR-007 but kept: it defines the `/handoff` state-sufficiency requirement ADR-007 keeps, and ADR-007 cites it. Same sub-namespacing caveat. |
+| `docs/adr/ADR-007-ai-context-archive-threshold-1000.md` | Live rationale for the `AI_CONTEXT.md` archive threshold (referenced from the SessionStart hook, `/handoff`, `templates/AI_SESSION_START.md` and CLAUDE.md). Same sub-namespacing caveat. |
+| `docs/adr/.gitkeep` | Keeps `docs/adr/` under version control; `check-template.sh` §5 requires the directory. Needed if you sub-namespace the template's ADRs and have none of your own yet. |
 | `docs/summaries/.gitkeep` | Keeps the (initially empty) monthly-summary archive dir under version control. **Easy to miss** — it's the only file under `docs/summaries/`, and `check-template.sh` §5 fails (`missing directory: docs/summaries`) without it. Copying it is what makes a fresh adoption pass verification. |
 
 ### Adapt (copy, then customize)
 
 | Path | What to change |
 |------|----------------|
+| `.claude/settings.json` | Permissions baseline and hook wiring. Add your own allow rules, denies and hooks. It wires three scripts (`block-dangerous.sh`, `session-context.sh`, `statusline.sh`); `check-template.sh` §5 fails if one is missing, so remove a script and its wiring together, and record that in `VENDORED.md`. |
 | `.claude/commands/session-start.md` | Customize section headers per project. |
 | `.claude/commands/handoff.md` | Minor tone customization. |
-| `.github/CODEOWNERS` | Replace the owner handle with your own GitHub handle/team. It **ships as `@mjvacas`** (the template maintainer), not a `@<owner>` placeholder — `grep @mjvacas .github/CODEOWNERS` to find every line, or you silently leave the maintainer as code-owner of your security-critical files. |
-| `.gitignore` | Keep the security entries; append project patterns. |
+| `.github/CODEOWNERS` | Replace the owner handle with your own GitHub handle/team. It **ships as `@mjvacas`** (the template maintainer), not a `@<owner>` placeholder — `grep @mjvacas .github/CODEOWNERS` to find every line, or you silently leave the maintainer as code-owner of your security-critical files. Then delete the `# ADOPTERS:` comment block, which a find-and-replace would turn into nonsense. |
+| `.gitignore` | Keep the security entries; append project patterns. Drop the `bench/results/` lines unless you vendored `cc-task-bench`. |
 | `SECURITY.md` | Add a private contact if you want one; customize scope. |
 | `LICENSE` | Update copyright holder. |
 
@@ -554,20 +673,22 @@ convenience.
 | Path | What to do |
 |------|------------|
 | `CLAUDE.md` | Fill tech stack, structure, key files, commands, conventions, hard constraints. **Keep under 200 lines.** Delete the template header. |
-| `AI_CONTEXT.md` | Decision log for your project; starts blank. |
-| `README.md` | Replace entirely. |
+| `AI_CONTEXT.md` | Decision log for your project. Keep the header; delete the sample session block. Required by `/session-start` and `CLAUDE.md`, which `@`-import it. |
+| `README.md` | New repo: replace it with your own. Existing repo: keep yours; don't copy this one. |
 | `templates/PROJECT_SPEC.md` | Optional "why/what". |
 | `templates/ARCHITECTURE.md` | Optional "how". |
 | `templates/BUILD_PLAN.md` | Optional "in what order". |
-| `templates/AI_SESSION_START.md` | Narrative session-workflow guide. |
+| `templates/AI_SESSION_START.md` | Narrative session-workflow guide. Required by `/session-start` and `/handoff`, which `@`-import it. |
 
 ### Reference only (read; don't copy)
 
 | Path | Why |
 |------|-----|
+| `docs/ADOPTING.md` | This procedure. The adopting session reads it from your template clone; don't copy it. |
 | `docs/claude-code-setup.md` | How this template wires into Claude Code. Read for ideas. |
 | `docs/skill-security.md` | Trust model + vetting procedures. Link rather than copy. |
-| `docs/token-awareness.md` | Cost classes, the per-session context tax, and model-routing heuristic. Read; link rather than copy. |
+| `docs/token-awareness.md` | Cost classes, the per-session context tax, compaction, and model-routing heuristic. Read; link rather than copy. |
+| `scripts/compaction-report.sh` | Lists your recent Claude Code compactions and which were idle. It reads your transcripts in `~/.claude`, not project files, so run it from your template clone; nothing in your repo depends on it. |
 | `.claude/skills/cc-task-bench/` | Model-routing benchmark *methodology* (V1 = design + fixture layout; runner is V2, per ADR-003). Read if you want to benchmark which model to route a task type to; not needed to adopt the template. |
 | `docs/adr/ADR-003-cc-task-bench-scope.md` | Scopes the cc-task-bench benchmark — template-internal R&D. Don't vendor. |
 | `docs/adr/ADR-005-token-awareness-legibility.md` | Records the template's own token-awareness decision (the statusline itself ships via `.claude/statusline.sh`). Template-internal. Don't vendor. |
@@ -575,12 +696,18 @@ convenience.
 | `CHANGELOG.md` | This template's change log. Read to re-sync. |
 | `CONTRIBUTING.md` | Sending fixes back to this repo + its maintainer-side working agreements. Don't copy — write your own if your project needs one. |
 
+If you vendor one of these docs anyway (adopters often keep `skill-security.md` or
+`token-awareness.md`), its links to template-only files dangle: `docs/ADOPTING.md`,
+`CONTRIBUTING.md`, ADR-003/005/006 and `scripts/compaction-report.sh`. Repoint them to
+upstream URLs at your pinned tag, record the file as adapted in `VENDORED.md`, and
+re-apply the repoints on each re-sync.
+
 ### Skip
 
 | Path | Why |
 |------|-----|
 | `bench/` | The template's own benchmark corpus, schema, and `pricing.json` (per ADR-003). Template-internal; read the schema via the `cc-task-bench` skill above if designing your own fixtures. |
-| `tests/`, `.github/workflows/template-tests.yml` | Regression fixtures for the template's own scripts (`tests/audit-config/`), and the CI workflow that runs them. Template-internal; the vendored `check.yml` doesn't reference them. |
+| `tests/`, `.github/workflows/template-tests.yml` | Regression tests for the template's own scripts and hooks (`tests/<suite>/`), and the CI workflow that runs them. Template-internal; the vendored `check.yml` doesn't reference them. |
 
 ## Re-syncing template updates
 
@@ -588,69 +715,194 @@ After adoption, re-sync periodically. Paste-prompt for the adopter's
 Claude Code session:
 
 > Re-sync vendored files from `claude_code_template` (at
-> `../claude_code_template`). Check the template's `CHANGELOG.md` since
+> `<template-clone>`). Check the template's `CHANGELOG.md` since
 > the version/SHA in `VENDORED.md`; show me what's changed and propose updates.
+
+Replace `<template-clone>` with the clone's absolute path: a relative one resolves
+from wherever the session runs, and with more than one clone around it can point at
+the wrong one.
 
 The session will:
 
 1. Read `VENDORED.md` to get the current pinned tag/SHA(s), vendored paths,
-   and installed plugins.
-2. Read the template's `CHANGELOG.md` between your pinned version and the
-   latest release (or `HEAD` if no tag is cut yet); a MAJOR (or, in 0.x beta,
-   MINOR) bump flags a breaking adoption-contract change. Identify entries
-   affecting vendored paths or baseline plugins — including **file deletions,
-   additions, and plugin swaps**. If your pin predates `v0.1.0`, also read the
-   date-stamped pre-history sections: changes there won't show as a SemVer bump.
+   and installed plugins. In the template clone, refuse on a dirty tree, run
+   `git fetch --tags`, and check out the **target** detached
+   (`git -C <template-clone> switch --detach <tag-or-sha>`): the latest release tag
+   (or a commit, if you're syncing past it). `git describe --tags <pin>` shows where your
+   pin sits relative to the tags. **Your own repo must be clean too:**
+   `git status --porcelain` must print nothing; otherwise ask the user to commit or
+   stash their work, and stop if they don't. Step 9's `git add -A` then stages only
+   the re-sync. A `git worktree` on a new branch
+   (`git worktree add -b resync ../<repo>-resync main`) also works and leaves work in
+   progress in place. Gitignored local files (`.env`, `.claude/snapshots/`, private
+   lists) aren't in it, so the checks see a different tree. Merge the branch into your
+   main branch after step 10, before starting the new session.
+2. Read the template's `CHANGELOG.md` from the first section after your pin up to
+   the target; a MAJOR (or, in 0.x beta, MINOR) bump flags a breaking
+   adoption-contract change. Identify entries affecting vendored paths or baseline
+   plugins — including **file deletions, additions, plugin swaps, and
+   Migration items**. A pin between two tags already has part of the next
+   section; step 3's log is the ground truth for what's new. If your pin predates
+   `v0.1.0`, also read the date-stamped pre-history sections after it: changes there
+   won't show as a SemVer bump.
 3. Run, against the template repo:
-   `git log --oneline <pinned-tag-or-sha>..HEAD -- <vendored-paths>`. Add
-   `--diff-filter=D` to spot files **deleted upstream** (handled in step 7).
+   `git log --oneline <pin>..<target> -- <upstream-paths>`, taking the paths from
+   `VENDORED.md`'s **Upstream path** column (a relocated file keeps its template path
+   there; your local path would silently match nothing). Pass each path as its own
+   argument: zsh doesn't split an unquoted `$paths`, so the log comes back empty. An
+   empty log for an old pin means the command is wrong, not that nothing changed. Add `--diff-filter=D` to spot
+   files **deleted upstream** (handled in step 7). Then check for **drift**: for each
+   row, `git -C <template-clone> show <pin>:<upstream-path> | diff - <local-path>`,
+   where `<template-clone>` is the clone path from the paste-prompt.
+   A row recorded as vendor-as-is whose copy differs has local changes nobody
+   recorded; treat it as **Merge** in step 7 and record the change in its Notes, or a
+   plain update will silently drop it. For example, if you wired your own hook into
+   `settings.json`, the diff shows it as a `>` line (`> "command": "…/my-hook.sh"`),
+   and that row goes to Merge. For an adapted row, compare the drift against its Notes
+   too: record any adaptation the Notes don't list, or step 7's Merge may drop it. A
+   per-file `Vendored from claude_code_template` header line (either form in
+   [Optional per-file headers](#optional-per-file-headers)) and the blank line after it
+   aren't drift. Then compare each row's
+   recorded class (vendor-as-is, adapted, skeleton) with the target's
+   [File map](#file-map): a file the map now classes as Adapt or Skeleton that your row
+   still calls vendor-as-is goes to Merge, and you fix the row. A plain Update would
+   overwrite your version (`LICENSE` would get the template's copyright holder).
 4. **Check for newly-vendored files.** Compare the template's current
    [File map](#file-map) against the paths in your `VENDORED.md`; propose
    **adding** any vendor-as-is file you never picked up — most importantly
    `.github/workflows/check.yml`, without which the security self-check isn't
-   enforced on your PRs. Skip anything recorded under your
-   `## Deliberately not vendored` section — don't re-propose deliberate skips.
+   enforced on your PRs. Skip anything recorded in your "Deliberately not
+   vendored" section, whatever its heading level or format — don't re-propose
+   deliberate skips. Also skip a row whose own note makes it conditional when the
+   condition doesn't hold (e.g. `docs/adr/.gitkeep` only matters while `docs/adr/`
+   has no files), and record the skip in that section. A row under any heading of
+   `VENDORED.md` (a customizations list, say) counts as recorded. If a mapped path
+   already exists locally but has no row anywhere, diff
+   it against the target, keep yours or take upstream, and add the row. New
+   reference-only and skip files aren't proposed here; they show up in the
+   `CHANGELOG`.
    Also add any file a *changed* command/skill now references (e.g. an updated
-   `handoff.md` that references `docs/adr/ADR-004-…` co-requires vendoring
-   ADR-004). If an incoming ADR's number already exists in your own `docs/adr/`
+   `handoff.md` that references `docs/adr/ADR-007-…` co-requires vendoring
+   ADR-007). If an incoming ADR's number already exists in your own `docs/adr/`
    series, **sub-namespace or renumber it** — don't assume the template's
    `ADR-NNN` slot is free.
-5. **Check baseline plugins** (`claude plugin list`) — install any
-   baseline newly recommended by the template (per upstream
-   [Plugins](#plugins)) and not yet installed; prompt opt-in per plugin.
+5. **Check plugins** (`claude plugin list`) against the whole "Installed plugins"
+   section, not just the baselines, and fix the section where they differ. The
+   section records the baselines and the plugins this project uses, at any scope. The
+   session can't tell which those are, so ask the user, and leave out user-scope
+   plugins installed only for other projects. Install any baseline newly recommended
+   by the template (per upstream [Plugins](#plugins)) and not yet installed; prompt
+   opt-in per plugin. Then audit each third-party plugin you add to the record, and
+   re-audit each recorded one (authorship per [Plugin discovery](#plugin-discovery)):
+   - Find the copy Claude Code loads for this project (user scope, or project scope
+     here), not the newest cache folder or another project's install:
+     `jq -r --arg p "$(git worktree list --porcelain | sed -n '1s/^worktree //p')" '.plugins["<name>@<marketplace>"][]? | select(.scope == "user" or .projectPath == $p) | .installPath' ~/.claude/plugins/installed_plugins.json`
+     (`$p` is your main checkout, even when you work in a worktree).
+     No output means it isn't installed for this project: fix its row instead.
+   - Re-audit when that path's version (its last folder) differs from the one in
+     the plugin's Notes, or when this range changed `scripts/audit-config.sh` or
+     the vetting docs.
+   - Run the target's auditor from the clone, since your own copy is still the
+     pin's: `bash <template-clone>/scripts/audit-config.sh <installPath>`. Read the
+     report rather than the exit code: nearly every plugin trips `--strict` on the
+     links in its LICENSE or README. `claude plugin details <name>@<marketplace>`
+     adds its component inventory and token cost, but it isn't a complete list of
+     what runs, so vet from the report. Show the user what runs or reaches out: §2 hits,
+     MODEL-INVOCABLE entries in §4, commands in §5, and §6 hits other than license
+     and README links. Ask whether to keep, disable or uninstall it (its Notes should
+     say what it's for; if they don't, ask), and record the decision, the date and
+     the audited version in its Notes.
+
    **If any were installed, prompt the user to run `/reload-plugins`**
    (see [Activation caveat](#activation-caveat-silent-failure-trap)).
-6. **Re-run plugin + MCP discovery** for anything newly relevant to the
-   project (new project areas, new ecosystem entries since last sync).
+6. **Re-run plugin + MCP discovery** per [Plugin discovery](#plugin-discovery)
+   when the project's stack changed since the last sync, or when the user asks;
+   otherwise say it was skipped and why. The last sync is the last adoption or
+   re-sync commit
+   (`base=$(git log -1 --format=%H -E --grep='^chore: (adopt|re-sync) claude_code_template' -- VENDORED.md)`),
+   and the stack changed if a dependency manifest changed anywhere in the repo
+   (`git diff --name-only "$base"..HEAD | grep -E '(^|/)(package\.json|pyproject\.toml|requirements[^/]*\.txt|go\.mod|Cargo\.toml|Gemfile)$'`)
+   or a top-level directory is new
+   (`comm -13 <(git ls-tree -d --name-only "$base" | sort) <(git ls-tree -d --name-only HEAD | sort)`).
+   If `base` comes back empty (an older adoption commit used another subject), show
+   `git log --oneline -- VENDORED.md`, ask the user which commit was the last
+   adoption or re-sync, and use that; never run the checks with an empty `base`.
+   Discovery here uses the template clone's auditor, as in step 5.
+   A repo without code (notes, docs) won't trip the manifest check; there, ask the
+   user whether they've taken up a new tool or workflow since the last sync, and run
+   discovery if so. Candidates are catalog entries that match
+   the stack, minus what's installed and what "Considered plugins" records as
+   declined. The output is a short list with the fields discovery surfaces, or
+   "no new candidates". Record each candidate the user declines (name, date,
+   reason) under "Considered plugins" so the next sync doesn't re-propose it.
    Prompt for `/reload-plugins` again if any plugins were installed.
 7. Propose changes **batched by action** (update / add / delete / merge) —
-   not one approval per file:
-   - **Update** — for changed vendor-as-is files, propose the latest copy —
+   not one approval per file. Show the whole batch in a message of its own, not inside
+   the approval prompt, then ask for one approval: a long list written above a prompt
+   can scroll out of view.
+   - **Update** — for changed files whose `VENDORED.md` Notes say vendor-as-is
+     and whose copy matched the pin in step 3, propose the target copy —
      **unless `VENDORED.md` records a path-adaptation for that file** (e.g.
      `adr.md`'s `@templates/`→your-layout repoint): re-apply the adaptation
-     instead of blind-copying, or the update reintroduces refs that dangle.
+     instead of blind-copying, or the update reintroduces refs that dangle. Go by
+     the Notes, not the file-map class.
    - **Add** — the newly-vendored files from step 4.
    - **Delete** — for files removed upstream, propose removing the local copy
      **and its `VENDORED.md` row**; if the `CHANGELOG` notes a replacement
      (e.g. a dropped agent superseded by a baseline plugin), surface that swap.
+     Then grep the repo for the deleted file's basename and fix prose that still
+     mentions it.
    - **Merge** — for adapted/skeleton files you customized, don't blind-copy.
      If `CLAUDE.md` changed upstream, re-apply only the bucket-1 (keep-verbatim)
      changes per [§ Merging the template's `CLAUDE.md`](#merging-the-templates-claudemd);
      leave your project-specific content alone. Same for any `.claude/commands/*`
-     whose `@templates/` refs you repointed: take the upstream body, then
-     re-apply your repoint.
+     whose `@templates/` or `@docs/adr/` refs you repointed: take the upstream
+     body, then re-apply your repoint. For `.claude/settings.json`, start from the
+     target copy, re-add your own allow, ask and deny rules (re-vetting each allow
+     rule as the template vetted its own: a broad one also approves destructive
+     forms, so `Bash(find:*)` allows `find -delete` and `-exec rm`, and `Bash(rg:*)`
+     allows `rg --pre <cmd>`; narrow it or move it to `ask`), and put each of your
+     hook entries back under the matching event and matcher — never drop a local
+     hook (`check-template.sh` can't tell that one is missing). "Your own" means what
+     the step-3 drift diff adds against the pin; rules the pin shipped and the target
+     dropped stay dropped. **Your `VENDORED.md` Notes win here too:** if a row says
+     you don't take upstream changes (a `CLAUDE.md` that diverged on purpose, a
+     skeleton you replaced entirely), leave the file alone and say in its Notes what
+     upstream changed. Migration items still apply to it.
+   - **Migrate** — apply every item in the **Migration** section of each release in
+     the `CHANGELOG` range (a `chmod`, a changed default, a setting to add), including
+     ones about your own files rather than vendored ones, or verification can fail on
+     state the new files expect. An item whose target doesn't exist locally is a no-op.
 
-   After Update/Merge, run `grep -rn '@templates/' .claude/commands .claude/skills`
-   — a surviving `@templates/` ref dangles (and fails § 3 at step 9) unless
-   `templates/` sits at that path; repoint or restore before committing.
-8. Apply approved changes; bump the tag/SHA(s) in `VENDORED.md`; update the
-   "Installed plugins" section. **Backfill any `VENDORED.md` sections missing
-   relative to the current schema above** (e.g. "Installed plugins" for a pin
-   that predates it).
-9. Re-run `bash scripts/check-template.sh` and
-   `bash scripts/audit-config.sh .claude/`.
-10. Stage one atomic commit:
-    `chore: re-sync claude_code_template <old-ref>..<new-ref>`.
+   A file in one of the file map's sets that you keep at another path, or record in
+   another `VENDORED.md` section (your own copy of `AI_SESSION_START.md`, say), still
+   gets that set's changes: find it and merge them. Order matters when you re-sync in
+   place, because the session runs with the files as you change them: a copied hook
+   acts at once, so delete a hook at the end, in the same change that removes its
+   `settings.json` wiring, and merge `settings.json` last so its new `ask` rules don't
+   prompt on the rest of the re-sync.
+
+   After Update/Merge, run `grep -rnE '@(templates|docs/adr)/' .claude/commands .claude/skills`
+   — a surviving ref dangles (and fails § 3 at step 9) unless its target sits at
+   that path; repoint or restore before committing. The grep only lists refs;
+   `check-template.sh` § 3 is what checks they resolve.
+8. Apply approved changes. In `VENDORED.md`, set "Last sync" to the target and bump
+   the pin of every row you reviewed against it, including rows you deliberately
+   didn't take (their Notes say what wasn't merged, per step 7); update the
+   "Installed plugins" section. **Backfill the required sections missing relative to the current schema
+   above** ("Files", "Installed plugins"); add the optional ones only when they have
+   content.
+9. **Stage first** (`git add -A`), then re-run `bash scripts/check-template.sh` and
+   `bash scripts/audit-config.sh .claude/`. Distinguish failures from template files
+   vs. pre-existing project state. If `.claude/worktrees/` holds worktrees whose work
+   is merged, ask the user whether to remove them first (`git worktree remove <path>`):
+   each one's `.claude/` is config a session there still loads, often the pre-sync
+   version, and they fill most of the report.
+10. Run your review plugin's code-reviewer on the staged diff, then stage one atomic
+    commit: `chore: re-sync claude_code_template <old-ref>..<new-ref>`. The commit
+    body and `VENDORED.md` are the record; mention the re-sync in your next
+    `/handoff` rather than adding a session block just for it. Then start a new
+    Claude Code session: hooks and the merged settings load at session start.
 
 ## Uninstalling / backing out
 
@@ -681,12 +933,13 @@ template buckets from `CLAUDE.md`.
 **Both paths — clean up what lives outside the repo.** `git revert` only touches tracked
 files, so these survive a revert:
 
-- **Plugins** — `claude plugin uninstall <name>@<marketplace>` for each row in
-  `VENDORED.md` → `## Installed plugins` (they install at user scope under `~/.claude/`,
-  not in your repo).
+- **Plugins** — `claude plugin uninstall <name>@<marketplace>` at the scope in each
+  row of `VENDORED.md` → `## Installed plugins` (they live under `~/.claude/`, not in
+  your repo). Leave a user-scope plugin, such as a baseline, installed if another
+  project still uses it.
 - **MCP servers** — remove any entries you added to `.mcp.json`.
 
-Three traps to avoid:
+Traps to avoid:
 
 - **Don't blind-`rm` the merged files** (`CLAUDE.md`, `.claude/settings.json`,
   `.gitignore`) — they hold *your* content alongside the template's. Revert or un-merge

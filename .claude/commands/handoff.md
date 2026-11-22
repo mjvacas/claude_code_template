@@ -10,7 +10,7 @@ Close out the session so the next one can resume cleanly.
 - Today's date: !`date '+%Y-%m-%d'` — use this for the session block header; dates remembered from context go stale (midnight rollover, compaction)
 - Working tree: !`git status --short`
 - Staged + unstaged diff summary: !`git diff --stat HEAD`
-- `AI_CONTEXT.md` size: !`wc -l < AI_CONTEXT.md | tr -d ' '` lines (archive oldest blocks to `docs/summaries/YYYY-MM.md` if > 750 — see @docs/adr/ADR-004-ai-context-archive-threshold-bump.md)
+- `AI_CONTEXT.md` size: !`wc -l < AI_CONTEXT.md | tr -d ' '` lines (archive oldest blocks to `docs/summaries/YYYY-MM.md` if > 1000 — see @docs/adr/ADR-007-ai-context-archive-threshold-1000.md)
 
 ## Your task
 
@@ -21,7 +21,7 @@ Close out the session so the next one can resume cleanly.
    - **Next steps** — concrete actions, not vague intent
    Capture only what a future reader can't reconstruct from the diff. Promote any decision that is significant or hard to reverse into a new `docs/adr/ADR-NNN-*.md` (copy from @templates/ADR-template.md).
 2. Leave learned patterns / build quirks to native auto-memory — don't duplicate them into `AI_CONTEXT.md`.
-3. **If `AI_CONTEXT.md` is over 750 lines**, move the oldest session blocks into `docs/summaries/YYYY-MM.md` (current month) and keep only recent blocks in `AI_CONTEXT.md`. Compress aggressively — one paragraph per archived session is fine. Archival is safe because step 1's state-sufficiency requirement guarantees the latest block alone is enough to resume. (Threshold rationale: @docs/adr/ADR-004-ai-context-archive-threshold-bump.md)
+3. **If `AI_CONTEXT.md` is over 1000 lines**, move the oldest session blocks into `docs/summaries/YYYY-MM.md` (current month) and keep only recent blocks in `AI_CONTEXT.md`. Compress aggressively — one paragraph per archived session is fine. Archival is safe because step 1's state-sufficiency requirement guarantees the latest block alone is enough to resume. (Threshold rationale: @docs/adr/ADR-007-ai-context-archive-threshold-1000.md)
 4. Commit **code + `AI_CONTEXT.md` together** (plus any new `docs/summaries/` file) in one atomic commit. Use a conventional prefix (`feat:`, `fix:`, `refactor:`, `docs:`, `chore:`) and a body explaining what and why.
 5. Confirm the working tree is clean and report the commit hash.
 

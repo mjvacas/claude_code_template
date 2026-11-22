@@ -21,14 +21,14 @@ Claude Code's live native tools (`/context`, `/usage`) for the actual numbers.
 
 Most cost decisions don't hinge on "47 tokens" — they hinge on the *shape* of
 the cost: paid once, or every session, or every turn? These four classes are
-the vocabulary the rest of the repo annotates against. They map onto the plugin
-catalog's two cost axes (`tokens.<model>.always_on` / `tokens.<model>.on_invoke`,
-surfaced during [plugin discovery](ADOPTING.md#plugin-discovery)) so the doc and
-the catalog speak one language.
+the vocabulary the rest of the repo annotates against. They map onto the two cost
+axes Claude Code's plugin catalog has used (`always_on` / `on_invoke`); a plugin's
+actual cost shows in `/context` once it's installed (see
+[plugin discovery](ADOPTING.md#plugin-discovery)).
 
 | Class | Tag | What it means | Catalog axis | Examples in this repo |
 |-------|-----|---------------|--------------|-----------------------|
-| Free / local | `free-local` | Runs as code; emits ~nothing into the *model's* context (terminal-only output counts — it never enters the window) | — | `block-dangerous.sh`, `precompact-snapshot.sh`, `statusline.sh`, the `scripts/` |
+| Free / local | `free-local` | Runs as code; emits ~nothing into the *model's* context (terminal-only output counts — it never enters the window) | — | `block-dangerous.sh`, `statusline.sh`, the `scripts/` |
 | One-shot on use | `on-use` | Loaded into context only when invoked; paid once per invocation | `tokens.*.on_invoke` | skills (`verify-refactor`, `llm-eval`, …), `/handoff`, `/adr`, `/commit` |
 | Always-on / session | `session` | Loaded at session start, resident the whole session — the "context tax" | `tokens.*.always_on` | `CLAUDE.md`, `@AI_CONTEXT.md`, the `session-context.sh` injection, a plugin's `always_on` |
 | Per-prompt recurring | `per-prompt` | Re-injected on **every** user turn; scales with conversation length | (not modeled by the catalog — flag it) | `clock.sh` heartbeat |
@@ -48,10 +48,10 @@ numbers live.
 | Item | How to see its real cost |
 |------|--------------------------|
 | `CLAUDE.md` | `/context` → "Memory files" |
-| `@AI_CONTEXT.md` (auto-imported by `CLAUDE.md`) | `/context`; capped at 750 lines by design — see [ADR-004](adr/ADR-004-ai-context-archive-threshold-bump.md) |
+| `@AI_CONTEXT.md` (auto-imported by `CLAUDE.md`) | `/context`; capped at 1000 lines by design — see [ADR-007](adr/ADR-007-ai-context-archive-threshold-1000.md) |
 | `MEMORY.md` index + recalled auto-memories | `/context` (varies by what's recalled) |
 | `session-context.sh` SessionStart injection | `/context` → conversation/system |
-| Each baseline/discovered plugin's `always_on` | the plugin's catalog entry; `/usage` for the live split |
+| Each baseline/discovered plugin's `always_on` | `/context` once it's installed; `/usage` for the live split |
 
 **Don't trust a frozen total — measure it:**
 
@@ -82,7 +82,7 @@ below. It's a `free-local` signal — the status line never enters the model's
 context, so this costs zero tokens.
 
 The single largest fixed item is usually a full `AI_CONTEXT.md`; its budget is
-owned by [ADR-004](adr/ADR-004-ai-context-archive-threshold-bump.md) — don't copy
+owned by [ADR-007](adr/ADR-007-ai-context-archive-threshold-1000.md) — don't copy
 the figure here, it would drift. Run `/context` for your actual total rather than
 trusting any number in prose.
 
@@ -116,6 +116,53 @@ So: watch `ctx` to decide when to **hand off and clear** (long conversation at a
 natural stopping point); watch `5h`/`7d` to decide when to **slow down or route
 cheaper** (next section). They are different signals — a depleted budget is not
 fixed by clearing context, and a fresh context does not restore budget.
+
+## Compaction
+
+Compaction replaces the conversation so far with a summary written by the model.
+It saves tokens on every later turn, but the session then works from the summary:
+exact instructions and the reasons behind decisions can drop out. It happens three
+ways:
+
+- **Manual** — you run `/compact` (optionally with instructions for the summary).
+- **Automatic** — near the context limit, so the session can continue.
+- **Idle** — a long conversation left alone for about 54 minutes is compacted just
+  before its one-hour prompt cache expires, so your next message doesn't re-read the
+  whole context uncached. By default it applies from 200K tokens, which on a 1M window
+  is only a fifth full. It needs an interactive terminal session on the one-hour cache,
+  and Anthropic turns it on server-side; nothing in your config changes when it does.
+
+Idle compaction trades context for cost. If you keep long sessions open and the context
+is the valuable part, turn it off with `"idleCompaction": false` in your **user**
+settings (`~/.claude/settings.json`, or `/config` → Idle compaction), or raise its
+threshold with the `CLAUDE_CODE_IDLE_COMPACT_MIN_TOKENS` environment variable (minimum
+100000). The setting needs Claude Code 2.1.290 or later; a session started on an older
+version ignores it until restarted, and there only `"autoCompactEnabled": false` stops
+it, which turns off automatic compaction too. The template doesn't set it: the trade-off
+is personal, and a project setting would override every collaborator's choice.
+
+Nothing is deleted: Claude Code keeps the full transcript in `~/.claude/projects/` (30
+days by default, `cleanupPeriodDays`), and its compaction summary tells the session where
+to find it. To see which of your sessions
+were compacted and why, run `scripts/compaction-report.sh` from your template clone: it
+lists each compaction with its size and how long the session had been idle, and never
+prints message text. Before 2.1.290, idle compactions were recorded with trigger
+"manual", so check the idle column, not the trigger. For example (illustrative data):
+
+```text
+time              project                   trigger     tokens  idle min  version    flag
+2026-10-14 16:57  my-app                    manual     312,480      53.9  2.1.289    idle (notice)
+2026-10-15 09:11  my-app                    auto       968,211       0.1  2.1.302
+2026-10-15 12:36  api-server                manual     205,377      54.5  2.1.280    likely idle (gap)
+2026-10-16 15:16  my-app                    auto       241,090      53.8  2.1.302    idle (notice)
+
+4 compaction(s); 3 idle (2 by notice, 1 by gap)
+```
+
+Only the 968K row hit the context limit. The other three came about 54 minutes after the
+last message, at 205K–312K tokens: a fifth to a third of a 1M window. "idle (notice)"
+means Claude Code recorded its own "Compacted while idle" notice; "likely idle (gap)" is
+inferred from the 50–60 minute gap, for versions that didn't record one.
 
 ## Which model for which task
 

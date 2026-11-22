@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted (2026-06-09) — supersedes [ADR-002](./ADR-002-ai-context-archive-threshold.md).
+Superseded by [ADR-007](./ADR-007-ai-context-archive-threshold-1000.md) (2026-11-18).
+
+Original status: Accepted (2026-06-09) — supersedes [ADR-002](./ADR-002-ai-context-archive-threshold.md). ADR-007 raises the cap to 1000 lines after measuring real files and archive frequency, and keeps this ADR's `/handoff` state-sufficiency requirement.
 
 ## Context
 
