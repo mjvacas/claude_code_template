@@ -12,6 +12,8 @@ Pre-0.1.0 history is kept below in the original date-stamped sections.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-22
+
 A security release. Vetting a third-party plugin showed that `audit-config.sh` missed
 whole classes of config that runs without a prompt. A review against
 [Agent Baseline](https://agentbaseline.org), and dry-run adoptions on throwaway clones of
@@ -38,6 +40,10 @@ MINOR under [ADR-006](docs/adr/ADR-006-versioning-and-release-management.md):
 - **Re-sync that keeps your changes.** Re-sync detects local edits to vendored files and
   merges them instead of overwriting, applies migration notes, and the file map says
   which files only work together.
+- **A larger `AI_CONTEXT.md` cap.** Archiving starts at 1000 lines instead of 750
+  ([ADR-007](docs/adr/ADR-007-ai-context-archive-threshold-1000.md)), chosen from a
+  replay of real archive history: about 30–50% fewer archives for roughly 2k more tokens
+  per session.
 - **Tested.** Regression suites for the auditor, the self-check, the guard hook and the
   compaction report run on Linux and macOS in CI.
 - **One feature removed.** The PreCompact snapshot hook is gone: it was rarely read,
@@ -798,7 +804,8 @@ commit is tagged `v0.1.0`. Entries below were previously under `[Unreleased]`._
 ### Changed
 - `SECURITY.md` `Scope` section: customize-me placeholder for adopters. (#4)
 
-[unreleased]: https://github.com/mjvacas/claude_code_template/compare/v0.2.2...HEAD
+[unreleased]: https://github.com/mjvacas/claude_code_template/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/mjvacas/claude_code_template/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/mjvacas/claude_code_template/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/mjvacas/claude_code_template/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/mjvacas/claude_code_template/compare/v0.1.0...v0.2.0
