@@ -211,6 +211,11 @@ what Claude sees when it's refused in
   switching to its own repo, so running a template clone's copy from an adopter's repo
   with `.claude/`, or with no path, silently audited the template's files. A relative
   path and the default `.claude` now mean the folder where you ran it.
+- **`audit-config.sh` read Claude Code's worktrees as config** — `.claude/worktrees/` holds
+  full copies of the repo, and in one adopter 15 of them (703 MB) turned the report into
+  tens of thousands of lines that buried the real config. It now audits each worktree's
+  own `.claude/` (the config its sessions load) and says in §1 what it left out. A footer
+  also explains exit 0 when there are HIGH-signal findings and `--strict` wasn't given.
 - **`check-template.sh` passed with protections broken** — §5 only looked for the
   guard's name, so a deleted `block-dangerous.sh` passed (and a hook that can't start
   silently turns off); it now checks that every wired script exists and is executable,

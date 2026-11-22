@@ -282,6 +282,112 @@ for p in .claude/ .claude; do
   has 6 "fixture.invalid/linked-hook"
 done
 
+# git for the fixture repos below: a fixed identity and none of the user's config.
+fgit() { GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c user.name=fixture \
+  -c user.email=fixture@example.invalid -c init.defaultBranch=main "$@"; }
+
+# Git worktrees under .claude/worktrees/ (where Claude Code puts its own) are checkouts of
+# the repo: each one's own .claude/ is audited (its snapshots held back), the rest is left
+# out, and §1 names each one. Anything there that git doesn't vouch for as a worktree is
+# read in full: a plain folder, a one-line fake .git, and a forged back-link that points
+# into the audited .claude. A linked settings.json next to them is still read.
+R="$tmp/wt"
+mkdir -p "$R/src" "$R/.claude/hooks"
+echo 'curl https://fixture.invalid/worktree-source' > "$R/src/app.py"
+fgit -C "$R" init -q && fgit -C "$R" add src && fgit -C "$R" commit -qm fixture
+for w in w1 w2; do fgit -C "$R" worktree add -q -b "$w" "$R/.claude/worktrees/$w"; done
+mkdir -p "$R/.claude/worktrees/w1/.claude/snapshots"
+echo '{"hooks": {"SessionStart": [{"hooks": [{"type": "command", "command": "echo worktree-hook"}]}]}}' \
+  > "$R/.claude/worktrees/w1/.claude/settings.json"
+echo 'curl https://fixture.invalid/worktree-snapshot' > "$R/.claude/worktrees/w1/.claude/snapshots/s.md"
+mkdir -p "$R/.claude/worktrees/notes" "$R/.claude/worktrees/cache" "$R/.claude/worktrees/forged" \
+  "$R/.claude/worktrees/gd"
+echo 'curl https://fixture.invalid/not-a-worktree' > "$R/.claude/worktrees/notes/plan.sh"
+echo 'x' > "$R/.claude/worktrees/cache/.git"
+echo 'curl https://fixture.invalid/fake-worktree' > "$R/.claude/worktrees/cache/run.sh"
+echo 'gitdir: ../gd' > "$R/.claude/worktrees/forged/.git"
+echo "$R/.claude/worktrees/forged/.git" > "$R/.claude/worktrees/gd/gitdir"
+echo 'curl https://fixture.invalid/forged-worktree' > "$R/.claude/worktrees/forged/run.sh"
+# A link plus enough ".." to read as /usr on paper, while on disk the path lands back
+# inside the .claude where a forged back-link waits.
+d="$R/.claude/worktrees/x" p="" up=""
+for i in $(seq 1 40); do p="$p/a$i"; up="$up../"; done
+mkdir -p "$d$p" "$d/usr" "$R/.claude/worktrees/linked"
+ln -s "../x$p" "$R/.claude/worktrees/linked/lnk"
+echo "gitdir: lnk/${up}usr" > "$R/.claude/worktrees/linked/.git"
+echo '../../linked/.git' > "$d/usr/gitdir"
+echo 'curl https://fixture.invalid/linked-forgery' > "$R/.claude/worktrees/linked/run.sh"
+echo 'curl https://fixture.invalid/main-hook' > "$R/.claude/hooks/h.sh"
+echo '{"hooks": {"Stop": [{"hooks": [{"type": "command", "command": "echo linked-settings-hook"}]}]}}' \
+  > "$tmp/linked-settings.json"
+ln -s "$tmp/linked-settings.json" "$R/.claude/settings.json"
+audit "$R/.claude"
+has 1 "[note] $R/.claude/worktrees/ holds 2 git worktree(s)"
+has 1 "    $R/.claude/worktrees/w2"
+lacks 1 "src/app.py"
+has 1 "w1/.claude/settings.json"
+lacks 6 "worktree-source"
+lacks 6 "worktree-snapshot"
+has 6 "w1/.claude/snapshots/s.md: matched"
+has 6 "fixture.invalid/main-hook"
+has 5 "worktree-hook"
+has 5 "linked-settings-hook"
+has 6 "fixture.invalid/not-a-worktree"
+has 6 "fixture.invalid/fake-worktree"
+has 6 "fixture.invalid/forged-worktree"
+has 6 "fixture.invalid/linked-forgery"
+# A worktree's .claude/ that can't be listed is an ERROR, not "none".
+chmod 300 "$R/.claude/worktrees/w1/.claude"
+if [ -r "$R/.claude/worktrees/w1/.claude" ]; then
+  echo "== $R/.claude unreadable worktree"; echo "  skip (running as root: chmod doesn't stop reads)"
+else
+  audit "$R/.claude" errors-ok
+  has 6 "ERROR: grep could not finish"
+fi
+chmod 700 "$R/.claude/worktrees/w1/.claude"
+
+# A .claude holding only worktrees without their own .claude/ reads nothing else (find
+# with no path would have read the current directory).
+R2="$tmp/wtonly"
+mkdir -p "$R2/src" "$R2/.claude"
+echo 'curl https://fixture.invalid/worktree-source' > "$R2/src/app.py"
+fgit -C "$R2" init -q && fgit -C "$R2" add src && fgit -C "$R2" commit -qm fixture
+fgit -C "$R2" worktree add -q -b w1 "$R2/.claude/worktrees/w1"
+AUDIT_CWD="$tmp" audit "$R2/.claude"
+has 1 "(no files)"
+has 1 "holds 1 git worktree(s)"
+has 6 "none"
+# With nothing else to flag, a worktree .claude/ that can't be listed still fails --strict.
+mkdir -p "$R2/.claude/worktrees/w1/.claude"
+echo '{}' > "$R2/.claude/worktrees/w1/.claude/settings.json"
+chmod 300 "$R2/.claude/worktrees/w1/.claude"
+if [ -r "$R2/.claude/worktrees/w1/.claude" ]; then
+  echo "== $R2/.claude unreadable worktree"; echo "  skip (running as root: chmod doesn't stop reads)"
+else
+  strict "$R2/.claude" 1
+fi
+chmod 700 "$R2/.claude/worktrees/w1/.claude"
+
+# Next to snapshots/ or worktrees/, §5 reads what one walk over the .claude read: a JSON
+# file that isn't a config name stays unread, and a dangling link is still an error.
+mkdir -p "$tmp/lone/.claude/worktrees"
+echo '{ // a JSONC file, not config' > "$tmp/lone/.claude/launch.json"
+audit "$tmp/lone/.claude"
+strict "$tmp/lone/.claude" 0
+mkdir -p "$tmp/dangle/.claude/snapshots"
+ln -s missing.json "$tmp/dangle/.claude/settings.local.json"
+audit "$tmp/dangle/.claude" errors-ok
+has 5 "settings.local.json"
+
+# With HIGH-signal findings, a footer explains exit 0 unless --strict was given.
+audit "$R/.claude"
+has 6 "exit 0 because --strict wasn't given"
+echo "== --strict on $R/.claude"
+out=$(bash scripts/audit-config.sh --strict "$R/.claude" 2>&1)
+lacks 6 "exit 0 because --strict"
+audit "$fx/tokens/clean.md"
+lacks 6 "exit 0 because --strict"
+
 # An exported CDPATH doesn't change where `.claude/` run from the repo root points.
 mkdir -p "$tmp/cdp/scripts" "$tmp/cdp/.claude/snapshots"
 cp scripts/audit-config.sh "$tmp/cdp/scripts/"
