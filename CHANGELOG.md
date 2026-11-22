@@ -175,6 +175,11 @@ what Claude sees when it's refused in
   archiving by about 30–50% for roughly 2k more tokens per session. The SessionStart
   reminder and `/handoff` use the new number; the state-sufficiency rule is unchanged
   (Migration 7).
+- **CI pins `actions/checkout` v7.0.1** (`3d3c42e…`) instead of v4.3.1, which runs on
+  Node 20, now deprecated by GitHub. v5 moved to Node 24, v6 keeps persisted credentials
+  in a separate file, and v7 refuses to check out fork pull requests under
+  `pull_request_target` or `workflow_run`. `persist-credentials: false` stays. Adopters get it with the
+  vendored `check.yml`.
 
 ### Removed
 - **`.claude/hooks/precompact-snapshot.sh`** — the template's own PreCompact hook, which

@@ -18,7 +18,7 @@ jobs:
       # Third-party actions are pinned to a commit SHA (a tag is mutable; a SHA is not) —
       # the posture docs/skill-security.md teaches. Bump deliberately; the trailing comment
       # records the human-readable tag the SHA maps to.
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           fetch-depth: 0   # full history so the secret scan sees all commits
           persist-credentials: false   # nothing here pushes, so no token stays on disk
