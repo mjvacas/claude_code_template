@@ -88,7 +88,8 @@ files — no guessing):
   marketplace's entry in `~/.claude/plugins/known_marketplaces.json`). For a `url` or
   `git-subdir` source, fetch the commit it pins (`.source.sha`), not the branch tip:
   `git init -q <tmp> && git -C <tmp> fetch -q --depth 1 <url> <sha> && git -C <tmp> checkout -q FETCH_HEAD`,
-  then its `path` for `git-subdir`.
+  then its `.source.path` subfolder for `git-subdir` (in zsh, don't keep it in a
+  variable named `path`: zsh ties that name to `$PATH`).
 - **What runs** — `bash <template-clone>/scripts/audit-config.sh <folder>`, the
   template clone's auditor: hooks, MCP and LSP servers, monitors, commands,
   permission grants and model-invocable skills. Vet from this report.
@@ -760,7 +761,8 @@ The session will:
    and that row goes to Merge. For an adapted row, compare the drift against its Notes
    too: record any adaptation the Notes don't list, or step 7's Merge may drop it. A
    per-file `Vendored from claude_code_template` header line (either form in
-   [Optional per-file headers](#optional-per-file-headers)) isn't drift. Then compare each row's
+   [Optional per-file headers](#optional-per-file-headers)) and the blank line after it
+   aren't drift. Then compare each row's
    recorded class (vendor-as-is, adapted, skeleton) with the target's
    [File map](#file-map): a file the map now classes as Adapt or Skeleton that your row
    still calls vendor-as-is goes to Merge, and you fix the row. A plain Update would
@@ -835,7 +837,9 @@ The session will:
    reason) under "Considered plugins" so the next sync doesn't re-propose it.
    Prompt for `/reload-plugins` again if any plugins were installed.
 7. Propose changes **batched by action** (update / add / delete / merge) —
-   not one approval per file:
+   not one approval per file. Show the whole batch in a message of its own, not inside
+   the approval prompt, then ask for one approval: a long list written above a prompt
+   can scroll out of view.
    - **Update** — for changed files whose `VENDORED.md` Notes say vendor-as-is
      and whose copy matched the pin in step 3, propose the target copy —
      **unless `VENDORED.md` records a path-adaptation for that file** (e.g.
@@ -874,9 +878,9 @@ The session will:
    another `VENDORED.md` section (your own copy of `AI_SESSION_START.md`, say), still
    gets that set's changes: find it and merge them. Order matters when you re-sync in
    place, because the session runs with the files as you change them: a copied hook
-   acts at once, so remove a hook in the same change as its `settings.json` wiring,
-   and merge `settings.json` last so its new `ask` rules don't prompt on the rest of
-   the re-sync.
+   acts at once, so delete a hook at the end, in the same change that removes its
+   `settings.json` wiring, and merge `settings.json` last so its new `ask` rules don't
+   prompt on the rest of the re-sync.
 
    After Update/Merge, run `grep -rnE '@(templates|docs/adr)/' .claude/commands .claude/skills`
    — a surviving ref dangles (and fails § 3 at step 9) unless its target sits at
@@ -890,7 +894,10 @@ The session will:
    content.
 9. **Stage first** (`git add -A`), then re-run `bash scripts/check-template.sh` and
    `bash scripts/audit-config.sh .claude/`. Distinguish failures from template files
-   vs. pre-existing project state.
+   vs. pre-existing project state. If `.claude/worktrees/` holds worktrees whose work
+   is merged, ask the user whether to remove them first (`git worktree remove <path>`):
+   each one's `.claude/` is config a session there still loads, often the pre-sync
+   version, and they fill most of the report.
 10. Run your review plugin's code-reviewer on the staged diff, then stage one atomic
     commit: `chore: re-sync claude_code_template <old-ref>..<new-ref>`. The commit
     body and `VENDORED.md` are the record; mention the re-sync in your next

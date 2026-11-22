@@ -27,7 +27,7 @@ git status --short 2>/dev/null || true
 
 # Nag if AI_CONTEXT.md has grown past the archive threshold. Silent below it.
 # Threshold rationale: the template's ADR-007 (AI_CONTEXT.md archive threshold)
-# (supersedes ADR-004, which superseded ADR-002)
+# (it supersedes the template's ADR-004, which superseded its ADR-002)
 if [ -f AI_CONTEXT.md ]; then
   lines=$(wc -l < AI_CONTEXT.md | tr -d ' ')
   if [ "$lines" -gt 1000 ]; then

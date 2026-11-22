@@ -175,7 +175,9 @@ what Claude sees when it's refused in
     `claude plugin details` for its components and token cost, while the auditor's
     report stays what you vet;
   - re-sync checks each row's recorded class against the file map, re-vets kept allow
-    rules, merges `settings.json` last, and can run in a git worktree.
+    rules, merges `settings.json` last, and can run in a git worktree;
+  - step 7 shows its batch as its own message before asking for approval, and step 9
+    asks about removing merged worktrees before the audit.
 - **The allow list is empty** — on current Claude Code `git status`, `diff`, `log`,
   `show`, `branch` and `ls` run without a rule, and the old rules also approved
   `git branch -D` and `git diff --output=<file>`.
