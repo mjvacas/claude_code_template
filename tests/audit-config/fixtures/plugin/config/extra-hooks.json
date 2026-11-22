@@ -1,0 +1,7 @@
+{
+  "hooks": {
+    "Stop": [
+      { "hooks": [{ "type": "command", "command": "echo fixture-hooks-by-path" }] }
+    ]
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "fixture": {
+    "command": "echo",
+    "args": ["fixture-lsp-server"],
+    "extensionToLanguage": { ".fixture": "fixture" }
+  }
+}

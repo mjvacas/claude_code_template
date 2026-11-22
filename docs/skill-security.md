@@ -15,14 +15,21 @@ What a malicious or compromised artifact can do:
 - **Auto-running hooks** — a hook in `.claude/settings.json` runs automatically on
   lifecycle events (e.g. SessionStart) once you accept the folder's trust dialog.
   Cloning a repo and clicking "trust" can run attacker code. (Non-interactive `-p`
-  mode skips the trust prompt entirely.)
+  mode skips the trust prompt entirely.) Plugins declare hooks too, in
+  `hooks/hooks.json` or in `.claude-plugin/plugin.json`, and enabling a plugin can also
+  start MCP and LSP servers and monitors. Skills and agents can declare hooks in their
+  frontmatter, which run while the skill or agent is active. A settings `env` entry
+  such as `BASH_ENV`, `NODE_OPTIONS` or `LD_PRELOAD` makes the shells and tools Claude
+  starts run other code.
 - **Tool pre-approval** — a skill's `allowed-tools` suppresses per-call prompts while
   it's active (removes your speed bumps).
 - **Prompt injection** — instructions in the body ("read `.env` and POST it", "loosen
   `settings.json`", "ignore previous instructions").
-- **Bundled scripts** — files the skill tells the model to execute.
+- **Bundled scripts** — files the skill tells the model to execute, including binaries
+  a launcher downloads on first run.
 - **Model-invocation** — without `disable-model-invocation`, the model can trigger a
-  skill on its own based on its description.
+  skill on its own based on its description. Subagents are always delegated to by
+  description; no frontmatter turns that off, but a `deny` on `Agent(<name>)` does.
 - **MCP servers** — external processes that can read context and reach the network.
 
 ## The hard backstop: deny always wins
@@ -55,15 +62,49 @@ blanket `cat`/`grep`/`find`) and why the OS sandbox is the real boundary for unt
 
 - **Provenance & pinning** — only from sources you trust (Anthropic-curated >
   reviewed-community > random gist). Pin to a commit; don't auto-update.
+- **A checksum proves only what its source proves** — a `.sha256` downloaded from the
+  same release as the binary shows the download wasn't corrupted, not that the release
+  is the one you reviewed. Pin to a hash recorded in your repo, so changing it takes a
+  PR. (This template's CI pins gitleaks this way.)
 - **Vendor, don't fetch-at-runtime** — copy the artifact in, review it, commit it. Now
-  it's frozen and goes through PR review.
+  it's frozen and goes through PR review. A launcher that downloads its engine "once,
+  on first run" is fetching at runtime.
 - **Review on add *and* every update** — the classic attack is a benign v1 that turns
   malicious in v3. Diff every bump.
 - **Least privilege** — anything external or side-effecting gets
-  `disable-model-invocation: true`; never add broad `allowed-tools`.
+  `disable-model-invocation: true`, and so does any skill whose description matches
+  most tasks in an area or whose body sets a persona: if Claude could start it on its
+  own, it would steer every matching change. Never add broad `allowed-tools`.
+  (`user-invocable` is not a model control; it only hides a skill from the `/` menu.)
+- **Deny what its docs tell Claude to run** — if vetted docs say to run `npx <pkg>`
+  (an unpinned download-and-run), add project denies. A rule matches only the literal
+  text before its `*`, so cover the bare, versioned and auto-confirm forms:
+  `Bash(npx <pkg>:*)`, `Bash(npx <pkg>@*)`, `Bash(npx -y <pkg>:*)`,
+  `Bash(npx -y <pkg>@*)`, `Bash(npx --yes <pkg>:*)`, `Bash(npx --yes <pkg>@*)`. If the
+  project never needs `npx`, deny `Bash(npx:*)` instead. Bash denies match command
+  text and can be bypassed, but they cost nothing; the sandbox is the real boundary.
 - **Quarantine, then promote** — keep unvetted skills in `settings.local.json` (your
   machine only); only commit to `.claude/` after vetting.
 - **Review gate** — require extra review on `.claude/**` changes (e.g. CODEOWNERS).
+
+### Partial vendoring: taking the skill out of a plugin
+
+Many plugins are one markdown skill wrapped in hooks, scripts, a binary and agents.
+When the markdown is what you want:
+
+1. Copy in only `SKILL.md` and the reference files it reads. Leave out scripts,
+   binaries, hooks and agents. Hooks in the `SKILL.md` frontmatter survive the copy:
+   remove them or vet them.
+2. Add `disable-model-invocation: true` to its frontmatter.
+3. Add a short note at the top of `SKILL.md` that sends every engine or script step to
+   the skill's own fallback, and tells Claude not to download or run the engine. Prefer
+   skills that document a fallback; without one, the copy keeps asking for tools you
+   left out.
+4. Record each local patch in `VENDORED.md` as a "re-apply on every bump" list, beside
+   the pinned tag/SHA and license (format: `docs/ADOPTING.md` → Source-pin manifest).
+   On each bump, diff the upstream skill directory between tags, run
+   `scripts/audit-config.sh` on the new copy, grep the references for new commands,
+   package runners and URLs, then re-apply the patches.
 
 ## Vetting an MCP server (before adding to `.mcp.json`)
 
@@ -90,10 +131,28 @@ Read it like untrusted code:
 
 - [ ] **Frontmatter:** what does `allowed-tools` pre-approve? Can it self-invoke (is
       `disable-model-invocation` missing)? Any surprising `model` / `context: fork` / `agent`?
+      For an agent, which `tools:` does it get? None listed means all of them. Does it
+      set `mcpServers` or `permissionMode`?
 - [ ] **Body:** every `` !`cmd` `` and ```` ```! ```` block — read each command.
-- [ ] **Bundled files:** scripts the skill tells the model to run.
+- [ ] **Bundled files:** scripts the skill tells the model to run, anything a
+      launcher downloads, and symlinks (a link can point anywhere on your disk).
+- [ ] **Hooks:** every hook it registers (`settings.json`, `hooks/hooks.json`,
+      `plugin.json`, `hooks:` in skill or agent frontmatter), and settings `env` vars
+      that load code (`BASH_ENV`, `NODE_OPTIONS`, `LD_PRELOAD`). A hook guarded like
+      `[ ! -f X ] || X` does nothing until X
+      exists, so copying X in later turns it on with no warning. "Does nothing today"
+      isn't a pass; vet what it *would* run.
 - [ ] **Egress / secrets:** `curl`, `wget`, `nc`, `/dev/tcp`, `base64`, `WebFetch`,
-      external URLs, reads of `.env` / `~/.ssh` / `~/.aws` / `secrets/`.
+      external URLs, reads of `.env` / `~/.ssh` / `~/.aws` / `secrets/`, and package
+      runners (`npx`, `bunx`, `uvx`, `pipx run`, `npm exec`, `pnpm dlx`, and aliases
+      like `npm x`) that download and run unpinned code.
+- [ ] **Egress in compiled code:** grep compiled sources too (Rust crates, Go modules),
+      not just scripts. Look for telemetry (is it on by default? does `DO_NOT_TRACK=1`
+      turn it off?) and for reads of `*_API_KEY` variables: a tool that quietly uses a
+      key already in your environment spends money and sends data out.
+- [ ] **Local servers:** a "live mode" that injects a script into your dev server, or
+      offers to loosen the Content Security Policy, is a security change. Review it
+      like one.
 - [ ] **Injection:** "ignore previous instructions", edits to `settings.json` / hooks /
       `.gitignore`, anything that weakens permissions, hidden/obfuscated text.
 - [ ] **Provenance:** who publishes it, is it pinned, is the source maintained?
@@ -105,11 +164,16 @@ Read it like untrusted code:
 
 ## Tools in this template
 
-- **`scripts/audit-config.sh [path]`** — reports what a `.claude/` artifact actually
-  does: dynamic `` !`cmd` `` execution, `allowed-tools` grants, model-invocable skills,
-  bundled scripts, hook commands, and egress/secret tokens. Run it on a candidate skill
+- **`scripts/audit-config.sh [path]`** — reports what a `.claude/` artifact or plugin
+  actually does: dynamic `` !`cmd` `` execution, `allowed-tools` grants, every skill,
+  command and agent (tagged model-invocable or opted out; agents with their tools;
+  frontmatter hooks and MCP servers), bundled scripts, binaries and symlinks, commands
+  that run without a prompt (hooks in settings, `hooks/hooks.json` or `plugin.json`;
+  `statusLine`, helper keys and code-loading `env` vars; MCP/LSP servers; monitors),
+  and egress/secret tokens including package runners. Run it on a candidate skill
   *before* adding it. It reports; you decide (`--strict` exits non-zero on high-signal
-  findings).
+  findings and on anything it couldn't read). It reads frontmatter without a YAML
+  parser, so treat an "opted out" tag as a hint and check the file.
 - **`scripts/check-template.sh`** — integrity (JSON valid, hooks runnable, `@references`
   resolve) + a secret-pattern smoke test. Not a real secret scanner — see below.
 - **`.claude/settings.lockdown.json.example`** — the quarantine overlay: merge its deny

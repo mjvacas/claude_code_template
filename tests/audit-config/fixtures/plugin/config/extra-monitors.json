@@ -1,0 +1,3 @@
+[
+  { "name": "fixture-by-path", "command": "echo fixture-monitor-by-path", "description": "Test fixture." }
+]
