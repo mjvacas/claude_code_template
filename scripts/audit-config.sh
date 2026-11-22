@@ -88,7 +88,11 @@ add_claude() {
 }
 # is_worktree DIR: a git worktree, checked the way git links one: DIR/.git is a file
 # naming a gitdir outside the audited .claude, and that gitdir's own "gitdir" file points
-# back at DIR/.git. A one-line .git file written by anyone else doesn't pass.
+# back at DIR/.git. A one-line .git file written by anyone else doesn't pass. What this
+# doesn't stop is out of scope: a clone can't create a .git file (git refuses the path),
+# and an archive that ships its own gitdir controls the whole repo, whose files outside
+# .claude this audit never reads anyway. git itself isn't run here: it would load the
+# audited repo's own config.
 is_worktree() {
   local g back top
   [ -d "$1" ] && [ ! -L "$1" ] && [ -f "$1/.git" ] && [ ! -L "$1/.git" ] || return 1

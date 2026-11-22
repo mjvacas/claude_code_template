@@ -58,8 +58,10 @@ what Claude sees when it's refused in
    old raw conversation: delete it when you no longer need it, and keep its `.gitignore`
    line until you do. `audit-config.sh` still reports the folder's files but doesn't print
    their lines, and under `--strict` they can fail the check until you delete it.
-3. Add `-I` to the `python3 -c`, `python3 -` and `python3 <script>` calls in your own
-   hooks and scripts, and if anything runs a script directly through its
+3. Add `-I` to the system `python3 -c`, `python3 -` and `python3 <script>` calls in your
+   own hooks and shell scripts. Leave alone any run that needs `PYTHONPATH` or a venv's
+   setup (`PYTHONPATH=src venv/bin/python …`): `-I` also ignores `PYTHONPATH` and the
+   other `PYTHON*` variables, so it would break them. If anything runs a script directly through its
    `#!/usr/bin/env python3` line, change that line to `#!/usr/bin/env -S python3 -I`:
    without `-I`, a script's own folder and your working folder come first on its import
    path. If a script imports modules from its own folder, add that folder to `sys.path`
@@ -74,8 +76,12 @@ what Claude sees when it's refused in
    `docs/claude-code-setup.md`, repoint their links to template-only files
    (`docs/ADOPTING.md`, `CONTRIBUTING.md`, ADR-003/005/006, `scripts/compaction-report.sh`)
    to upstream URLs at your pinned tag, and record the file as adapted in `VENDORED.md`
-   (file map → Reference only). If you're pinned to an untagged commit, do this when you
-   re-pin to the release tag: until then there's no tag URL to point at.
+   (file map → Reference only). Code-span mentions of those files count too: reword them
+   as "the template's <file>" or link them. If you're pinned to an untagged commit,
+   record the rows as adapted now with a note to repoint at the tag, and leave the links
+   until you re-pin: there's no tag URL to point at yet, and a commit that isn't on GitHub
+   has none either. ADR-005 is now Reference only: keep a vendored copy while your
+   vendored docs link it, and otherwise remove it and its row.
 6. If your `CLAUDE.md` doesn't take keep-verbatim changes (it diverged on purpose),
    add the "Personal info stays local" bullet from the template's `## Conventions` by
    hand. Put it with your file's privacy or convention rules, and if a rule there names
@@ -86,12 +92,14 @@ what Claude sees when it's refused in
    makes itself; and the user is asked before anything is sent, including what to send
    when an API wants contact info, since even a project name can identify them. Or keep
    one line that `@`-imports a doc holding the full text (a plain link isn't loaded
-   into context).
+   into context); that form also suits a `CLAUDE.md` already at its line cap.
 7. `/handoff` and the SessionStart hook now point at ADR-007 and archive above 1000
    lines. Vendor `docs/adr/ADR-007-ai-context-archive-threshold-1000.md` next to
    ADR-004 (sub-namespace or renumber it if your own ADR series has a 007), and repoint
-   its path the way you did for ADR-004: `handoff.md`'s two `@` refs and the path in
-   `templates/AI_SESSION_START.md`, plus, if you renumbered it, ADR-004's status link.
+   its path the way you did for ADR-004: `handoff.md`'s two `@` refs and the path in your
+   copy of `AI_SESSION_START.md`, wherever you keep it, plus, if you renumbered it,
+   ADR-004's status link. The SessionStart hook names the template's ADR-007 without a
+   path, so it needs no repoint.
    If you sub-namespaced the template's ADRs instead, check every number you vendored
    (ADR-001, 002, 004 and 007) against your own series: where they collide, say
    "upstream ADR-NNN" in prose that names the template's, as `docs/ADOPTING.md`'s
@@ -99,6 +107,10 @@ what Claude sees when it's refused in
    ADR-004 entry superseded and add the ADR-007 highlight from the template, with your
    path. Your own `AI_CONTEXT.md` header likely still says ~750 and links ADR-004; update
    it too. If you keep a different cap on purpose, record it in `VENDORED.md`.
+8. Re-vet the allow rules you keep in `settings.json`, as the template did when it
+   emptied its own list: a broad rule also approves destructive forms. `Bash(find:*)`
+   allows `find -delete` and `-exec rm`, and `Bash(rg:*)` allows `rg --pre <cmd>`;
+   narrow such a rule or move it to `ask`.
 
 ### Added
 - **Privacy convention in `CLAUDE.md`** — "Personal info stays local" tells Claude to ask
@@ -148,8 +160,9 @@ what Claude sees when it's refused in
   re-pinning a pre-release SHA to its release tag. A dry run of the release candidate
   added more:
   - adoption and re-sync start from a clean repo, so staging takes only their changes;
-  - plugin discovery reads each marketplace's refreshed manifest, not a catalog cache
-    that can go stale, and finds licenses where partner plugins keep them;
+  - plugin discovery lists candidates with `claude plugin list --available --json`
+    (which includes the built-in plugin directory), not a catalog cache that can go
+    stale, and finds licenses where partner plugins keep them;
   - third-party plugins are re-audited when the installed version changes, reading
     the auditor's report on the copy Claude Code loads, and the decision is recorded;
   - discovery runs when the stack changed, and declined plugins are recorded, at
@@ -157,7 +170,12 @@ what Claude sees when it's refused in
   - `VENDORED.md` Notes win over the keep-verbatim rule when merging, but Migration
     items still apply;
   - deletes are followed by a search for prose that still names the file, and a new
-    session afterwards loads the merged settings.
+    session afterwards loads the merged settings;
+  - discovery inspects the commit a plugin pins rather than its branch tip, and adds
+    `claude plugin details` for its components and token cost, while the auditor's
+    report stays what you vet;
+  - re-sync checks each row's recorded class against the file map, re-vets kept allow
+    rules, merges `settings.json` last, and can run in a git worktree.
 - **The allow list is empty** — on current Claude Code `git status`, `diff`, `log`,
   `show`, `branch` and `ls` run without a rule, and the old rules also approved
   `git branch -D` and `git diff --output=<file>`.
