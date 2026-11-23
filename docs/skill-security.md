@@ -116,14 +116,18 @@ servers — vet each like an unpinned dependency. Start from `.mcp.json.example`
 
 - **Provenance & pinning** — prefer first-party / Anthropic-listed servers; pin the package
   version or image digest, never `@latest`.
-- **Least scope** — filesystem servers get one project path, never `$HOME` or `/`. Servers
-  that reach the network get the lockdown overlay while you watch their first runs.
+- **Least scope** — filesystem servers get one project path, never `$HOME` or `/`. The
+  lockdown overlay doesn't stop a server reaching the network (see **Deny still wins**),
+  so watch a network-reaching server's first runs in a container, VM or throwaway machine
+  (`sandbox.enabled` isolates Bash commands, not MCP servers).
 - **Auto-approve caveat** — do **not** set `autoApproveMcpjsonServers` /
   `enableAllProjectMcpServers` globally: a cloned repo's `.mcp.json` would then launch its
   servers with no prompt. `.mcp.json` is gitignored here; only `.mcp.json.example` is tracked.
 - **Deny still wins** — a `deny` in `settings.json` beats any MCP tool. Block one with
-  `mcp__<server>__<tool>` (or `mcp__<server>__*` for the whole server); the lockdown egress
-  denies also cover MCP calls.
+  `mcp__<server>__<tool>` (or `mcp__<server>__*` for the whole server). That stops Claude
+  calling the server's tools, not the server itself: it runs as its own process with its
+  own network access, which the lockdown overlay's denies (`WebFetch` and shell network
+  commands) don't reach.
 - **Marketplaces are the same surface** — `/plugin` marketplaces bundle skills/hooks/MCP and
   warrant the same review (managed `blockedMarketplaces` can restrict them).
 
@@ -177,7 +181,9 @@ Read it like untrusted code:
   findings and on anything it couldn't read). It reads frontmatter without a YAML
   parser, so treat an "opted out" tag as a hint and check the file.
 - **`scripts/check-template.sh`** — integrity (JSON valid, hooks runnable, `@references`
-  resolve) + a secret-pattern smoke test. Not a real secret scanner — see below.
+  resolve) + a secret-pattern smoke test. Not a real secret scanner: for that, CI runs
+  [gitleaks](https://github.com/gitleaks/gitleaks) over the full git history
+  (`.github/workflows/check.yml`).
 - **`.claude/settings.lockdown.json.example`** — the quarantine overlay: merge its deny
   rules into `settings.local.json` to block network egress while vetting.
 

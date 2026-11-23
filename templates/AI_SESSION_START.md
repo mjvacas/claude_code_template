@@ -33,7 +33,8 @@ let auto-memory hold it.
 The `SessionStart` hook (`.claude/hooks/session-context.sh`) already injects recent repo
 activity. To actively orient:
 
-1. Read the newest block in **`AI_CONTEXT.md`** — decisions, open questions, next steps.
+1. Read the newest block in **`AI_CONTEXT.md`** — current state, decisions, open
+   questions, next steps.
 2. Skim `git log --oneline -10` for what shipped recently.
 3. If a focus area was given, skim the relevant files and `docs/adr/`.
 4. Check the working tree (`git status`, `git diff`) for paused, in-progress work.
@@ -67,7 +68,8 @@ commits before recording context; planning to "document it later."
 
 ## End of session — `/handoff`
 
-1. Append a dated block to **`AI_CONTEXT.md`**: Summary, Decisions (+ why / alternatives
+1. Append a dated block to **`AI_CONTEXT.md`**: Summary, Current state (where the work
+   stands, so this block alone is enough to resume), Decisions (+ why / alternatives
    rejected), Open Questions, Next Steps. Capture only what a future reader *can't*
    reconstruct from the diff.
 2. Promote decisions worth an ADR with `/adr` (copy from `templates/ADR-template.md`).

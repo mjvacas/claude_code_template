@@ -262,6 +262,16 @@ what Claude sees when it's refused in
   repoint scans missed `handoff.md`'s `@docs/adr/ADR-004-…` refs; the Bucket-1 callout
   missed reference-only pointers; comments in vendored files pointed at template-only
   paths as if local. See Changed for the new procedure.
+- **Docs that had gone stale** — `docs/claude-code-setup.md` said CI runs no repo code
+  on a fork PR (whatever code the PR changes runs, with a read-only token and no
+  secrets), and `docs/skill-security.md` said the lockdown overlay covers MCP calls (an
+  MCP server is its own process, outside those denies and outside `sandbox.enabled`).
+  Also updated: the ask list and `session-context.sh` descriptions, the README layout,
+  the setup table (lockdown example, `cc-task-bench`), the `CLAUDE.md` Context System
+  line for `token-awareness.md` (now mentions compaction), the routing table's model
+  names, and a `cc-task-bench` status note (V1 has no runner). The **Current state**
+  heading `/handoff` requires is now in `templates/AI_SESSION_START.md`, the
+  `AI_CONTEXT.md` sample and `/session-start`'s first step.
 
 ### Security
 - **`block-dangerous.sh` failed open, and missed common forms** — without a working

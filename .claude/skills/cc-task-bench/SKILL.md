@@ -1,10 +1,12 @@
 ---
 name: cc-task-bench
-description: Benchmark Claude Code task performance — pass-rate × tokens × wall-clock × cost across Opus, Sonnet, Haiku on a fixed task corpus. Use to decide which model routes which task type, or to validate a routing claim with data instead of vibes.
-argument-hint: "[task family or task-id; default: run all V1 families]"
+description: Benchmark Claude Code task performance — pass-rate × tokens × wall-clock × cost across Opus, Sonnet, Haiku on a fixed task corpus. V1 is the method only (no runner yet). Use to design a benchmark that decides which model routes which task type, or to validate a routing claim with data instead of vibes.
+argument-hint: "[task family or task-id to design for; default: all V1 families]"
 ---
 
 Goal: pick the cheapest model that's good enough — measured, not guessed.
+
+**Status:** V1 is the method only (`docs/adr/ADR-003-cc-task-bench-scope.md`). There's no runner and no fixtures yet, and every price in `bench/pricing.json` is null, so nothing can run: use this to design a benchmark, with the schema in `bench/README.md`.
 
 1. **Pin the bench commit.** Every attempt records `bench_commit` (git sha of the runner) and `git_sha_of_attempt` (worktree HEAD). Re-runs against the same fixtures stay comparable across days.
 2. **One worktree per attempt.** Spin a fresh git worktree under `.worktrees/<run-id>/<model>/<task>/<n>/` so attempts can't contaminate each other. Results land separately in `bench/results/<run-id>/<model>/<task>/`; tear the worktree down after capturing artifacts.

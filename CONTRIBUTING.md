@@ -53,9 +53,10 @@ adopters to do otherwise:
   the same PR).
 - **Recurring-token-cost features default to opt-in.** Anything that adds
   always-on or per-prompt context cost ships *unwired*, with a documented
-  enable snippet (precedents: the format-on-edit hook, the lockdown settings
-  overlay, the clock heartbeat — see `docs/claude-code-setup.md`). Valuable ≠
-  on-by-default. Cost classes + the per-session context tax: `docs/token-awareness.md`.
+  enable snippet (precedents: the format-on-edit hook and the clock heartbeat in
+  `docs/claude-code-setup.md`, the lockdown settings overlay in
+  `docs/skill-security.md`). Valuable ≠ on-by-default. Cost classes + the
+  per-session context tax: `docs/token-awareness.md`.
 
 ## Promote practices out of auto-memory
 

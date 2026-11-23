@@ -173,9 +173,9 @@ bounded, verifiable work) is the same question Opus poses, just louder.
 
 | Task shape | Tier | Why |
 |------------|------|-----|
-| Ambiguous spec, architecture, subtle refactor where an error is expensive *and* hard to detect | High-capability (e.g. Opus 4.8, Fable) | One wrong-but-plausible answer costs more than the model |
-| Bounded, well-specified change with a clear correctness check | Mid (e.g. Sonnet 4.6) | A cheaper model + a verification loop beats an expensive one-shot |
-| Mechanical / verifiable: test scaffolding from a repro, code search, rote edits | Floor (e.g. Haiku 4.5) | Output is cheap to check; pay the floor |
+| Ambiguous spec, architecture, subtle refactor where an error is expensive *and* hard to detect | High-capability (e.g. Opus 5.5, Fable 5.1) | One wrong-but-plausible answer costs more than the model |
+| Bounded, well-specified change with a clear correctness check | Mid (e.g. Sonnet 5.5) | A cheaper model + a verification loop beats an expensive one-shot |
+| Mechanical / verifiable: test scaffolding from a repro, code search, rote edits | Floor (e.g. Haiku 5.5) | Output is cheap to check; pay the floor |
 
 The tiers are the spine; the model IDs are today's examples and will age. This
 table is a **heuristic to be superseded by `cc-task-bench` V2 measured data**

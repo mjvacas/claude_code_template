@@ -7,9 +7,10 @@ after you copy it into a new project.
 
 | Path | What it does | Cost | Customize? |
 |------|--------------|------|-----------|
-| `settings.json` | Permissions (denies for secret files in the project and credential stores in `~`; asks before edits to `CLAUDE.md`, `.github/` and the check scripts; an empty allow list; `defaultMode: acceptEdits` **auto-applies other file edits without prompting**), statusline, and SessionStart/PreToolUse hooks. Committed, team-shared. | `free-local` | Yes — add your build/test/lint to the allow list. |
+| `settings.json` | Permissions (denies for secret files in the project and credential stores in `~`; asks before `git push`, `rm`, and edits to `CLAUDE.md`, `.github/`, the check scripts and its own settings, hooks and status line; an empty allow list; `defaultMode: acceptEdits` **auto-applies other file edits without prompting**), statusline, and SessionStart/PreToolUse hooks. Committed, team-shared. | `free-local` | Yes — add your build/test/lint to the allow list. |
 | `settings.local.json` | Your personal overrides. **Gitignored.** Copy `settings.local.json.example` to start. | `free-local` | Personal. |
-| `hooks/session-context.sh` | `SessionStart` hook: prints the session-start time, recent commits + working-tree status into context. Outside git only the clock line prints. | `session` | Optional — delete the hook entry in `settings.json` to disable. |
+| `settings.lockdown.json.example` | Quarantine overlay (**not loaded**): network-egress denies (`WebFetch`, `curl`, `wget`, `ssh`, …) to merge into `settings.local.json` while you vet an untrusted skill. | `free-local` | Opt-in — see [`docs/skill-security.md`](skill-security.md). |
+| `hooks/session-context.sh` | `SessionStart` hook: prints the session-start time, recent commits + working-tree status into context, plus a reminder to archive `AI_CONTEXT.md` once it passes 1000 lines. Outside git only the clock line prints. | `session` | Optional — delete the hook entry in `settings.json` to disable. |
 | `hooks/clock.sh` | `UserPromptSubmit` heartbeat (**opt-in, not wired by default**): injects the current time into context on every prompt, so the session can notice elapsed time and date rollovers. | `per-prompt` | Opt-in — see [§ Optional: session clock heartbeat](#optional-session-clock-heartbeat). |
 | `hooks/block-dangerous.sh` | `PreToolUse(Bash)` guard: hard-blocks catastrophic commands (`rm -rf /`, `git reset --hard`, `git push --force`, pipe-to-shell, `dd`/`mkfs`, fork bomb) via exit 2, and still blocks when `python3` is missing. A safety net, **not** a sandbox. | `free-local` | Tune the pattern list to your needs. To try a pattern, save `{"tool_name":"Bash","tool_input":{"command":"<cmd>"}}` to a file with the Write tool and run `.claude/hooks/block-dangerous.sh < sample.json`: exit 2 with a deny message means blocked (without `tool_name` the hook ignores the event). Typed inline in a Claude session, the sample command trips the live guard first. |
 | `statusline.sh` | Status line: model · dir · git branch, plus live session context as absolute tokens vs the window (`ctx 152k/1M`, `⚠` at ~200k), 5-hour + weekly rate-limit usage with reset clocks (`5h 24% (16:30)`/`7d 41% (Tue 16:30)`, subscription plans), and an estimated session cost `~$` (pay-as-you-go only — it's notional on a subscription, so the line hides it there and the rate-limit windows carry the real signal). | `free-local` | Optional — remove the `statusLine` key in `settings.json` to disable. |
@@ -20,6 +21,7 @@ after you copy it into a new project.
 | `skills/verify-refactor/` | Prove a refactor preserved behavior via golden-output diff. | `on-use` | As needed. |
 | `skills/tune-parameters/` | Pick a parameter by reading the metric surface, not the peak. | `on-use` | As needed. |
 | `skills/llm-eval/` | Ground-truth accuracy harness for AI features. | `on-use` | As needed. |
+| `skills/cc-task-bench/` | Method for benchmarking which model to route each task type to. V1 is design only: no runner yet ([ADR-003](adr/ADR-003-cc-task-bench-scope.md)). | `on-use` | Reference-only; template-internal. |
 
 The **Cost** column uses the four classes from
 [`docs/token-awareness.md`](token-awareness.md) (`free-local` / `on-use` /
@@ -113,8 +115,8 @@ Three layers, on by default — keep them in place (the self-check below enforce
    tokens) appears in tracked content, or if either protection above is removed.
 
 Keep real secrets in environment variables or an untracked `.env` loaded at runtime —
-never in tracked files. For deeper scanning across git history, add
-[gitleaks](https://github.com/gitleaks/gitleaks) to CI.
+never in tracked files. CI also scans the full git history with
+[gitleaks](https://github.com/gitleaks/gitleaks) (see below).
 
 ## Validate the template
 
@@ -125,8 +127,11 @@ bash scripts/check-template.sh
 Validates JSON, hook scripts, every `@reference`, that every script `settings.json` wires
 exists and the PreToolUse guard stays wired on Bash, that the referenced doc directories
 exist, and the secrets protections above (including the home-directory denies). Runs automatically
-on push/PR via `.github/workflows/check.yml` (which also runs a `gitleaks` secret scan and
-deliberately runs no project build/test, so fork PRs can't execute untrusted code).
+on push/PR via `.github/workflows/check.yml`, which also runs a `gitleaks` secret scan over
+the full history and no project build or tests. On a public repo, whatever code a fork
+PR changes (`check-template.sh`, or the workflow file itself) still runs on the runner,
+with a read-only token and no secrets; the comment at the top of `check.yml` explains
+the limits.
 
 ## Optional: format-on-edit hook
 
@@ -191,6 +196,8 @@ write-ups so nothing is duplicated:
 - `.claude/skills/{verify-refactor,tune-parameters,llm-eval}/SKILL.md` — each carries
   its own inline rationale (golden-output diffing; surface-shape parameter tuning;
   ground-truth accuracy harness).
+- `.claude/skills/cc-task-bench/SKILL.md` — benchmark method; its schema and pricing
+  file live in `bench/`.
 - `docs/token-awareness.md` — the cost classes behind the **Cost** column above, the
   per-session context tax, compaction (including idle compaction and how to opt out),
   and model-routing guidance. `scripts/compaction-report.sh` shows which of your

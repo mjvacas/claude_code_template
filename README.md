@@ -43,26 +43,28 @@ CONTRIBUTING.md               # Sending fixes back + this repo's working agreeme
 .mcp.json.example             # Vetted-server template; copy to .mcp.json (gitignored) after review
 .github/workflows/check.yml   # CI: runs check-template.sh + gitleaks (no project build/test)
 .github/workflows/template-tests.yml  # CI: regression tests for the template's scripts and hooks (template-internal)
+.github/CODEOWNERS            # Owner review for agent config, CI, the checks and memory files
 .claude/
 ├── settings.json             # Permissions, statusline, SessionStart + PreToolUse hooks
 ├── settings.local.json.example
 ├── settings.lockdown.json.example  # Opt-in egress denies for vetting untrusted skills
 ├── statusline.sh             # Status line: model · dir · branch · cost · context (tokens vs window) · 5h/7d limits + resets
-├── hooks/session-context.sh  # Prints session-start time + recent git activity at session start
+├── hooks/session-context.sh  # At session start: time, recent git activity, AI_CONTEXT.md archive reminder
 ├── hooks/block-dangerous.sh  # PreToolUse guard: hard-blocks catastrophic shell commands
 ├── hooks/clock.sh            # Opt-in per-prompt time heartbeat (not wired by default)
 ├── commands/                 # /session-start, /handoff, /commit, /adr
-└── skills/                   # verify-refactor, tune-parameters, llm-eval
+└── skills/                   # verify-refactor, tune-parameters, llm-eval, cc-task-bench (design only)
 scripts/
 ├── check-template.sh         # Integrity + secrets smoke-test (run manually + in CI)
 ├── audit-config.sh           # Reports what .claude/ artifacts and plugins do — vet before trusting
 └── compaction-report.sh      # Lists your recent compactions and which were idle (reads ~/.claude)
 tests/                        # Regression tests for the scripts and hooks (template-internal)
+bench/                        # cc-task-bench schema and pricing file (template-internal)
 docs/
 ├── ADOPTING.md               # Adoption + re-sync procedure (the session reads this to adopt)
 ├── claude-code-setup.md      # How the native config is wired; what to customize
 ├── skill-security.md         # Trust model, vetting checklist (incl. MCP), SAST options
-├── token-awareness.md        # Cost classes, per-session context tax, model-routing heuristic
+├── token-awareness.md        # Cost classes, context tax, compaction, model-routing heuristic
 ├── adr/                      # Filled-in Architecture Decision Records (scaffold with /adr)
 └── summaries/                # Monthly compressed recaps (YYYY-MM.md)
 templates/                    # Reference docs + blank templates (loaded on demand)
@@ -92,9 +94,9 @@ from outside this repo, vet it — see `docs/skill-security.md`. Quick tools:
 - `bash scripts/check-template.sh` — validate config integrity + secrets hygiene.
 - The default `settings.json` denies reads of secret files in the project and of credential
   stores in your home directory (`~/.ssh`, `~/.aws`, `~/.config/gh`, …); on current Claude
-  Code that covers shell reads too, so `cat .env` is refused. It asks before edits to
-  `CLAUDE.md`, `.github/`, the two check scripts and its own settings and hooks, and
-  ships an empty allow list;
+  Code that covers shell reads too, so `cat .env` is refused. It asks before `git push`,
+  `rm`, and edits to `CLAUDE.md`, `.github/`, the two check scripts and its own settings,
+  hooks and status line, and ships an empty allow list;
   `settings.lockdown.json.example` adds network-egress denies for quarantining untrusted skills.
 - A `PreToolUse` hook (`.claude/hooks/block-dangerous.sh`) hard-blocks catastrophic shell
   commands (`rm -rf /`, `git reset --hard`, `git push --force`, pipe-to-shell, `dd`/`mkfs`).

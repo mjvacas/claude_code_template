@@ -17,7 +17,7 @@ Restore working context and orient before any coding.
 
 ## Your task
 
-1. Read the most recent session block in `AI_CONTEXT.md` above (decisions, open questions, next steps). Native auto-memory has already surfaced learned patterns — don't re-derive them.
+1. Read the most recent session block in `AI_CONTEXT.md` above (current state, decisions, open questions, next steps). Native auto-memory has already surfaced learned patterns — don't re-derive them.
 2. If a focus area was given ($ARGUMENTS), skim the relevant files/ADRs under `docs/adr/`.
 3. Report back, briefly:
    - **Last completed** / **In progress** / **Next planned**

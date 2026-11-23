@@ -97,7 +97,7 @@ Hybrid memory — two stores, kept from overlapping:
 - **docs/summaries/YYYY-MM.md**: Monthly compressed recaps.
 - **docs/{PROJECT_SPEC,ARCHITECTURE,BUILD_PLAN}.md** (optional; scale to project size): the source-of-truth triad — the "why/what", the "how", and the "in what order". Read at session start; don't re-litigate decisions captured here (revisit via a new ADR). Skeletons in `templates/`.
 - **.claude/**: native Claude Code config — `settings.json` (permissions, statusline, SessionStart + PreToolUse hooks), `hooks/` (session-context, block-dangerous, clock — opt-in), `commands/` (`/session-start`, `/handoff`, `/commit`, `/adr`), `skills/` (verify-refactor, tune-parameters, llm-eval, cc-task-bench). Code review is delegated to the `pr-review-toolkit@claude-plugins-official` baseline plugin installed during adoption (see docs/ADOPTING.md). See docs/claude-code-setup.md.
-- **docs/token-awareness.md**: token cost of the context system — cost classes (`free-local`/`on-use`/`session`/`per-prompt`), the per-session context tax, and a model-routing heuristic. Loaded on demand, not auto-loaded.
+- **docs/token-awareness.md**: token cost of the context system — cost classes (`free-local`/`on-use`/`session`/`per-prompt`), the per-session context tax, compaction (including idle compaction), and a model-routing heuristic. Loaded on demand, not auto-loaded.
 - **Rule**: Commit code + AI_CONTEXT.md updates together atomically.
 
 Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed. 

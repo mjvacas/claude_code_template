@@ -20,6 +20,10 @@
 ### Summary
 One line: what this session was about.
 
+### Current state
+Where the work stands: in flight on branch X, merged to main, or blocked on Y. This
+block alone should be enough to resume, even after older blocks are archived.
+
 ### Decisions
 - **Decision:** what was decided
   - **Why:** rationale
