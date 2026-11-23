@@ -134,11 +134,22 @@ standards.
   [documentation](https://code.claude.com/docs) on permissions, protected paths
   and compaction shaped the v0.3.0 defaults and the idle compaction notes.
 - **[Agent Baseline](https://agentbaseline.org)**: the v0.3.0 security review
-  checked the template against its control catalogue and *The Secure Software
-  Factory* reference architecture (v1.0-draft, October 2026). The guard no longer
-  failing open, the denies on home directory credentials, and asking before edits to
-  agent and CI config came from that pass. Ideas only. Its prose is CC BY 4.0
-  and its controls Apache-2.0.
+  checked the template against its reference architecture,
+  [*The Secure Software Factory*](https://agentbaseline.org/software-factory.pdf)
+  (version 1, October 2026). Three of its points shaped the v0.3.0 defaults, and
+  later releases may adopt more of the paper:
+  - *Only enforced rules are boundaries.* The paper counts access, action and
+    network rules and the sandbox as boundaries. It says context files and hooks
+    guide the agent without constraining it. So the new credential denies
+    and edit asks are permission rules in `settings.json`, which Claude Code
+    enforces.
+  - *A local agent runs with the developer's own access.* Claude can read the
+    credentials in your home directory unless something stops it, so v0.3.0 denies
+    reads of those stores (`~/.ssh`, `~/.aws`, `~/.config/gh`, …).
+  - *The profile is the agent's whole setup.* The paper's profile is an agent's
+    context, skills, hooks and rules, versioned as one artifact. Claude can edit
+    its own profile here, so v0.3.0 makes it ask before editing `CLAUDE.md`,
+    settings, hooks, status line, CI config and the template's own checks.
 - **[trailofbits/claude-code-config](https://github.com/trailofbits/claude-code-config)**:
   the list of home directory credential stores to deny. Ideas only. The repo
   has no license and nothing is copied.

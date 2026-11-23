@@ -12,6 +12,10 @@ History before 0.1.0 is kept below in the original dated sections.
 
 ## [Unreleased]
 
+### Changed
+- **Acknowledgements.** The README's Agent Baseline credit links *The Secure Software
+  Factory* and names the three points from it that shaped the v0.3.0 defaults.
+
 ## [0.3.0] - 2026-11-22
 
 A security release. Vetting a third party plugin showed that `audit-config.sh` missed
