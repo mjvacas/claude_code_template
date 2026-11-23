@@ -2,14 +2,14 @@
 
 Benchmark for Claude Code task performance across Opus 4.7, Opus 4.8, Sonnet 4.6, and Haiku 4.5.
 
-Measures **pass-rate × tokens × wall-clock × cost** on a fixed task corpus, so model routing for everyday Claude Code work becomes a data decision instead of a guess.
+Measures **pass rate × tokens × wall clock × cost** on a fixed task corpus, so model routing for everyday Claude Code work becomes a data decision instead of a guess.
 
 - **Methodology:** [`.claude/skills/cc-task-bench/SKILL.md`](../.claude/skills/cc-task-bench/SKILL.md)
 - **Scope and rationale:** [ADR-003](../docs/adr/ADR-003-cc-task-bench-scope.md)
 
 ## Status
 
-**V1 — design artifacts only.** This file, the skill, the pricing schema, the ADR, and the fixture layout document below. The runner is V2 work; no runs have happened yet.
+**V1: design artifacts only.** This file, the skill, the pricing schema, the ADR, and the fixture layout document below. The runner is V2 work. No runs have happened yet.
 
 ## Layout
 
@@ -35,12 +35,12 @@ bench/
 
 | Family | Scoring | Oracle | Timeout |
 |---|---|---|---|
-| `refactor`   | Diff-baseline (byte-identical) | `verify-refactor` skill verbatim | 5 min |
+| `refactor`   | Diff baseline (byte identical) | `verify-refactor` skill verbatim | 5 min |
 | `explore`    | F1 over reported `file:line` set | `oracle/expected.json` | 2 min |
-| `test-write` | Originally-failing test green; no regressions | `oracle/failing_test.<ext>` + full suite | 3 min |
+| `test-write` | Originally failing test green, no regressions | `oracle/failing_test.<ext>` and full suite | 3 min |
 
-Deferred to V2 (rubric-or-corpus dependent): code review (planted-bug recall), multi-file edits with constraint preservation.
-Deferred to V3 (rubric-judged via `llm-eval` ensemble): planning, session orient, commit-message authoring.
+Deferred to V2 (depends on a rubric or corpus): code review (planted bug recall), edits across multiple files with constraint preservation.
+Deferred to V3 (judged by rubric via an `llm-eval` ensemble): planning, session orient, commit message authoring.
 
 ## Model matrix
 
@@ -51,13 +51,13 @@ Deferred to V3 (rubric-judged via `llm-eval` ensemble): planning, session orient
 | `claude-opus-4-8`           | Frontier | Current top tier |
 | `claude-opus-4-7`           | Frontier (prior) | Characterizes the 4.7 → 4.8 delta |
 | `claude-sonnet-4-6`         | Mid | Likely default for most adopters |
-| `claude-haiku-4-5-20251001` | Cheap | Cost-floor anchor; routing target for cheap tasks |
+| `claude-haiku-4-5-20251001` | Cheap | Cost floor anchor, routing target for cheap tasks |
 
-5 runs per cell (ECC says ≥3) so IQR + stdev consistency reporting is stable enough to act on.
+5 runs per cell (ECC says ≥3) so IQR and stdev consistency reporting is stable enough to act on.
 
 ## Schema
 
-### Per-attempt JSON
+### JSON per attempt
 `results/<run-id>/<model>/<task>/<attempt-n>.json`
 
 ```json
@@ -86,7 +86,7 @@ Deferred to V3 (rubric-judged via `llm-eval` ensemble): planning, session orient
 }
 ```
 
-`status` ∈ `pass | fail | error | timeout`. `judge.kind` ∈ `diff-baseline | f1 | test-suite | rubric` — one per V1 family (rubric reserved for V3); `judge.verdict` carries the family-specific outcome.
+`status` ∈ `pass | fail | error | timeout`. `judge.kind` ∈ `diff-baseline | f1 | test-suite | rubric`, one per V1 family (rubric reserved for V3). `judge.verdict` carries the family specific outcome.
 
 ### Cell aggregate
 `results/<run-id>/<model>/<task>/cell.json`
@@ -106,18 +106,18 @@ Deferred to V3 (rubric-judged via `llm-eval` ensemble): planning, session orient
 }
 ```
 
-`pass_rate` and `consistency` are surfaced as separate axes. Collapsing them — ECC's anti-pattern — hides whether a model fails because it gets things wrong or because it's inconsistent.
+`pass_rate` and `consistency` are surfaced as separate axes. Collapsing them (ECC's antipattern) hides whether a model fails because it gets things wrong or because it's inconsistent.
 
 ### Model summary
-`results/<run-id>/<model>/summary.json` — per-family pass-rate, weighted total cost, latency p50/p95, and a `vs_baseline` block comparing the previous run's same-model results when present.
+`results/<run-id>/<model>/summary.json`: pass rate per family, weighted total cost, latency p50/p95, and a `vs_baseline` block comparing the previous run's results for the same model when present.
 
 ### Run INDEX
-`results/<run-id>/INDEX.md` — human-readable summary table + a **hypothesis-check** section noting where this run agrees or disagrees with ECC's prescriptive routing table. Force-added per run (`git add -f bench/results/<run-id>/INDEX.md`); raw per-attempt JSON is gitignored.
+`results/<run-id>/INDEX.md`: a human readable summary table and a **hypothesis check** section noting where this run agrees or disagrees with ECC's prescriptive routing table. Force added each run (`git add -f bench/results/<run-id>/INDEX.md`). Raw JSON for each attempt is gitignored.
 
 ## Running
 
-Runner ships in V2. The shape will be roughly `bench/runner/run.sh --family <name> --models all --runs 5`. The schema above is the data contract; the runner produces it, dashboards consume it.
+Runner ships in V2. The shape will be roughly `bench/runner/run.sh --family <name> --models all --runs 5`. The schema above is the data contract. The runner produces it, dashboards consume it.
 
 ## Attribution
 
-Harness methodology — worktree isolation per attempt, separate pass-rate / cost / wall-clock dimensions, ≥3 runs per cell, pinned `bench_commit`, per-attempt token accounting — adapted from the [affaan-m/ECC](https://github.com/affaan-m/ECC) benchmark. ECC's prescriptive model-routing table is treated as a hypothesis this benchmark tests, not a result it inherits.
+The harness methodology is adapted from the [affaan-m/ECC](https://github.com/affaan-m/ECC) benchmark: worktree isolation per attempt, separate pass rate, cost and wall clock dimensions, ≥3 runs per cell, pinned `bench_commit`, and token accounting per attempt. This benchmark treats ECC's prescriptive model routing table as a hypothesis to test rather than a result to inherit.
