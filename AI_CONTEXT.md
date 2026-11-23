@@ -1,16 +1,17 @@
-# AI Context — Human-Curated Decision Log
+# AI Context: Human Curated Decision Log
 
-> The **human-curated** half of this project's hybrid memory. It holds decisions,
-> rationale, open questions, and next steps — the things a future reader can't
-> reconstruct from the diff. Claude's native auto-memory handles the *other* half
-> (learned patterns, build quirks); don't duplicate those here.
+> The **human curated** half of this project's hybrid memory. It holds what a future
+> reader can't reconstruct from the diff: decisions, rationale, open questions, and
+> next steps. Claude's native auto memory handles the *other* half (learned patterns,
+> build quirks). Don't duplicate those here.
 >
-> Auto-loaded into every session via `@AI_CONTEXT.md` in `CLAUDE.md`. Update it with
-> `/handoff` at the end of a session and commit it **together with the code**.
-> Keep it scannable; archive old session blocks to `docs/summaries/YYYY-MM.md` once
-> this file exceeds ~1000 lines (the SessionStart hook nags above that, and `/handoff`
-> archives before committing). Archival is safe because `/handoff` requires each
-> session block to be state-sufficient for cold pickup. Threshold rationale:
+> Loaded automatically into every session via `@AI_CONTEXT.md` in `CLAUDE.md`.
+> Update it with `/handoff` at the end of a session and commit it **together with
+> the code**. Keep it scannable. Archive old session blocks to
+> `docs/summaries/YYYY-MM.md` once this file exceeds ~1000 lines (the SessionStart
+> hook nags above that and `/handoff` archives before committing). Archival is safe
+> because `/handoff` requires each session block to be state sufficient for a cold
+> pickup. Threshold rationale:
 > [ADR-007](docs/adr/ADR-007-ai-context-archive-threshold-1000.md) (supersedes [ADR-004](docs/adr/ADR-004-ai-context-archive-threshold-bump.md)).
 
 ---
@@ -20,6 +21,10 @@
 ### Summary
 One line: what this session was about.
 
+### Current state
+Where the work stands: in flight on branch X, merged to main, or blocked on Y. This
+block alone should be enough to resume, even after older blocks are archived.
+
 ### Decisions
 - **Decision:** what was decided
   - **Why:** rationale
@@ -27,7 +32,7 @@ One line: what this session was about.
   - (If significant or hard to reverse, also write an ADR under `docs/adr/`.)
 
 ### Open Questions
-- Q: … — options: [A, B] — need to decide by/when.
+- Q: … Options: [A, B]. Need to decide by (date or event).
 
 ### Next Steps
 1. …

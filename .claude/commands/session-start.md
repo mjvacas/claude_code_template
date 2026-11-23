@@ -11,18 +11,18 @@ Restore working context and orient before any coding.
 - Recent commits: !`git log --oneline -10`
 - Working tree: !`git status --short`
 
-## Human-curated decision log
+## Human curated decision log
 
 @AI_CONTEXT.md
 
 ## Your task
 
-1. Read the most recent session block in `AI_CONTEXT.md` above (decisions, open questions, next steps). Native auto-memory has already surfaced learned patterns — don't re-derive them.
-2. If a focus area was given ($ARGUMENTS), skim the relevant files/ADRs under `docs/adr/`.
+1. Read the most recent session block in `AI_CONTEXT.md` above (current state, decisions, open questions, next steps). Native auto memory has already surfaced learned patterns. Don't derive them again.
+2. If a focus area was given ($ARGUMENTS), skim the relevant files and ADRs under `docs/adr/`.
 3. Report back, briefly:
-   - **Last completed** / **In progress** / **Next planned**
+   - **Last completed**, **In progress**, **Next planned**
    - Any blockers or open questions from the log
-   - The single next action you'd take, and ask the user to confirm or redirect.
+   - The single next action you'd take. Ask the user to confirm or redirect.
 
 Keep it tight. Do not start editing until the user confirms direction.
 

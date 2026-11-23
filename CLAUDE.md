@@ -5,15 +5,15 @@
 
 # Project Name
 
-> One-line description of what this project does.
+> What this project does, in one line.
 
 ## Tech Stack
 
 - **Language**: [e.g., TypeScript, Python, Go]
-- **Framework**: [e.g., Next.js, FastAPI, Rails — or "none"]
-- **Database**: [e.g., PostgreSQL, SQLite — or "none"]
-- **UI**: [e.g., React Native Paper, Tailwind — or "none" for CLIs/services]
-- **AI**: [e.g., Claude API, OpenAI API — or "none"]
+- **Framework**: [e.g., Next.js, FastAPI, Rails, or "none"]
+- **Database**: [e.g., PostgreSQL, SQLite, or "none"]
+- **UI**: [e.g., React Native Paper, Tailwind, or "none" for CLIs and services]
+- **AI**: [e.g., Claude API, OpenAI API, or "none"]
 
 ## Project Structure
 
@@ -27,7 +27,7 @@ src/                # or app/, lib/, cmd/ — follow your stack's idiom
 
 ## Key Files
 
-- `[path to core data types/schemas]` — Core data contracts
+- `[path to core data types/schemas]`: core data contracts
 - `[path to database schema & queries — if any]`
 - [Add other important files as they emerge]
 
@@ -42,37 +42,37 @@ src/                # or app/, lib/, cmd/ — follow your stack's idiom
 ## Conventions
 
 - Commit prefixes: `feat:`, `fix:`, `refactor:`, `docs:`, `chore:`
-- Before a non-trivial commit or PR, run your code-review plugin's reviewer agent on the diff (baseline: `pr-review-toolkit`'s `code-reviewer`) — review agents are model-invoked and never fire on their own
-- Once a branch is pushed, don't amend/force-push it — add a fixup commit instead (force-push is hard-blocked by the PreToolUse hook)
-- **Don't duplicate — share.** When logic appears twice, extract it into one shared module and fold the existing copies in; never let a third copy appear. If the same computation runs in two contexts (prod vs. tests/simulation, or sibling features), share the *exact* implementation so they can't silently drift. Grep for the pattern before writing a near-duplicate.
-- Keep entry points thin (screens, routes, CLI handlers) — push logic into services/modules
-- Types first: define data contracts (types/schemas/models) before building features
-- Defensive defaults at boundaries only: normalize external/untrusted data with safe fallbacks (JS `?? 0`, Python `.get(key, default)`); don't validate trusted internal calls
-- After refactoring deterministic code, verify behavior is unchanged against a saved baseline output — stronger than "tests still pass"
-- **Personal info stays local.** Never send the user's email or other personal info (name, phone number, address) to an outside service without asking first. That includes request headers (a User-Agent counts), URLs, request bodies, MCP tool inputs, and code written to send it later. If an API wants contact info or a custom User-Agent, ask the user what to send: even a project name can identify them. This applies to subagents too.
-- Treat `.claude/` skills/commands/agents/hooks and MCP servers as dependencies: vet before adding, review every update, keep unvetted ones out of version control — see docs/skill-security.md
+- Before a nontrivial commit or PR, run your code review plugin's reviewer agent on the diff (baseline: `pr-review-toolkit`'s `code-reviewer`). Review agents are invoked by the model and never fire on their own
+- Once a branch is pushed, don't amend or force push it. Add a fixup commit instead (the PreToolUse hook blocks force pushes outright)
+- **Don't duplicate. Share.** When logic appears twice, extract it into one shared module and fold the existing copies in. Never let a third copy appear. If the same computation runs in two contexts (prod vs. tests or simulation, or sibling features), share the *exact* implementation so they can't silently drift. Grep for the pattern before writing a near duplicate.
+- Keep entry points thin (screens, routes, CLI handlers). Push logic into services and modules
+- Types first: define data contracts (types, schemas, models) before building features
+- Defensive defaults at boundaries only: normalize external or untrusted data with safe fallbacks (JS `?? 0`, Python `.get(key, default)`). Don't validate trusted internal calls
+- After refactoring deterministic code, verify behavior is unchanged against a saved baseline output. That's stronger than "tests still pass"
+- **Personal info stays local.** Never send the user's email or other personal info (name, phone number, address) to an outside service without asking first. That includes request headers (a User-Agent counts), URLs, request bodies, MCP tool inputs, and code written to send it later. If an API wants contact info or a custom User-Agent, ask the user what to send. Even a project name can identify them. This applies to subagents too.
+- Treat `.claude/` skills, commands, agents, hooks and MCP servers as dependencies: vet before adding, review every update, keep unvetted ones out of version control. See docs/skill-security.md
 
 ## Hard Constraints (guarded by code)
 
-Critical invariants are enforced **in code** — asserted at startup or at the
-relevant boundary — not merely documented, so they can't silently regress. Config
-that governs behavior lives in version-controlled files changed via PR review,
-never a runtime toggle/UI. List this project's code-guarded invariants here, e.g.:
+Critical invariants are enforced **in code**, asserted at startup or at the relevant
+boundary, so they can't silently regress. Documenting them isn't enough. Config that
+governs behavior lives in version controlled files changed through PR review, never in
+a runtime toggle or UI. List this project's invariants guarded by code here, e.g.:
 
-- **Catastrophic shell commands are hard-blocked** by the `PreToolUse` hook
-  `.claude/hooks/block-dangerous.sh` (exit 2) — a safety net, not a sandbox. Ships with this template.
-- `<INVARIANT>` — asserted at startup; the process refuses to run if violated.
-- `<limit/threshold>` — enforced in `<module>`; violations are rejected, not warned.
+- **Catastrophic shell commands are blocked outright** by the `PreToolUse` hook
+  `.claude/hooks/block-dangerous.sh` (exit 2). It's a safety net and doesn't sandbox anything. Ships with this template.
+- `<INVARIANT>`: asserted at startup. The process refuses to run if it's violated.
+- `<limit/threshold>`: enforced in `<module>`. Violations are rejected instead of warned about.
 
 ## Architecture Decisions
 
-- **[ADR-001](docs/adr/ADR-001-vendor-with-source-pin.md)** — adopters track vendored template files via a root `VENDORED.md` sidecar pinning upstream SHAs; per-file headers are optional.
-- **[ADR-002](docs/adr/ADR-002-ai-context-archive-threshold.md)** *(superseded by [ADR-004](docs/adr/ADR-004-ai-context-archive-threshold-bump.md))* — original 500-line / 6k-token research-anchored derivation of the `AI_CONTEXT.md` archive threshold.
-- **[ADR-003](docs/adr/ADR-003-cc-task-bench-scope.md)** — `cc-task-bench` V1 measures 3 deterministic task families (refactor, explore, test-write) across Opus 4.7/4.8, Sonnet 4.6, Haiku 4.5 with 5 runs/cell = **60 attempts per run**; methodology + fixture layout ship now, runner is V2.
-- **[ADR-004](docs/adr/ADR-004-ai-context-archive-threshold-bump.md)** *(superseded by [ADR-007](docs/adr/ADR-007-ai-context-archive-threshold-1000.md))* — `AI_CONTEXT.md` archive threshold raised to 750 lines AND `/handoff` now requires each session block to be state-sufficient for cold pickup; the discipline makes archival safe at the higher cap.
-- **[ADR-005](docs/adr/ADR-005-token-awareness-legibility.md)** — token awareness ships as a **legibility** layer now (cost classes + native `/context`/`/usage`, a per-session cost ledger, a model-routing heuristic in `docs/token-awareness.md`); empirical **measurement** stays deferred to `cc-task-bench` V2, which supersedes the routing heuristic.
-- **[ADR-006](docs/adr/ADR-006-versioning-and-release-management.md)** — the template is now **versioned** (SemVer, starting **v0.1.0 / beta**), superseding the date-stamped "unversioned" `CHANGELOG` convention. MAJOR/MINOR/PATCH are defined against the *adoption contract*; adopters pin `VENDORED.md` to a **release tag** so re-sync can answer "am I behind / is it breaking?". v1.0.0 waits on external-feedback validation.
-- **[ADR-007](docs/adr/ADR-007-ai-context-archive-threshold-1000.md)** — `AI_CONTEXT.md` archive threshold raised to **1000 lines** from a replay of real archive history (about 30–50% fewer archives for ~2k more tokens per session); keeps ADR-004's state-sufficiency requirement. The quality cost of a bigger file is still unmeasured.
+- **[ADR-001](docs/adr/ADR-001-vendor-with-source-pin.md)**: adopters track vendored template files with a root `VENDORED.md` sidecar that pins upstream SHAs. Headers in each file are optional.
+- **[ADR-002](docs/adr/ADR-002-ai-context-archive-threshold.md)** *(superseded by [ADR-004](docs/adr/ADR-004-ai-context-archive-threshold-bump.md))*: the original derivation of the `AI_CONTEXT.md` archive threshold (500 lines, about 6k tokens), anchored in research.
+- **[ADR-003](docs/adr/ADR-003-cc-task-bench-scope.md)**: `cc-task-bench` V1 measures 3 deterministic task families (refactor, explore, test-write) across Opus 4.7, Opus 4.8, Sonnet 4.6 and Haiku 4.5, with 5 runs per cell, so **60 attempts per run**. The method and fixture layout ship now. The runner is V2.
+- **[ADR-004](docs/adr/ADR-004-ai-context-archive-threshold-bump.md)** *(superseded by [ADR-007](docs/adr/ADR-007-ai-context-archive-threshold-1000.md))*: raised the `AI_CONTEXT.md` archive threshold to 750 lines AND made `/handoff` require each session block to be state sufficient for a cold pickup. That discipline makes archival safe at the higher cap.
+- **[ADR-005](docs/adr/ADR-005-token-awareness-legibility.md)**: token awareness ships now as a **legibility** layer (cost classes, the native `/context` and `/usage`, a cost ledger per session, and a model routing heuristic in `docs/token-awareness.md`). Empirical **measurement** stays deferred to `cc-task-bench` V2, which supersedes the routing heuristic.
+- **[ADR-006](docs/adr/ADR-006-versioning-and-release-management.md)**: the template is now **versioned** (SemVer, starting at **v0.1.0, beta**), superseding the old "unversioned" `CHANGELOG` convention of dated entries. MAJOR, MINOR and PATCH are defined against the *adoption contract*. Adopters pin `VENDORED.md` to a **release tag** so re-sync can answer "am I behind and is it breaking?". v1.0.0 waits on validation from outside feedback.
+- **[ADR-007](docs/adr/ADR-007-ai-context-archive-threshold-1000.md)**: raised the `AI_CONTEXT.md` archive threshold to **1000 lines**, from a replay of real archive history (about 30 to 50% fewer archives for ~2k more tokens per session). It keeps ADR-004's requirement that each block be state sufficient. The quality cost of a bigger file is still unmeasured.
 
 <!-- Add decisions as they're made. Format: -->
 <!-- - **Decision**: What was decided -->
@@ -81,24 +81,24 @@ never a runtime toggle/UI. List this project's code-guarded invariants here, e.g
 
 ## AI Integration Patterns (if applicable)
 
-- Provider-agnostic interface for LLM calls (easy to swap Claude/OpenAI/etc.)
+- A provider agnostic interface for LLM calls (easy to swap Claude, OpenAI and others)
 - Cache LLM responses to avoid inconsistent results across call sites
-- Log AI inputs/outputs for debugging: `[LLM] Input:`, `[LLM] Response:`
-- Validate and normalize all AI-generated data with defaults
+- Log AI inputs and outputs for debugging: `[LLM] Input:`, `[LLM] Response:`
+- Validate all data the AI generates and normalize it with defaults
 
 ## Context System
 
-Hybrid memory — two stores, kept from overlapping:
+Hybrid memory. Two stores, kept from overlapping:
 
-- **CLAUDE.md** (this file): static project rules and conventions. Auto-loaded every session. Keep under 200 lines.
-- **AI_CONTEXT.md**: *human-curated* decisions, rationale, open questions, next steps — what a future reader can't reconstruct from the diff. Auto-loaded via @AI_CONTEXT.md. Update at end of session with `/handoff`.
-- **Native auto-memory** (`~/.claude/projects/<project>/memory/`, on by default): patterns and build quirks Claude *learns* on its own. Browse/edit with `/memory`. Don't copy these into AI_CONTEXT.md.
-- **docs/adr/ADR-NNN-*.md**: Architecture Decision Records — one per significant or hard-to-reverse decision (Status / Context / Decision / Consequences / Alternatives Considered). Don't re-litigate a decided ADR; if it genuinely needs revisiting, write a new one that supersedes it. Keep a one-line highlight per ADR in the "Architecture Decisions" section above.
+- **CLAUDE.md** (this file): static project rules and conventions. Loaded automatically every session. Keep under 200 lines.
+- **AI_CONTEXT.md**: *human curated* decisions, rationale, open questions and next steps. What a future reader can't reconstruct from the diff. Loaded automatically through @AI_CONTEXT.md. Update at end of session with `/handoff`.
+- **Native auto memory** (`~/.claude/projects/<project>/memory/`, on by default): patterns and build quirks Claude *learns* on its own. Browse and edit with `/memory`. Don't copy these into AI_CONTEXT.md.
+- **docs/adr/ADR-NNN-*.md**: Architecture Decision Records, one per decision that's significant or hard to reverse (Status, Context, Decision, Consequences, Alternatives Considered). Don't relitigate a decided ADR. If it has to change, write a new one that supersedes it. Keep a one line highlight per ADR in the "Architecture Decisions" section above.
 - **docs/summaries/YYYY-MM.md**: Monthly compressed recaps.
-- **docs/{PROJECT_SPEC,ARCHITECTURE,BUILD_PLAN}.md** (optional; scale to project size): the source-of-truth triad — the "why/what", the "how", and the "in what order". Read at session start; don't re-litigate decisions captured here (revisit via a new ADR). Skeletons in `templates/`.
-- **.claude/**: native Claude Code config — `settings.json` (permissions, statusline, SessionStart + PreToolUse hooks), `hooks/` (session-context, block-dangerous, clock — opt-in), `commands/` (`/session-start`, `/handoff`, `/commit`, `/adr`), `skills/` (verify-refactor, tune-parameters, llm-eval, cc-task-bench). Code review is delegated to the `pr-review-toolkit@claude-plugins-official` baseline plugin installed during adoption (see docs/ADOPTING.md). See docs/claude-code-setup.md.
-- **docs/token-awareness.md**: token cost of the context system — cost classes (`free-local`/`on-use`/`session`/`per-prompt`), the per-session context tax, and a model-routing heuristic. Loaded on demand, not auto-loaded.
-- **Rule**: Commit code + AI_CONTEXT.md updates together atomically.
+- **docs/{PROJECT_SPEC,ARCHITECTURE,BUILD_PLAN}.md** (optional, scale to project size): the three source of truth docs. They cover the "why and what", the "how", and the "in what order". Read them at session start. Don't relitigate decisions captured here (revisit them with a new ADR). Skeletons in `templates/`.
+- **.claude/**: native Claude Code config. `settings.json` (permissions, statusline, SessionStart and PreToolUse hooks), `hooks/` (session-context, block-dangerous, and clock, which is opt-in), `commands/` (`/session-start`, `/handoff`, `/commit`, `/adr`), `skills/` (verify-refactor, tune-parameters, llm-eval, cc-task-bench). Code review is delegated to the `pr-review-toolkit@claude-plugins-official` baseline plugin installed during adoption (see docs/ADOPTING.md). See docs/claude-code-setup.md.
+- **docs/token-awareness.md**: token cost of the context system. Cost classes (`free-local`, `on-use`, `session`, `per-prompt`), the context tax per session, compaction (including idle compaction), and a model routing heuristic. Loaded on demand only.
+- **Rule**: Commit code and AI_CONTEXT.md updates together, atomically.
 
 Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed. 
 Tradeoff: These guidelines bias toward caution over speed. For trivial tasks, use judgment. 
