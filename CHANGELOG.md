@@ -12,6 +12,12 @@ History before 0.1.0 is kept below in the original dated sections.
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-25
+
+A docs patch from the first re-syncs to v0.3.0. Nothing to do when you re-sync. The
+changed files update or merge as usual. A PATCH under
+[ADR-006](docs/adr/ADR-006-versioning-and-release-management.md).
+
 ### Changed
 - **Acknowledgements.** The README's Agent Baseline credit links *The Secure Software
   Factory* and names the three points from it that shaped the v0.3.0 defaults.
