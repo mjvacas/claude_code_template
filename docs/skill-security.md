@@ -146,10 +146,11 @@ servers. Vet each like an unpinned dependency. Start from `.mcp.json.example`.
     stays with the pin. `--scope project` would turn the plugin off in every checkout,
     including ones without your pin. `chmod 600` both files, as `check-template.sh`
     expects. Your server's tools are named `mcp__<server>__<tool>`
-    instead of `mcp__plugin_<plugin>_<server>__<tool>`. A hook matcher or permission
-    rule that names the old tools stops matching without any error, so a guard on them
-    stops guarding. Rename them in the same commit and test the guard with a sample
-    event.
+    instead of `mcp__plugin_<plugin>_<server>__<tool>`. Checkouts without your pin
+    still use the old names. A hook matcher or permission rule that names only one form
+    misses the other without any error, so a guard on it stops guarding there. Make
+    each guard match both: a hook matcher like `mcp__(plugin_<plugin>_)?<server>__<tool>`
+    and a permission rule for each name. Then test it with a sample event for each name.
 
 ## Vetting checklist (before adding anything from online)
 

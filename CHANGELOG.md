@@ -24,9 +24,10 @@ changed files update or merge as usual. A PATCH under
 - **Plugins whose MCP server starts `@latest`.** `docs/skill-security.md` covers the
   official `playwright` plugin's case. Accept it and record that once, or pin it with
   your own `.mcp.json` entry and turn the plugin off on that machine. Pinning renames
-  the server's tools, so a hook or permission rule that names them stops matching
-  without any error. Re-sync (`docs/ADOPTING.md` step 5) doesn't ask again about a
-  server recorded as accepted or pinned unless its launch command changes.
+  the server's tools on that machine only, so a hook or permission rule has to match
+  both names or it misses one without any error. Re-sync (`docs/ADOPTING.md` step 5)
+  doesn't ask again about a server recorded as accepted or pinned unless its launch
+  command changes.
 - **Re-sync without switching the template clone.** `docs/ADOPTING.md` step 1 can
   extract the target into a folder outside both repos with `git archive` instead, so
   several sessions can share one clone.
@@ -866,7 +867,8 @@ for going public is tagged `v0.1.0`. Entries below were previously under
 ### Changed
 - `SECURITY.md` `Scope` section: placeholder for adopters to customize. (#4)
 
-[unreleased]: https://github.com/mjvacas/claude_code_template/compare/v0.3.0...HEAD
+[unreleased]: https://github.com/mjvacas/claude_code_template/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/mjvacas/claude_code_template/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/mjvacas/claude_code_template/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/mjvacas/claude_code_template/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/mjvacas/claude_code_template/compare/v0.2.0...v0.2.1
