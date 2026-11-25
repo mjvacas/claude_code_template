@@ -27,7 +27,7 @@ secrets/
 # Native auto-memory lives under ~/.claude/projects/<project>/memory/ (outside the
 # repo, machine-local) — nothing to ignore here, noted so it isn't re-created in-repo.
 
-# Local security-scan output (CodeQL / Semgrep — see docs/skill-security.md)
+# Local security-scan output (CodeQL / Semgrep — see the template's docs/skill-security.md)
 *.sarif
 .codeql-db/
 

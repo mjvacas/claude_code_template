@@ -9,7 +9,7 @@
 # This is defense-in-depth on top of the `ask` rules and the lockdown overlay / OS
 # sandbox — not a replacement. Patterns are deliberately NARROW (anchored to the rm
 # command, only root/home/parent targets) so false positives stay near zero; a guard
-# that cries wolf gets disabled. See docs/skill-security.md.
+# that cries wolf gets disabled. See the template's docs/skill-security.md.
 #
 # Block contract: we print a deny JSON to stdout AND `exit 2` with a stderr reason, so
 # the block holds on both older (exit-code) and newer (JSON permissionDecision) Claude

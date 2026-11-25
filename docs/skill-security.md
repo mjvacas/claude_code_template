@@ -132,6 +132,24 @@ servers. Vet each like an unpinned dependency. Start from `.mcp.json.example`.
 - **Marketplaces are the same surface.** `/plugin` marketplaces bundle skills, hooks and
   MCP servers. They warrant the same review (managed `blockedMarketplaces` can restrict
   them).
+- **A plugin's server can start `@latest`.** The official `playwright` plugin starts
+  `npx @playwright/mcp@latest`, so it runs the newest release each time it starts. You
+  can't pin it inside the plugin, because the next plugin update overwrites your edit.
+  Pick one and record it in `VENDORED.md`:
+  - **Accept it.** Record the plugin as unpinned and accepted, with the date and its
+    launch command. Re-sync asks again only if that command changes.
+  - **Pin it yourself.** Add your own `.mcp.json` entry with a fixed version. Then turn
+    the plugin off on this machine
+    (`claude plugin disable <plugin>@<marketplace> --scope local`). Otherwise its
+    `@latest` server keeps starting next to yours. Local scope writes
+    `.claude/settings.local.json`, which git ignores like `.mcp.json`, so the switch
+    stays with the pin. `--scope project` would turn the plugin off in every checkout,
+    including ones without your pin. `chmod 600` both files, as `check-template.sh`
+    expects. Your server's tools are named `mcp__<server>__<tool>`
+    instead of `mcp__plugin_<plugin>_<server>__<tool>`. A hook matcher or permission
+    rule that names the old tools stops matching without any error, so a guard on them
+    stops guarding. Rename them in the same commit and test the guard with a sample
+    event.
 
 ## Vetting checklist (before adding anything from online)
 

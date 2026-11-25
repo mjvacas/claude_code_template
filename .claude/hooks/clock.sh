@@ -6,7 +6,8 @@
 # is derivable by subtracting the "Session started" line that session-context.sh
 # prints at SessionStart.
 # Cost: a few tokens per prompt — which is why it ships unwired. To enable, add
-# the UserPromptSubmit entry shown in docs/claude-code-setup.md to settings.json
+# the UserPromptSubmit entry shown in the template's docs/claude-code-setup.md to
+# settings.json
 # (or your settings.local.json for a personal-only clock).
 set -euo pipefail
 date '+[clock] %Y-%m-%d %H:%M %Z (%A)'

@@ -16,8 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # Third-party actions are pinned to a commit SHA (a tag is mutable; a SHA is not) —
-      # the posture docs/skill-security.md teaches. Bump deliberately; the trailing comment
-      # records the human-readable tag the SHA maps to.
+      # the posture the template's docs/skill-security.md teaches. Bump deliberately; the
+      # trailing comment records the human-readable tag the SHA maps to.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           fetch-depth: 0   # full history so the secret scan sees all commits
@@ -35,7 +35,8 @@ jobs:
         # would only catch a corrupted download, not a replaced release, so the hash lives
         # in this file and changes only by PR. To bump: set both values, taking the hash
         # from the release's checksums.txt and checking it against the asset's `digest`
-        # (`gh api repos/gitleaks/gitleaks/releases/tags/v<ver>`). See docs/skill-security.md.
+        # (`gh api repos/gitleaks/gitleaks/releases/tags/v<ver>`). See the template's
+        # docs/skill-security.md.
         env:
           GITLEAKS_VERSION: "8.30.1"
           GITLEAKS_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"  # linux_x64 tarball

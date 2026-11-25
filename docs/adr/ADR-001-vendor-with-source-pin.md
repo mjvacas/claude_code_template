@@ -16,7 +16,8 @@ security posture that benefits from staying in sync with upstream: the
 In practice, the adopter's Claude Code session does the adoption by
 reading this repo and copying files into the adopter's project. A human
 doesn't run `cp -r`. The session also handles source pinning,
-customization, and verification. `docs/ADOPTING.md` owns the procedure.
+customization, and verification. The template's `docs/ADOPTING.md` owns the
+procedure.
 
 Adopters need:
 
@@ -51,8 +52,8 @@ skip the optional header without losing pinning, since the sidecar
 covers them.
 
 The full procedure (sidecar format, re-sync workflow, paste prompts for
-the adopter's CC session) lives in `docs/ADOPTING.md`. This ADR owns
-the why.
+the adopter's CC session) lives in the template's `docs/ADOPTING.md`. This
+ADR owns the why.
 
 ## Consequences
 
@@ -63,8 +64,8 @@ the why.
 - This template stays simple, with no machinery on its side to maintain
   vendoring state.
 - Tradeoff: no automation prompts adopters when this template changes.
-  They (or their CC session, on a periodic re-sync prompt) check
-  `CHANGELOG.md`.
+  They (or their CC session, on a periodic re-sync prompt) check the
+  template's `CHANGELOG.md`.
 
 ## Alternatives Considered
 

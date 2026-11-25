@@ -729,7 +729,16 @@ The session will:
    `git fetch --tags`, and check out the **target** detached
    (`git -C <template-clone> switch --detach <tag-or-sha>`). The target is the latest
    release tag (or a commit, if you're syncing past it). `git describe --tags <pin>` shows
-   where your pin sits relative to the tags. **Your own repo must be clean too:**
+   where your pin sits relative to the tags. If another session may be using the same
+   clone, leave it where it is. Extract the target into a new folder instead
+   (`git -C <template-clone> archive <target> > <dir>.tar && mkdir <dir> && tar -xf <dir>.tar -C <dir>`)
+   and use that folder wherever these steps read the template's files or run its
+   scripts. Make `<dir>` an absolute path outside both repos (under `$TMPDIR`, say).
+   Inside your repo, the extracted files would fail the clean check below or get staged
+   with the re-sync. Don't pipe `git archive` into `tar`. A wrong target then leaves an
+   empty folder and a zero exit code. History commands (`git log`,
+   `git show <pin>:<path>`) still run in the clone.
+   **Your own repo must be clean too:**
    `git status --porcelain` must print nothing. Otherwise ask the user to commit or
    stash their work. If they don't, stop. Step 9's `git add -A` then stages only
    the re-sync. A `git worktree` on a new branch
@@ -802,8 +811,15 @@ The session will:
    - Audit it again when that path's version (its last folder) differs from the one in
      the plugin's Notes, or when this range changed `scripts/audit-config.sh` or
      the vetting docs.
-   - Run the target's auditor from the clone, since your own copy is still the
-     pin's: `bash <template-clone>/scripts/audit-config.sh <installPath>`. Read the
+   - A plugin whose MCP server starts `@latest` (the official `playwright` does) runs
+     the newest release of that server whatever the plugin's own version says. If its
+     Notes record it as unpinned and accepted, or as replaced by a pinned `.mcp.json`
+     entry, don't ask again unless its launch command changed. Otherwise show the
+     command and ask whether to accept it or pin it (`docs/skill-security.md` →
+     Vetting an MCP server).
+   - Run the target's auditor (in the clone, or in the step 1 folder if you extracted
+     one), since your own copy is still the pin's:
+     `bash <template-clone>/scripts/audit-config.sh <installPath>`. Read the
      report rather than the exit code, because nearly every plugin trips `--strict` on the
      links in its LICENSE or README. `claude plugin details <name>@<marketplace>`
      adds its component inventory and token cost, but it isn't a complete list of
@@ -827,7 +843,7 @@ The session will:
    If `base` comes back empty (an older adoption commit used another subject), show
    `git log --oneline -- VENDORED.md`, ask the user which commit was the last
    adoption or re-sync, and use that. Never run the checks with an empty `base`.
-   Discovery here uses the template clone's auditor, as in step 5.
+   Discovery here uses the target's auditor, as in step 5.
    A repo without code (notes, docs) won't trip the manifest check. There, ask the
    user whether they've taken up a new tool or workflow since the last sync. If they
    have, run discovery. Candidates are catalog entries that match

@@ -15,6 +15,23 @@ History before 0.1.0 is kept below in the original dated sections.
 ### Changed
 - **Acknowledgements.** The README's Agent Baseline credit links *The Secure Software
   Factory* and names the three points from it that shaped the v0.3.0 defaults.
+- **Plugins whose MCP server starts `@latest`.** `docs/skill-security.md` covers the
+  official `playwright` plugin's case. Accept it and record that once, or pin it with
+  your own `.mcp.json` entry and turn the plugin off on that machine. Pinning renames
+  the server's tools, so a hook or permission rule that names them stops matching
+  without any error. Re-sync (`docs/ADOPTING.md` step 5) doesn't ask again about a
+  server recorded as accepted or pinned unless its launch command changes.
+- **Re-sync without switching the template clone.** `docs/ADOPTING.md` step 1 can
+  extract the target into a folder outside both repos with `git archive` instead, so
+  several sessions can share one clone.
+
+### Fixed
+- **Vendored files still named docs only the template has, as if they were local.**
+  v0.3.0 fixed some of these and missed the rest. Comments now say "the template's
+  `docs/…`" in `session-context.sh`, `block-dangerous.sh`, `clock.sh`, `audit-config.sh`,
+  `check.yml`, `CODEOWNERS`, `.gitignore`, `.mcp.json.example` and
+  `settings.lockdown.json.example`. ADR-001 says it too. Re-sync updates them as usual.
+  `CODEOWNERS` and `.gitignore` are Adapt files, so it merges those.
 
 ## [0.3.0] - 2026-11-22
 

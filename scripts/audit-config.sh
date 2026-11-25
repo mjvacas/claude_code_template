@@ -4,7 +4,8 @@
 #
 # This is a REVIEW AID for a human, not a pass/fail gate: legitimate config trips
 # many of these checks (our own commands use `!`git ...`` and our hooks mention curl).
-# Read the report, then decide. Pairs with docs/skill-security.md (the checklist).
+# Read the report, then decide. Pairs with the template's docs/skill-security.md
+# (the checklist).
 #
 # Handles arbitrary filenames safely (spaces/newlines via -print0) and scans EVERY
 # file regardless of extension, so a payload can't hide behind an odd name (`evil cmd.md`)
